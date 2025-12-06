@@ -44,6 +44,7 @@ export default function AdminDashboard() {
     name: '',
     description: '',
     price: '',
+    priceType: 'ONE_TIME',
     duration: '',
     image: '',
     isActive: true
@@ -137,6 +138,7 @@ export default function AdminDashboard() {
       name: '',
       description: '',
       price: '',
+      priceType: 'ONE_TIME',
       duration: '',
       image: '',
       isActive: true
@@ -151,6 +153,7 @@ export default function AdminDashboard() {
       name: program.name,
       description: program.description || '',
       price: program.price?.toString() || '',
+      priceType: program.priceType || 'ONE_TIME',
       duration: program.duration || '',
       image: program.image || '',
       isActive: program.isActive
@@ -965,15 +968,27 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                  <input
-                    type="text"
-                    value={programForm.duration}
-                    onChange={(e) => setProgramForm({ ...programForm, duration: e.target.value })}
-                    placeholder="e.g., 3 months"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price Type</label>
+                  <select
+                    value={programForm.priceType}
+                    onChange={(e) => setProgramForm({ ...programForm, priceType: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  />
+                  >
+                    <option value="ONE_TIME">One-Time Payment</option>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="YEARLY">Yearly</option>
+                  </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                <input
+                  type="text"
+                  value={programForm.duration}
+                  onChange={(e) => setProgramForm({ ...programForm, duration: e.target.value })}
+                  placeholder="e.g., 3 months"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>

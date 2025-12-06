@@ -34,6 +34,12 @@ enum CourseType {
   LIVE
 }
 
+enum PriceType {
+  ONE_TIME
+  MONTHLY
+  YEARLY
+}
+
 // ============ MODELS ============
 
 // User - for authentication
@@ -122,15 +128,16 @@ model IdSequence {
 
 // Program - created by admin
 model Program {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
-  price       Float    @default(0)
-  duration    String?  // e.g., "3 months", "1 semester"
-  image       String?  // URL for card image
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  price       Float     @default(0)
+  priceType   PriceType @default(ONE_TIME)
+  duration    String?   // e.g., "3 months", "1 semester"
+  image       String?   // URL for card image
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   
   courses     Course[]
 }

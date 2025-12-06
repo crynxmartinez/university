@@ -390,7 +390,15 @@ export default function StudentDashboard() {
                         {/* Price - Prominently displayed */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                           <p className="text-xs text-[#1e3a5f] font-medium">Program Fee</p>
-                          <p className="text-2xl font-bold text-[#1e3a5f]">₱{program.price?.toLocaleString() || '0'}</p>
+                          <p className="text-2xl font-bold text-[#1e3a5f]">
+                            ₱{program.price?.toLocaleString() || '0'}
+                            <span className="text-sm font-normal text-gray-500 ml-1">
+                              {program.priceType === 'MONTHLY' ? '/month' : program.priceType === 'YEARLY' ? '/year' : ''}
+                            </span>
+                          </p>
+                          {program.priceType !== 'ONE_TIME' && (
+                            <p className="text-xs text-gray-500 mt-1">Recurring payment</p>
+                          )}
                         </div>
                         
                         {program.duration && (
