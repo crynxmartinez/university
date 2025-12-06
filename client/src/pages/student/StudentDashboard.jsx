@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, Clock } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 
@@ -406,13 +406,6 @@ export default function StudentDashboard() {
                             </>
                           )}
                         </div>
-                        
-                        {program.duration && (
-                          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                            <Clock className="w-4 h-4" />
-                            <span>{program.duration}</span>
-                          </div>
-                        )}
                         
                         <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition">
                           Enroll Now

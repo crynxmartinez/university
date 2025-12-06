@@ -45,7 +45,6 @@ export default function AdminDashboard() {
     description: '',
     price: '',
     priceType: 'ONE_TIME',
-    duration: '',
     image: '',
     isActive: true
   })
@@ -139,7 +138,6 @@ export default function AdminDashboard() {
       description: '',
       price: '',
       priceType: 'ONE_TIME',
-      duration: '',
       image: '',
       isActive: true
     })
@@ -154,7 +152,6 @@ export default function AdminDashboard() {
       description: program.description || '',
       price: program.price?.toString() || '',
       priceType: program.priceType || 'ONE_TIME',
-      duration: program.duration || '',
       image: program.image || '',
       isActive: program.isActive
     })
@@ -979,16 +976,6 @@ export default function AdminDashboard() {
                     <option value="YEARLY">Yearly</option>
                   </select>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                <input
-                  type="text"
-                  value={programForm.duration}
-                  onChange={(e) => setProgramForm({ ...programForm, duration: e.target.value })}
-                  placeholder="e.g., 3 months"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>

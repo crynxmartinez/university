@@ -15,7 +15,6 @@ router.get('/public', async (req, res) => {
         id: true,
         name: true,
         description: true,
-        duration: true,
         image: true,
         isActive: true,
         createdAt: true
@@ -59,7 +58,6 @@ router.get('/student', async (req, res) => {
         description: true,
         price: true, // Include price for students
         priceType: true,
-        duration: true,
         image: true,
         isActive: true,
         createdAt: true
@@ -124,7 +122,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only admins can create programs' })
     }
 
-    const { name, description, price, priceType, duration, image, isActive } = req.body
+    const { name, description, price, priceType, image, isActive } = req.body
 
     if (!name) {
       return res.status(400).json({ error: 'Program name is required' })
@@ -136,7 +134,6 @@ router.post('/', authenticate, async (req, res) => {
         description: description || '',
         price: parseFloat(price) || 0,
         priceType: priceType || 'ONE_TIME',
-        duration: duration || null,
         image: image || null,
         isActive: isActive !== undefined ? isActive : true
       }
@@ -157,14 +154,13 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const { id } = req.params
-    const { name, description, price, priceType, duration, image, isActive } = req.body
+    const { name, description, price, priceType, image, isActive } = req.body
 
     const updateData = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
     if (price !== undefined) updateData.price = parseFloat(price)
     if (priceType !== undefined) updateData.priceType = priceType
-    if (duration !== undefined) updateData.duration = duration
     if (image !== undefined) updateData.image = image
     if (isActive !== undefined) updateData.isActive = isActive
 

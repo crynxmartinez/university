@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, GraduationCap, Folder, Clock, ArrowRight, X } from 'lucide-react'
+import { BookOpen, GraduationCap, Folder, ArrowRight, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
@@ -116,12 +116,6 @@ export default function ProgramsPage() {
                         <h3 className="text-xl font-bold text-gray-900 mb-2">{program.name}</h3>
                       )}
                       <p className="text-gray-600 mb-4 line-clamp-3">{program.description || 'No description available'}</p>
-                      {program.duration && (
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                          <Clock className="w-4 h-4" />
-                          <span>{program.duration}</span>
-                        </div>
-                      )}
                       <button 
                         onClick={() => setSelectedProgram(program)}
                         className="inline-flex items-center gap-2 text-[#f7941d] font-semibold hover:gap-3 transition-all"
@@ -232,13 +226,6 @@ export default function ProgramsPage() {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-12rem)]">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedProgram.name}</h2>
-              
-              {selectedProgram.duration && (
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                  <Clock className="w-4 h-4" />
-                  <span>{selectedProgram.duration}</span>
-                </div>
-              )}
               
               <div 
                 className="rich-text-content text-gray-600 mb-6"
