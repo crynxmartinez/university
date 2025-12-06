@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
@@ -21,6 +21,8 @@ export default function StudentDashboard() {
   const [enrollmentsOpen, setEnrollmentsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [enrollingId, setEnrollingId] = useState(null)
+  const [selectedProgram, setSelectedProgram] = useState(null) // For browse modal
+  const [selectedEnrolledProgram, setSelectedEnrolledProgram] = useState(null) // For enrolled modal
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -510,11 +512,10 @@ export default function StudentDashboard() {
                                 </button>
                               ) : (
                                 <button 
-                                  onClick={() => handleEnrollProgram(program.id)}
-                                  disabled={enrollingId === program.id}
-                                  className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                                  onClick={() => setSelectedProgram(program)}
+                                  className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition"
                                 >
-                                  {enrollingId === program.id ? 'Enrolling...' : 'Enroll Now'}
+                                  Learn More
                                 </button>
                               )}
                             </div>
@@ -617,10 +618,14 @@ export default function StudentDashboard() {
                       {myProgramEnrollments.map((enrollment) => {
                         const program = enrollment.program
                         return (
-                          <div key={enrollment.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group">
+                          <div 
+                            key={enrollment.id} 
+                            onClick={() => setSelectedEnrolledProgram(program)}
+                            className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#f7941d] transition group cursor-pointer"
+                          >
                             {program.image ? (
                               <div className="h-40 overflow-hidden">
-                                <img src={program.image} alt={program.name} className="w-full h-full object-cover" />
+                                <img src={program.image} alt={program.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                               </div>
                             ) : (
                               <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
@@ -630,7 +635,7 @@ export default function StudentDashboard() {
                             <div className="p-5">
                               <div className="flex items-start justify-between mb-2">
                                 <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
-                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
                                   program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
                                   program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
                                   program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
@@ -661,18 +666,7 @@ export default function StudentDashboard() {
                                 </div>
                               )}
                               
-                              {program.meetingLink && (
-                                <a 
-                                  href={program.meetingLink} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 rounded-lg font-semibold transition"
-                                >
-                                  <Video className="w-4 h-4" />
-                                  Join Meeting
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              )}
+                              <p className="text-sm text-[#f7941d] font-medium">Click to view details →</p>
                             </div>
                           </div>
                         )
@@ -748,6 +742,237 @@ export default function StudentDashboard() {
           )}
         </main>
       </div>
+
+      {/* Browse Program Modal - Learn More & Enroll */}
+      {selectedProgram && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header with Image */}
+            {selectedProgram.image ? (
+              <div className="h-48 relative flex-shrink-0">
+                <img src={selectedProgram.image} alt={selectedProgram.name} className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => setSelectedProgram(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="h-48 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center relative flex-shrink-0">
+                <Folder className="w-20 h-20 text-white/50" />
+                <button 
+                  onClick={() => setSelectedProgram(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">{selectedProgram.name}</h2>
+                <span className={`text-xs px-3 py-1 rounded-full flex-shrink-0 ${
+                  selectedProgram.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                  selectedProgram.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                  selectedProgram.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                  selectedProgram.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedProgram.programType === 'WEBINAR' ? 'Webinar' :
+                   selectedProgram.programType === 'IN_PERSON' ? 'In-Person' :
+                   selectedProgram.programType === 'EVENT' ? 'Event' :
+                   selectedProgram.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                </span>
+              </div>
+
+              {/* Schedule & Location */}
+              {(selectedProgram.schedule || selectedProgram.location) && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+                  {selectedProgram.schedule && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Calendar className="w-4 h-4 text-[#1e3a5f]" />
+                      <span>{selectedProgram.schedule}</span>
+                    </div>
+                  )}
+                  {selectedProgram.location && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <MapPin className="w-4 h-4 text-[#1e3a5f]" />
+                      <span>{selectedProgram.location}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Full Description */}
+              <div 
+                className="prose prose-sm max-w-none text-gray-600 mb-6"
+                dangerouslySetInnerHTML={{ __html: selectedProgram.description || 'No description available.' }}
+              />
+
+              {/* Price */}
+              <div className={`rounded-lg p-4 mb-6 ${!selectedProgram.price || selectedProgram.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                <p className={`text-sm font-medium ${!selectedProgram.price || selectedProgram.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
+                {!selectedProgram.price || selectedProgram.price === 0 ? (
+                  <p className="text-3xl font-bold text-green-600">FREE</p>
+                ) : (
+                  <p className="text-3xl font-bold text-[#1e3a5f]">
+                    ₱{selectedProgram.price?.toLocaleString()}
+                    <span className="text-base font-normal text-gray-500 ml-1">
+                      {selectedProgram.priceType === 'MONTHLY' ? '/month' : selectedProgram.priceType === 'YEARLY' ? '/year' : ''}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t flex gap-3 flex-shrink-0">
+              <button 
+                onClick={() => setSelectedProgram(null)}
+                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+              <button 
+                onClick={async () => {
+                  await handleEnrollProgram(selectedProgram.id)
+                  setSelectedProgram(null)
+                }}
+                disabled={enrollingId === selectedProgram.id}
+                className="flex-1 bg-[#f7941d] hover:bg-[#e8850f] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+              >
+                {enrollingId === selectedProgram.id ? 'Enrolling...' : 'Enroll Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enrolled Program Modal - View Details */}
+      {selectedEnrolledProgram && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header with Image */}
+            {selectedEnrolledProgram.image ? (
+              <div className="h-48 relative flex-shrink-0">
+                <img src={selectedEnrolledProgram.image} alt={selectedEnrolledProgram.name} className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => setSelectedEnrolledProgram(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="h-48 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center relative flex-shrink-0">
+                <Folder className="w-20 h-20 text-white/50" />
+                <button 
+                  onClick={() => setSelectedEnrolledProgram(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedEnrolledProgram.name}</h2>
+                  <p className="text-green-600 text-sm font-medium flex items-center gap-1 mt-1">
+                    <CheckCircle className="w-4 h-4" /> You are enrolled
+                  </p>
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full flex-shrink-0 ${
+                  selectedEnrolledProgram.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                  selectedEnrolledProgram.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                  selectedEnrolledProgram.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                  selectedEnrolledProgram.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedEnrolledProgram.programType === 'WEBINAR' ? 'Webinar' :
+                   selectedEnrolledProgram.programType === 'IN_PERSON' ? 'In-Person' :
+                   selectedEnrolledProgram.programType === 'EVENT' ? 'Event' :
+                   selectedEnrolledProgram.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                </span>
+              </div>
+
+              {/* Schedule, Location, Meeting Link */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
+                {selectedEnrolledProgram.schedule && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Calendar className="w-5 h-5 text-[#1e3a5f]" />
+                    <div>
+                      <p className="text-xs text-gray-500">Schedule</p>
+                      <p className="font-medium">{selectedEnrolledProgram.schedule}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedEnrolledProgram.location && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <MapPin className="w-5 h-5 text-[#1e3a5f]" />
+                    <div>
+                      <p className="text-xs text-gray-500">Location</p>
+                      <p className="font-medium">{selectedEnrolledProgram.location}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedEnrolledProgram.meetingLink && (
+                  <div className="flex items-start gap-2 text-gray-700">
+                    <Video className="w-5 h-5 text-[#1e3a5f] mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">Meeting Link</p>
+                      <a 
+                        href={selectedEnrolledProgram.meetingLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[#1e3a5f] hover:underline font-medium break-all"
+                      >
+                        {selectedEnrolledProgram.meetingLink}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {!selectedEnrolledProgram.schedule && !selectedEnrolledProgram.location && !selectedEnrolledProgram.meetingLink && (
+                  <p className="text-gray-500 text-sm">No schedule or location details available yet.</p>
+                )}
+              </div>
+
+              {/* Full Description */}
+              <div 
+                className="prose prose-sm max-w-none text-gray-600"
+                dangerouslySetInnerHTML={{ __html: selectedEnrolledProgram.description || 'No description available.' }}
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t flex gap-3 flex-shrink-0">
+              <button 
+                onClick={() => setSelectedEnrolledProgram(null)}
+                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+              {selectedEnrolledProgram.meetingLink && (
+                <a 
+                  href={selectedEnrolledProgram.meetingLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                >
+                  <Video className="w-5 h-5" />
+                  Join Meeting
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
