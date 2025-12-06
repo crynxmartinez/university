@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image } from 'lucide-react'
 import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
 import { getPrograms, createProgram, updateProgram, deleteProgram } from '../api/programs'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
@@ -929,13 +931,25 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={programForm.description}
-                  onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })}
-                  placeholder="Brief description of the program..."
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
-                />
+                <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#1e3a5f] focus-within:border-[#1e3a5f]">
+                  <ReactQuill
+                    theme="snow"
+                    value={programForm.description}
+                    onChange={(value) => setProgramForm({ ...programForm, description: value })}
+                    placeholder="Brief description of the program..."
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link'],
+                        ['clean']
+                      ]
+                    }}
+                    style={{ minHeight: '200px' }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Use the toolbar to format text, add lists, links, and more.</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

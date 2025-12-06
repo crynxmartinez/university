@@ -240,11 +240,12 @@ export default function ProgramsPage() {
                 </div>
               )}
               
-              <div className="prose prose-gray max-w-none mb-6">
-                <p className="text-gray-600 whitespace-pre-wrap">
-                  {selectedProgram.description || 'No description available for this program.'}
-                </p>
-              </div>
+              <div 
+                className="rich-text-content text-gray-600 mb-6"
+                dangerouslySetInnerHTML={{ 
+                  __html: selectedProgram.description || '<p>No description available for this program.</p>' 
+                }}
+              />
               
               <div className="border-t pt-6 flex flex-col sm:flex-row gap-3">
                 <Link 

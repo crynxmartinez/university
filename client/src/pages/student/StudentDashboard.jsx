@@ -382,7 +382,10 @@ export default function StudentDashboard() {
                       )}
                       <div className="p-5">
                         <h3 className="text-lg font-bold text-gray-900 mb-2">{program.name}</h3>
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{program.description || 'No description available'}</p>
+                        <div 
+                          className="text-gray-600 text-sm mb-4 line-clamp-2 rich-text-content"
+                          dangerouslySetInnerHTML={{ __html: program.description || 'No description available' }}
+                        />
                         
                         {/* Price - Prominently displayed */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">

@@ -15,3 +15,70 @@ body {
 .font-arabic {
   font-family: 'Amiri', serif;
 }
+
+/* Rich Text Editor Styles */
+.ql-container {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  min-height: 150px;
+}
+
+.ql-editor {
+  min-height: 150px;
+}
+
+.ql-toolbar {
+  border: none !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background: #f9fafb;
+}
+
+.ql-container {
+  border: none !important;
+}
+
+.ql-editor.ql-blank::before {
+  color: #9ca3af;
+  font-style: normal;
+}
+
+/* Rich text content display */
+.rich-text-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.rich-text-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.rich-text-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.rich-text-content p {
+  margin-bottom: 0.75rem;
+}
+
+.rich-text-content ul, .rich-text-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.rich-text-content li {
+  margin-bottom: 0.25rem;
+}
+
+.rich-text-content a {
+  color: #f7941d;
+  text-decoration: underline;
+}
+
+.rich-text-content strong {
+  font-weight: 600;
+}
