@@ -621,18 +621,18 @@ export default function StudentDashboard() {
                           <div 
                             key={enrollment.id} 
                             onClick={() => setSelectedEnrolledProgram(program)}
-                            className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#f7941d] transition group cursor-pointer"
+                            className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#f7941d] transition group cursor-pointer flex flex-col"
                           >
                             {program.image ? (
-                              <div className="h-40 overflow-hidden">
+                              <div className="h-40 overflow-hidden flex-shrink-0">
                                 <img src={program.image} alt={program.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                               </div>
                             ) : (
-                              <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
+                              <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center flex-shrink-0">
                                 <Folder className="w-16 h-16 text-white/50" />
                               </div>
                             )}
-                            <div className="p-5">
+                            <div className="p-5 flex flex-col flex-1">
                               <div className="flex items-start justify-between mb-2">
                                 <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
                                 <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
@@ -649,24 +649,26 @@ export default function StudentDashboard() {
                                 </span>
                               </div>
                               
-                              {(program.schedule || program.location) && (
-                                <div className="text-xs text-gray-500 mb-3 space-y-1">
-                                  {program.schedule && (
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="w-3 h-3" />
-                                      <span>{program.schedule}</span>
-                                    </div>
-                                  )}
-                                  {program.location && (
-                                    <div className="flex items-center gap-1">
-                                      <MapPin className="w-3 h-3" />
-                                      <span>{program.location}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                              <div className="flex-1">
+                                {(program.schedule || program.location) && (
+                                  <div className="text-xs text-gray-500 space-y-1">
+                                    {program.schedule && (
+                                      <div className="flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        <span>{program.schedule}</span>
+                                      </div>
+                                    )}
+                                    {program.location && (
+                                      <div className="flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" />
+                                        <span>{program.location}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               
-                              <p className="text-sm text-[#f7941d] font-medium">Click to view details →</p>
+                              <p className="text-sm text-[#f7941d] font-medium mt-3">Click to view details →</p>
                             </div>
                           </div>
                         )
