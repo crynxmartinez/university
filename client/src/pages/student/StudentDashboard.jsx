@@ -440,20 +440,20 @@ export default function StudentDashboard() {
                   ) : (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {allPrograms.map((program) => (
-                        <div key={program.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group">
+                        <div key={program.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group flex flex-col">
                           {program.image ? (
-                            <div className="h-40 overflow-hidden">
+                            <div className="h-40 overflow-hidden flex-shrink-0">
                               <img src={program.image} alt={program.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                             </div>
                           ) : (
-                            <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
+                            <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center flex-shrink-0">
                               <Folder className="w-16 h-16 text-white/50" />
                             </div>
                           )}
-                          <div className="p-5">
+                          <div className="p-5 flex flex-col flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
-                              <span className={`text-xs px-2 py-1 rounded-full ${
+                              <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
                                 program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
                                 program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
                                 program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
@@ -484,38 +484,40 @@ export default function StudentDashboard() {
                               </div>
                             )}
                             
-                            <div className="text-gray-600 text-sm mb-4 line-clamp-2"
+                            <div className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1"
                               dangerouslySetInnerHTML={{ __html: program.description || 'No description available' }}
                             />
                             
-                            <div className={`rounded-lg p-3 mb-4 ${!program.price || program.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-                              <p className={`text-xs font-medium ${!program.price || program.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
-                              {!program.price || program.price === 0 ? (
-                                <p className="text-2xl font-bold text-green-600">FREE</p>
+                            <div className="mt-auto">
+                              <div className={`rounded-lg p-3 mb-4 ${!program.price || program.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                                <p className={`text-xs font-medium ${!program.price || program.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
+                                {!program.price || program.price === 0 ? (
+                                  <p className="text-2xl font-bold text-green-600">FREE</p>
+                                ) : (
+                                  <p className="text-2xl font-bold text-[#1e3a5f]">
+                                    ₱{program.price?.toLocaleString()}
+                                    <span className="text-sm font-normal text-gray-500 ml-1">
+                                      {program.priceType === 'MONTHLY' ? '/month' : program.priceType === 'YEARLY' ? '/year' : ''}
+                                    </span>
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {isEnrolledInProgram(program.id) ? (
+                                <button disabled className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+                                  <CheckCircle className="w-4 h-4" />
+                                  Enrolled
+                                </button>
                               ) : (
-                                <p className="text-2xl font-bold text-[#1e3a5f]">
-                                  ₱{program.price?.toLocaleString()}
-                                  <span className="text-sm font-normal text-gray-500 ml-1">
-                                    {program.priceType === 'MONTHLY' ? '/month' : program.priceType === 'YEARLY' ? '/year' : ''}
-                                  </span>
-                                </p>
+                                <button 
+                                  onClick={() => handleEnrollProgram(program.id)}
+                                  disabled={enrollingId === program.id}
+                                  className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                                >
+                                  {enrollingId === program.id ? 'Enrolling...' : 'Enroll Now'}
+                                </button>
                               )}
                             </div>
-                            
-                            {isEnrolledInProgram(program.id) ? (
-                              <button disabled className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
-                                <CheckCircle className="w-4 h-4" />
-                                Enrolled
-                              </button>
-                            ) : (
-                              <button 
-                                onClick={() => handleEnrollProgram(program.id)}
-                                disabled={enrollingId === program.id}
-                                className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition disabled:opacity-50"
-                              >
-                                {enrollingId === program.id ? 'Enrolling...' : 'Enroll Now'}
-                              </button>
-                            )}
                           </div>
                         </div>
                       ))}
