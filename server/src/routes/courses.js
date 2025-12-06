@@ -131,7 +131,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only teachers can create courses' })
     }
 
-    const { name, description, type } = req.body
+    const { name, description, type, schedule, meetingLink } = req.body
 
     if (!name) {
       return res.status(400).json({ error: 'Course name is required' })
@@ -142,6 +142,8 @@ router.post('/', authenticate, async (req, res) => {
         name,
         description: description || '',
         type: type || 'RECORDED',
+        schedule: type === 'LIVE' ? schedule : null,
+        meetingLink: type === 'LIVE' ? meetingLink : null,
         teacherId: req.user.teacher.id
       },
       include: {
@@ -160,7 +162,7 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, type } = req.body
+    const { name, description, type, schedule, meetingLink } = req.body
 
     // Check ownership
     const existing = await prisma.course.findUnique({ where: { id } })
@@ -173,7 +175,13 @@ router.put('/:id', authenticate, async (req, res) => {
 
     const course = await prisma.course.update({
       where: { id },
-      data: { name, description, type },
+      data: { 
+        name, 
+        description, 
+        type,
+        schedule: type === 'LIVE' ? schedule : null,
+        meetingLink: type === 'LIVE' ? meetingLink : null
+      },
       include: { modules: true }
     })
 

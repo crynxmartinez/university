@@ -183,6 +183,8 @@ model Course {
   name        String
   description String?
   type        CourseType @default(RECORDED)
+  schedule    String?    // For LIVE courses: e.g., "Mon/Wed/Fri 7:00 PM" or specific dates
+  meetingLink String?    // Zoom/Meet link for LIVE courses
   teacherId   String
   programId   String?
   createdAt   DateTime   @default(now())

@@ -23,6 +23,7 @@ export default function StudentDashboard() {
   const [enrollingId, setEnrollingId] = useState(null)
   const [selectedProgram, setSelectedProgram] = useState(null) // For browse modal
   const [selectedEnrolledProgram, setSelectedEnrolledProgram] = useState(null) // For enrolled modal
+  const [showCalendarModal, setShowCalendarModal] = useState(false) // For course schedule calendar
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -102,7 +103,6 @@ export default function StudentDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'browse', label: 'Browse', icon: Search },
     { id: 'enrollments', label: 'My Enrollments', icon: CheckCircle, hasDropdown: true },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'grades', label: 'Grades', icon: Award },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
@@ -681,6 +681,19 @@ export default function StudentDashboard() {
               {/* My Enrolled Courses */}
               {enrollmentsTab === 'courses' && (
                 <>
+                  {/* Calendar Button - Top Right */}
+                  {myCourseEnrollments.some(c => c.type === 'LIVE' && c.schedule) && (
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={() => setShowCalendarModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        View Schedule
+                      </button>
+                    </div>
+                  )}
+
                   {myCourseEnrollments.length === 0 ? (
                     <div className="text-center py-12">
                       <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -709,6 +722,12 @@ export default function StudentDashboard() {
                               {course.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
                             </span>
                           </div>
+                          {course.type === 'LIVE' && course.schedule && (
+                            <div className="flex items-center gap-1 text-xs text-purple-600 mb-2">
+                              <Calendar className="w-3 h-3" />
+                              <span>{course.schedule}</span>
+                            </div>
+                          )}
                           <p className="text-sm text-gray-500 line-clamp-2 mb-3">{course.description}</p>
                           <div className="text-xs text-gray-400">
                             {course.modules?.length || 0} modules
@@ -719,13 +738,6 @@ export default function StudentDashboard() {
                   )}
                 </>
               )}
-            </div>
-          )}
-
-          {activeTab === 'schedule' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Class Schedule</h2>
-              <p className="text-gray-500">Schedule coming soon...</p>
             </div>
           )}
 
@@ -971,6 +983,95 @@ export default function StudentDashboard() {
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Course Schedule Calendar Modal */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Course Schedule</h2>
+                  <p className="text-sm text-gray-500">Your LIVE course sessions</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowCalendarModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {myCourseEnrollments.filter(c => c.type === 'LIVE' && c.schedule).length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No scheduled classes</h3>
+                  <p className="text-gray-500">You don't have any LIVE courses with schedules yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myCourseEnrollments
+                    .filter(c => c.type === 'LIVE' && c.schedule)
+                    .map((course) => (
+                      <div key={course.id} className="border border-purple-200 bg-purple-50 rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{course.name}</h3>
+                            <div className="flex items-center gap-2 mt-2 text-purple-700">
+                              <Calendar className="w-4 h-4" />
+                              <span className="font-medium">{course.schedule}</span>
+                            </div>
+                            {course.meetingLink && (
+                              <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                                <Video className="w-4 h-4" />
+                                <a 
+                                  href={course.meetingLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[#1e3a5f] hover:underline"
+                                >
+                                  {course.meetingLink}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                          {course.meetingLink && (
+                            <a 
+                              href={course.meetingLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+                            >
+                              <Video className="w-4 h-4" />
+                              Join
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t flex-shrink-0">
+              <button 
+                onClick={() => setShowCalendarModal(false)}
+                className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

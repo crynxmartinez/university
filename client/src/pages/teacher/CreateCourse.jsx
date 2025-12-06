@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Video, Radio } from 'lucide-react'
+import { ArrowLeft, Video, Radio, Calendar, LinkIcon } from 'lucide-react'
 import { createCourse } from '../../api/courses'
 
 export default function CreateCourse() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('RECORDED')
+  const [schedule, setSchedule] = useState('')
+  const [meetingLink, setMeetingLink] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -17,7 +19,7 @@ export default function CreateCourse() {
     setLoading(true)
 
     try {
-      const course = await createCourse({ name, description, type })
+      const course = await createCourse({ name, description, type, schedule, meetingLink })
       navigate(`/teacher/courses/${course.id}`)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create course')
@@ -130,6 +132,41 @@ export default function CreateCourse() {
                 </button>
               </div>
             </div>
+
+            {/* Schedule & Meeting Link - Only for LIVE courses */}
+            {type === 'LIVE' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Schedule *
+                  </label>
+                  <input
+                    type="text"
+                    value={schedule}
+                    onChange={(e) => setSchedule(e.target.value)}
+                    placeholder="e.g., Mon/Wed/Fri 7:00 PM or Every Saturday 10:00 AM"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">When will the live sessions be held?</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <LinkIcon className="w-4 h-4 inline mr-1" />
+                    Meeting Link
+                  </label>
+                  <input
+                    type="url"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    placeholder="https://zoom.us/j/123456789 or https://meet.google.com/abc-defg-hij"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Zoom or Google Meet link for students to join</p>
+                </div>
+              </>
+            )}
 
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
