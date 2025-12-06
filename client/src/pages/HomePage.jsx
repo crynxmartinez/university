@@ -30,24 +30,25 @@ export default function HomePage() {
 
       {/* Hero Section - ILM Style */}
       <section id="home" className="relative">
-        <div className="grid lg:grid-cols-2">
-          {/* Left - Image */}
-          <div className="relative h-[400px] lg:h-[600px]">
-            <img 
-              src="https://ilmlearningcenter.com/wp-content/uploads/2024/04/Screenshot-2024-04-07-165639.png"
-              alt="ILM Learning"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/80 to-transparent lg:hidden"></div>
+        <div className="grid lg:grid-cols-2 min-h-[600px]">
+          {/* Left - White Background with ILM Logo */}
+          <div className="bg-white flex items-center justify-center p-8 lg:p-16">
+            <div className="text-center">
+              <img 
+                src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Stacked-with-Sec-Reg-1-364x302x0x0x364x302x1711677866.png"
+                alt="ILM Learning Center"
+                className="w-full max-w-md mx-auto"
+              />
+            </div>
           </div>
           
-          {/* Right - Content */}
+          {/* Right - Green Content */}
           <div className="bg-emerald-800 text-white flex items-center">
             <div className="p-8 lg:p-16">
-              <p className="font-arabic text-2xl md:text-3xl text-emerald-200 mb-4">
+              <p className="font-arabic text-2xl md:text-3xl text-amber-400 mb-2">
                 طَلَبُ الْعِلْمِ فَرِيضَةٌ عَلَى كُلِّ مُسْلِمٍ
               </p>
-              <p className="text-emerald-200 mb-6 text-lg italic">
+              <p className="text-emerald-200 mb-8 text-lg italic">
                 "Seeking knowledge is an obligation upon every Muslim"
               </p>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
@@ -71,32 +72,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* About Section - ILM Educational Center Style */}
+      {/* About Section */}
       <section id="about" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left - Images Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="row-span-2">
+            {/* Left - Building Image */}
+            <div className="relative">
+              <div className="bg-gray-100 rounded-2xl overflow-hidden">
                 <img 
-                  src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/photo_2024-04-09_09-58-22-617x674x17x0x583x674x1712628523.jpg"
-                  alt="ILM Students"
-                  className="w-full h-full object-cover rounded-2xl"
+                  src="https://ilmlearningcenter.com/wp-content/uploads/2024/04/Screenshot-2024-04-07-165639.png"
+                  alt="ILM Learning Center Building"
+                  className="w-full h-auto object-cover rounded-2xl"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = '<div class="h-80 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center"><div class="text-center"><div class="w-24 h-24 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg></div><p class="text-emerald-700 font-semibold">ILM Learning Center</p></div></div>';
+                  }}
                 />
               </div>
-              <div>
-                <img 
-                  src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/photo_2024-04-09_09-58-17-583x428x0x28x583x372x1712628528.jpg"
-                  alt="ILM Class"
-                  className="w-full h-full object-cover rounded-2xl"
-                />
-              </div>
-              <div>
-                <img 
-                  src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/photo_2024-04-09_09-58-19-583x365x0x31x583x303x1712628526.jpg"
-                  alt="ILM Learning"
-                  className="w-full h-full object-cover rounded-2xl"
-                />
+              <div className="absolute -bottom-6 -right-6 bg-amber-500 text-emerald-900 p-6 rounded-2xl shadow-lg hidden lg:block">
+                <p className="text-3xl font-bold">10+</p>
+                <p className="text-sm font-medium">Years of Excellence</p>
               </div>
             </div>
             
