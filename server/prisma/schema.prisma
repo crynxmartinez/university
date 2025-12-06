@@ -118,6 +118,17 @@ model IdSequence {
   @@unique([type, year])
 }
 
+// ============ PROGRAM MODELS ============
+
+// Program - created by admin
+model Program {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // ============ COURSE MODELS ============
 
 // Course - created by teacher

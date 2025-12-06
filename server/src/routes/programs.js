@@ -1,0 +1,133 @@
+import express from 'express'
+import prisma from '../lib/prisma.js'
+import jwt from 'jsonwebtoken'
+
+const router = express.Router()
+
+// GET /api/programs/public - Get all public programs (no auth required)
+router.get('/public', async (req, res) => {
+  try {
+    const programs = await prisma.program.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json(programs)
+  } catch (error) {
+    console.error('Get public programs error:', error)
+    // Return empty array if table doesn't exist yet
+    res.json([])
+  }
+})
+
+// Middleware to verify token and get user
+const authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id }
+    })
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+
+    req.user = user
+    next()
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' })
+  }
+}
+
+// GET /api/programs - Get all programs (admin only)
+router.get('/', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Only admins can access programs' })
+    }
+
+    const programs = await prisma.program.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json(programs)
+  } catch (error) {
+    console.error('Get programs error:', error)
+    res.status(500).json({ error: 'Failed to get programs' })
+  }
+})
+
+// POST /api/programs - Create a new program (admin only)
+router.post('/', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Only admins can create programs' })
+    }
+
+    const { name, description } = req.body
+
+    if (!name) {
+      return res.status(400).json({ error: 'Program name is required' })
+    }
+
+    const program = await prisma.program.create({
+      data: {
+        name,
+        description: description || ''
+      }
+    })
+
+    res.status(201).json(program)
+  } catch (error) {
+    console.error('Create program error:', error)
+    res.status(500).json({ error: 'Failed to create program' })
+  }
+})
+
+// PUT /api/programs/:id - Update a program (admin only)
+router.put('/:id', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Only admins can update programs' })
+    }
+
+    const { id } = req.params
+    const { name, description } = req.body
+
+    const program = await prisma.program.update({
+      where: { id },
+      data: { name, description }
+    })
+
+    res.json(program)
+  } catch (error) {
+    console.error('Update program error:', error)
+    res.status(500).json({ error: 'Failed to update program' })
+  }
+})
+
+// DELETE /api/programs/:id - Delete a program (admin only)
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Only admins can delete programs' })
+    }
+
+    const { id } = req.params
+
+    await prisma.program.delete({ where: { id } })
+
+    res.json({ message: 'Program deleted successfully' })
+  } catch (error) {
+    console.error('Delete program error:', error)
+    res.status(500).json({ error: 'Failed to delete program' })
+  }
+})
+
+export default router

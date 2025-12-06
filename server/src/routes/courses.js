@@ -4,6 +4,29 @@ import jwt from 'jsonwebtoken'
 
 const router = express.Router()
 
+// GET /api/courses/public - Get all public courses (no auth required)
+router.get('/public', async (req, res) => {
+  try {
+    const courses = await prisma.course.findMany({
+      include: {
+        teacher: {
+          include: {
+            user: {
+              include: { profile: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json(courses)
+  } catch (error) {
+    console.error('Get public courses error:', error)
+    res.status(500).json({ error: 'Failed to get courses' })
+  }
+})
+
 // Middleware to verify token and get user
 const authenticate = async (req, res, next) => {
   try {
