@@ -48,6 +48,12 @@ enum ProgramType {
   HYBRID
 }
 
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 // ============ MODELS ============
 
 // User - for authentication
@@ -66,6 +72,7 @@ model User {
   student  Student?
   teacher  Teacher?
   registrar Registrar?
+  programEnrollments ProgramEnrollment[]
 }
 
 // Profile - personal information
@@ -151,6 +158,21 @@ model Program {
   updatedAt   DateTime    @updatedAt
   
   courses     Course[]
+  enrollments ProgramEnrollment[]
+}
+
+// Program Enrollment - student enrolls in a program
+model ProgramEnrollment {
+  id          String   @id @default(cuid())
+  studentId   String
+  programId   String
+  enrolledAt  DateTime @default(now())
+  status      EnrollmentStatus @default(ACTIVE)
+  
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  
+  @@unique([studentId, programId])
 }
 
 // ============ COURSE MODELS ============

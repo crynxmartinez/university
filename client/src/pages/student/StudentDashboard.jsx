@@ -1,17 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
+import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
+import axios from 'axios'
+import API_URL from '../../api/config'
 
 export default function StudentDashboard() {
   const [user, setUser] = useState(null)
   const [courses, setCourses] = useState([])
-  const [programs, setPrograms] = useState([])
+  const [allPrograms, setAllPrograms] = useState([]) // All available programs
+  const [allCourses, setAllCourses] = useState([]) // All available courses
+  const [myProgramEnrollments, setMyProgramEnrollments] = useState([]) // Enrolled programs
+  const [myCourseEnrollments, setMyCourseEnrollments] = useState([]) // Enrolled courses
   const [loading, setLoading] = useState(true)
-  const [programsLoading, setProgramsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [browseTab, setBrowseTab] = useState('programs') // 'programs' or 'courses'
+  const [enrollmentsTab, setEnrollmentsTab] = useState('programs') // 'programs' or 'courses'
+  const [enrollmentsOpen, setEnrollmentsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [enrollingId, setEnrollingId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -28,30 +37,57 @@ export default function StudentDashboard() {
     }
     
     setUser(userData)
-    fetchCourses()
-    fetchPrograms()
+    fetchAllData()
   }, [navigate])
 
-  const fetchCourses = async () => {
+  const fetchAllData = async () => {
     try {
-      const data = await getMyCourses()
-      setCourses(data)
+      // Fetch all available programs
+      const programsRes = await getStudentPrograms()
+      setAllPrograms(programsRes)
+      
+      // Fetch my program enrollments
+      const myPrograms = await getMyProgramEnrollments()
+      setMyProgramEnrollments(myPrograms)
+      
+      // Fetch my course enrollments
+      const myCourses = await getMyCourses()
+      setMyCourseEnrollments(myCourses)
+      
+      // Fetch all available courses
+      try {
+        const token = localStorage.getItem('token')
+        const coursesRes = await axios.get(`${API_URL}/courses`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        setAllCourses(coursesRes.data)
+      } catch (e) {
+        console.error('Failed to fetch courses:', e)
+      }
     } catch (error) {
-      console.error('Failed to fetch courses:', error)
+      console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchPrograms = async () => {
+  const handleEnrollProgram = async (programId) => {
+    setEnrollingId(programId)
     try {
-      const data = await getStudentPrograms()
-      setPrograms(data)
+      await enrollInProgram(programId)
+      // Refresh enrollments
+      const myPrograms = await getMyProgramEnrollments()
+      setMyProgramEnrollments(myPrograms)
     } catch (error) {
-      console.error('Failed to fetch programs:', error)
+      console.error('Failed to enroll:', error)
+      alert(error.response?.data?.error || 'Failed to enroll')
     } finally {
-      setProgramsLoading(false)
+      setEnrollingId(null)
     }
+  }
+
+  const isEnrolledInProgram = (programId) => {
+    return myProgramEnrollments.some(e => e.program?.id === programId)
   }
 
   const handleLogout = () => {
@@ -62,8 +98,8 @@ export default function StudentDashboard() {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'programs', label: 'Programs', icon: Folder },
-    { id: 'courses', label: 'My Courses', icon: BookOpen },
+    { id: 'browse', label: 'Browse', icon: Search },
+    { id: 'enrollments', label: 'My Enrollments', icon: CheckCircle, hasDropdown: true },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'grades', label: 'Grades', icon: Award },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -100,17 +136,68 @@ export default function StudentDashboard() {
           <ul className="space-y-2">
             {menuItems.map((item) => (
               <li key={item.id}>
-                <button
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                    activeTab === item.id 
-                      ? 'bg-[#f7941d] text-white' 
-                      : 'text-blue-200 hover:bg-[#2d5a87]'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {sidebarOpen && <span>{item.label}</span>}
-                </button>
+                {item.hasDropdown ? (
+                  // Dropdown menu for My Enrollments
+                  <div>
+                    <button
+                      onClick={() => {
+                        setEnrollmentsOpen(!enrollmentsOpen)
+                        if (!enrollmentsOpen) setActiveTab('enrollments')
+                      }}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition ${
+                        activeTab === 'enrollments' 
+                          ? 'bg-[#f7941d] text-white' 
+                          : 'text-blue-200 hover:bg-[#2d5a87]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>{item.label}</span>}
+                      </div>
+                      {sidebarOpen && (
+                        enrollmentsOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+                      )}
+                    </button>
+                    {enrollmentsOpen && sidebarOpen && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        <button
+                          onClick={() => { setActiveTab('enrollments'); setEnrollmentsTab('programs') }}
+                          className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition ${
+                            activeTab === 'enrollments' && enrollmentsTab === 'programs'
+                              ? 'bg-[#2d5a87] text-white'
+                              : 'text-blue-200 hover:bg-[#2d5a87]'
+                          }`}
+                        >
+                          <Folder className="w-4 h-4" />
+                          Programs
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab('enrollments'); setEnrollmentsTab('courses') }}
+                          className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition ${
+                            activeTab === 'enrollments' && enrollmentsTab === 'courses'
+                              ? 'bg-[#2d5a87] text-white'
+                              : 'text-blue-200 hover:bg-[#2d5a87]'
+                          }`}
+                        >
+                          <BookOpen className="w-4 h-4" />
+                          Courses
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                      activeTab === item.id 
+                        ? 'bg-[#f7941d] text-white' 
+                        : 'text-blue-200 hover:bg-[#2d5a87]'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {sidebarOpen && <span>{item.label}</span>}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -163,14 +250,25 @@ export default function StudentDashboard() {
           {activeTab === 'dashboard' && (
             <>
               {/* Stats Cards */}
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
+              <div className="grid md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#1e3a5f]">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-[#1e3a5f]" />
+                      <Folder className="w-6 h-6 text-[#1e3a5f]" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
+                      <p className="text-2xl font-bold text-gray-900">{myProgramEnrollments.length}</p>
+                      <p className="text-gray-600 text-sm">Enrolled Programs</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <BookOpen className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{myCourseEnrollments.length}</p>
                       <p className="text-gray-600 text-sm">Enrolled Courses</p>
                     </div>
                   </div>
@@ -181,7 +279,7 @@ export default function StudentDashboard() {
                       <Calendar className="w-6 h-6 text-[#f7941d]" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      <p className="text-2xl font-bold text-gray-900">{myProgramEnrollments.filter(e => e.program?.schedule).length}</p>
                       <p className="text-gray-600 text-sm">Upcoming Classes</p>
                     </div>
                   </div>
@@ -297,170 +395,331 @@ export default function StudentDashboard() {
             </>
           )}
 
-          {activeTab === 'courses' && (
+          {/* Browse Tab - Programs & Courses Toggle */}
+          {activeTab === 'browse' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">My Courses</h2>
+              {/* Toggle Tabs */}
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setBrowseTab('programs')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    browseTab === 'programs' 
+                      ? 'bg-[#1e3a5f] text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Folder className="w-4 h-4 inline mr-2" />
+                  Programs
+                </button>
+                <button
+                  onClick={() => setBrowseTab('courses')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    browseTab === 'courses' 
+                      ? 'bg-[#1e3a5f] text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4 inline mr-2" />
+                  Courses
+                </button>
+              </div>
 
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f] mx-auto"></div>
-                </div>
-              ) : courses.length === 0 ? (
-                <div className="text-center py-12">
-                  <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No courses yet</h3>
-                  <p className="text-gray-500">You haven't been enrolled in any courses yet.</p>
-                  <p className="text-gray-500 text-sm mt-2">Contact your teacher to get enrolled.</p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {courses.map((course) => (
-                    <Link
-                      key={course.id}
-                      to={`/student/courses/${course.id}`}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-medium text-gray-900">{course.name}</h3>
-                        <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
-                          course.type === 'RECORDED' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-purple-100 text-purple-700'
-                        }`}>
-                          {course.type === 'RECORDED' ? (
-                            <><Video className="w-3 h-3" /> Recorded</>
+              {/* Browse Programs */}
+              {browseTab === 'programs' && (
+                <>
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f] mx-auto"></div>
+                    </div>
+                  ) : allPrograms.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No programs available</h3>
+                      <p className="text-gray-500">Programs will appear here once they are created.</p>
+                    </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {allPrograms.map((program) => (
+                        <div key={program.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group">
+                          {program.image ? (
+                            <div className="h-40 overflow-hidden">
+                              <img src={program.image} alt={program.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                            </div>
                           ) : (
-                            <><Radio className="w-3 h-3" /> Live</>
+                            <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
+                              <Folder className="w-16 h-16 text-white/50" />
+                            </div>
                           )}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 line-clamp-2 mb-3">{course.description}</p>
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span>{course.modules?.length || 0} modules</span>
-                        <span>
-                          By {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
+                          <div className="p-5">
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
+                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                                program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                                program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                                program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {program.programType === 'WEBINAR' ? 'Webinar' :
+                                 program.programType === 'IN_PERSON' ? 'In-Person' :
+                                 program.programType === 'EVENT' ? 'Event' :
+                                 program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                              </span>
+                            </div>
+                            
+                            {(program.schedule || program.location) && (
+                              <div className="text-xs text-gray-500 mb-3 space-y-1">
+                                {program.schedule && (
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{program.schedule}</span>
+                                  </div>
+                                )}
+                                {program.location && (
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    <span>{program.location}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            <div className="text-gray-600 text-sm mb-4 line-clamp-2"
+                              dangerouslySetInnerHTML={{ __html: program.description || 'No description available' }}
+                            />
+                            
+                            <div className={`rounded-lg p-3 mb-4 ${!program.price || program.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                              <p className={`text-xs font-medium ${!program.price || program.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
+                              {!program.price || program.price === 0 ? (
+                                <p className="text-2xl font-bold text-green-600">FREE</p>
+                              ) : (
+                                <p className="text-2xl font-bold text-[#1e3a5f]">
+                                  ₱{program.price?.toLocaleString()}
+                                  <span className="text-sm font-normal text-gray-500 ml-1">
+                                    {program.priceType === 'MONTHLY' ? '/month' : program.priceType === 'YEARLY' ? '/year' : ''}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+                            
+                            {isEnrolledInProgram(program.id) ? (
+                              <button disabled className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+                                <CheckCircle className="w-4 h-4" />
+                                Enrolled
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleEnrollProgram(program.id)}
+                                disabled={enrollingId === program.id}
+                                className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                              >
+                                {enrollingId === program.id ? 'Enrolling...' : 'Enroll Now'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Browse Courses */}
+              {browseTab === 'courses' && (
+                <>
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f] mx-auto"></div>
+                    </div>
+                  ) : allCourses.length === 0 ? (
+                    <div className="text-center py-12">
+                      <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No courses available</h3>
+                      <p className="text-gray-500">Courses will appear here once they are created.</p>
+                    </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {allCourses.map((course) => (
+                        <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-medium text-gray-900">{course.name}</h3>
+                            <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                              course.type === 'RECORDED' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {course.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3">{course.description}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                            <span>{course.modules?.length || 0} modules</span>
+                            <span>By {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}</span>
+                          </div>
+                          <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition">
+                            Enroll Now
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {activeTab === 'programs' && (
+          {/* My Enrollments Tab */}
+          {activeTab === 'enrollments' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Available Programs</h2>
-              
-              {programsLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f] mx-auto"></div>
-                </div>
-              ) : programs.length === 0 ? (
-                <div className="text-center py-12">
-                  <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No programs available</h3>
-                  <p className="text-gray-500">Programs will appear here once they are created.</p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {programs.map((program) => (
-                    <div key={program.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group">
-                      {/* Program Image or Default Header */}
-                      {program.image ? (
-                        <div className="h-40 overflow-hidden">
-                          <img 
-                            src={program.image} 
-                            alt={program.name} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
-                          <Folder className="w-16 h-16 text-white/50" />
-                        </div>
-                      )}
-                      <div className="p-5">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
-                            program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
-                            program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
-                            program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {program.programType === 'WEBINAR' ? 'Webinar' :
-                             program.programType === 'IN_PERSON' ? 'In-Person' :
-                             program.programType === 'EVENT' ? 'Event' :
-                             program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
-                          </span>
-                        </div>
-                        
-                        {/* Schedule & Location */}
-                        {(program.schedule || program.location) && (
-                          <div className="text-xs text-gray-500 mb-3 space-y-1">
-                            {program.schedule && (
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                <span>{program.schedule}</span>
-                              </div>
-                            )}
-                            {program.location && (
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                <span>{program.location}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        <div 
-                          className="text-gray-600 text-sm mb-4 line-clamp-2 rich-text-content"
-                          dangerouslySetInnerHTML={{ __html: program.description || 'No description available' }}
-                        />
-                        
-                        {/* Price - Prominently displayed */}
-                        <div className={`rounded-lg p-3 mb-4 ${!program.price || program.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-                          <p className={`text-xs font-medium ${!program.price || program.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
-                          {!program.price || program.price === 0 ? (
-                            <p className="text-2xl font-bold text-green-600">FREE</p>
-                          ) : (
-                            <>
-                              <p className="text-2xl font-bold text-[#1e3a5f]">
-                                ₱{program.price?.toLocaleString()}
-                                <span className="text-sm font-normal text-gray-500 ml-1">
-                                  {program.priceType === 'MONTHLY' ? '/month' : program.priceType === 'YEARLY' ? '/year' : ''}
-                                </span>
-                              </p>
-                              {program.priceType !== 'ONE_TIME' && (
-                                <p className="text-xs text-gray-500 mt-1">Recurring payment</p>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        
-                        {/* Meeting Link for enrolled students */}
-                        {program.meetingLink && (
-                          <a 
-                            href={program.meetingLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="w-full mb-2 flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 rounded-lg font-semibold transition"
-                          >
-                            <Video className="w-4 h-4" />
-                            Join Meeting
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                        
-                        <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition">
-                          Enroll Now
-                        </button>
-                      </div>
+              {/* Toggle Tabs */}
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setEnrollmentsTab('programs')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    enrollmentsTab === 'programs' 
+                      ? 'bg-[#1e3a5f] text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Folder className="w-4 h-4 inline mr-2" />
+                  Programs ({myProgramEnrollments.length})
+                </button>
+                <button
+                  onClick={() => setEnrollmentsTab('courses')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    enrollmentsTab === 'courses' 
+                      ? 'bg-[#1e3a5f] text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4 inline mr-2" />
+                  Courses ({myCourseEnrollments.length})
+                </button>
+              </div>
+
+              {/* My Enrolled Programs */}
+              {enrollmentsTab === 'programs' && (
+                <>
+                  {myProgramEnrollments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled programs</h3>
+                      <p className="text-gray-500 mb-4">You haven't enrolled in any programs yet.</p>
+                      <button 
+                        onClick={() => { setActiveTab('browse'); setBrowseTab('programs') }}
+                        className="text-[#f7941d] hover:underline font-medium"
+                      >
+                        Browse Programs →
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {myProgramEnrollments.map((enrollment) => {
+                        const program = enrollment.program
+                        return (
+                          <div key={enrollment.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group">
+                            {program.image ? (
+                              <div className="h-40 overflow-hidden">
+                                <img src={program.image} alt={program.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
+                                <Folder className="w-16 h-16 text-white/50" />
+                              </div>
+                            )}
+                            <div className="p-5">
+                              <div className="flex items-start justify-between mb-2">
+                                <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                                  program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                                  program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                                  program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {program.programType === 'WEBINAR' ? 'Webinar' :
+                                   program.programType === 'IN_PERSON' ? 'In-Person' :
+                                   program.programType === 'EVENT' ? 'Event' :
+                                   program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                                </span>
+                              </div>
+                              
+                              {(program.schedule || program.location) && (
+                                <div className="text-xs text-gray-500 mb-3 space-y-1">
+                                  {program.schedule && (
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      <span>{program.schedule}</span>
+                                    </div>
+                                  )}
+                                  {program.location && (
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      <span>{program.location}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {program.meetingLink && (
+                                <a 
+                                  href={program.meetingLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 rounded-lg font-semibold transition"
+                                >
+                                  <Video className="w-4 h-4" />
+                                  Join Meeting
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* My Enrolled Courses */}
+              {enrollmentsTab === 'courses' && (
+                <>
+                  {myCourseEnrollments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled courses</h3>
+                      <p className="text-gray-500 mb-4">You haven't enrolled in any courses yet.</p>
+                      <button 
+                        onClick={() => { setActiveTab('browse'); setBrowseTab('courses') }}
+                        className="text-[#f7941d] hover:underline font-medium"
+                      >
+                        Browse Courses →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {myCourseEnrollments.map((course) => (
+                        <Link
+                          key={course.id}
+                          to={`/student/courses/${course.id}`}
+                          className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-medium text-gray-900">{course.name}</h3>
+                            <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                              course.type === 'RECORDED' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {course.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3">{course.description}</p>
+                          <div className="text-xs text-gray-400">
+                            {course.modules?.length || 0} modules
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

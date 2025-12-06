@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import programRoutes from './routes/programs.js'
+import programEnrollmentRoutes from './routes/programEnrollments.js'
 import courseRoutes from './routes/courses.js'
 import moduleRoutes from './routes/modules.js'
 import lessonRoutes from './routes/lessons.js'
@@ -30,6 +31,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/programs', programRoutes)
+app.use('/api/program-enrollments', programEnrollmentRoutes)
 app.use('/api/courses', courseRoutes)
 app.use('/api/modules', moduleRoutes)
 app.use('/api/lessons', lessonRoutes)
