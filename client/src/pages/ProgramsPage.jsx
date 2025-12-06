@@ -4,8 +4,7 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import API_URL from '../api/config'
 
 export default function ProgramsPage() {
   const [activeTab, setActiveTab] = useState('programs')
@@ -22,8 +21,8 @@ export default function ProgramsPage() {
       setLoading(true)
       // Fetch public programs and courses
       const [programsRes, coursesRes] = await Promise.all([
-        axios.get(`${API_URL}/api/programs/public`).catch(() => ({ data: [] })),
-        axios.get(`${API_URL}/api/courses/public`).catch(() => ({ data: [] }))
+        axios.get(`${API_URL}/programs/public`).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/courses/public`).catch(() => ({ data: [] }))
       ])
       setPrograms(programsRes.data || [])
       setCourses(coursesRes.data || [])
