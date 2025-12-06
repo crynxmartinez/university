@@ -59,10 +59,10 @@ export default function CreateLesson() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to={`/teacher/courses/${courseId}`} className="flex items-center gap-2 text-green-200 hover:text-white transition">
+            <Link to={`/teacher/courses/${courseId}`} className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Course
             </Link>
@@ -93,7 +93,7 @@ export default function CreateLesson() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Lesson 1: Introduction"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                 required
               />
             </div>
@@ -108,7 +108,7 @@ export default function CreateLesson() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what this lesson covers..."
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
               />
             </div>
 
@@ -122,7 +122,7 @@ export default function CreateLesson() {
                 onChange={(e) => setMaterials(e.target.value)}
                 placeholder="Add links to PDF, documents, or other materials (one per line)"
                 rows={2}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
               />
             </div>
 
@@ -140,7 +140,7 @@ export default function CreateLesson() {
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Paste a YouTube link. You can make the video unlisted/private.
@@ -163,7 +163,7 @@ export default function CreateLesson() {
                     value={zoomLink}
                     onChange={(e) => setZoomLink(e.target.value)}
                     placeholder="https://zoom.us/j/... or https://meet.google.com/..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                   />
                 </div>
                 <div>
@@ -174,7 +174,7 @@ export default function CreateLesson() {
                     type="datetime-local"
                     value={scheduledAt}
                     onChange={(e) => setScheduledAt(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                   />
                 </div>
               </>
@@ -197,7 +197,7 @@ export default function CreateLesson() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Save Lesson'}
               </button>

@@ -28,10 +28,10 @@ export default function CreateModule() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Link to={`/teacher/courses/${courseId}`} className="flex items-center gap-2 text-green-200 hover:text-white transition">
+            <Link to={`/teacher/courses/${courseId}`} className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Course
             </Link>
@@ -54,7 +54,7 @@ export default function CreateModule() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Introduction to the Course"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                 required
               />
             </div>
@@ -75,7 +75,7 @@ export default function CreateModule() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Add Module'}
               </button>

@@ -70,7 +70,7 @@ export default function StudentCourseView() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
       </div>
     )
   }
@@ -80,10 +80,10 @@ export default function StudentCourseView() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to="/student" className="flex items-center gap-2 text-green-200 hover:text-white transition">
+            <Link to="/student" className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Dashboard
             </Link>
@@ -133,7 +133,7 @@ export default function StudentCourseView() {
                               onClick={() => setSelectedLesson(lesson)}
                               className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition text-sm ${
                                 selectedLesson?.id === lesson.id
-                                  ? 'bg-green-100 text-green-800'
+                                  ? 'bg-emerald-100 text-emerald-800'
                                   : 'hover:bg-gray-100 text-gray-700'
                               }`}
                             >
@@ -174,7 +174,7 @@ export default function StudentCourseView() {
                           href={selectedLesson.videoUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg"
+                          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg"
                         >
                           <ExternalLink className="w-5 h-5" />
                           Open Video
@@ -235,7 +235,7 @@ export default function StudentCourseView() {
                               href={link.trim()}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block text-green-700 hover:text-green-800 text-sm mb-1 truncate"
+                              className="block text-emerald-700 hover:text-emerald-800 text-sm mb-1 truncate"
                             >
                               {link.trim()}
                             </a>

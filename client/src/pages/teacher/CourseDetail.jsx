@@ -40,7 +40,7 @@ export default function CourseDetail() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
       </div>
     )
   }
@@ -52,10 +52,10 @@ export default function CourseDetail() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to="/teacher" className="flex items-center gap-2 text-green-200 hover:text-white transition">
+            <Link to="/teacher" className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Dashboard
             </Link>
@@ -114,7 +114,7 @@ export default function CourseDetail() {
             <h2 className="text-xl font-semibold text-gray-900">Course Content</h2>
             <Link
               to={`/teacher/courses/${id}/modules/create`}
-              className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition text-sm"
+              className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg transition text-sm"
             >
               <Plus className="w-4 h-4" />
               Add Module
@@ -128,7 +128,7 @@ export default function CourseDetail() {
               <p className="text-gray-500 mb-4">Start building your course by adding a module</p>
               <Link
                 to={`/teacher/courses/${id}/modules/create`}
-                className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition"
+                className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg transition"
               >
                 <Plus className="w-4 h-4" />
                 Add First Module
@@ -183,7 +183,7 @@ export default function CourseDetail() {
                       )}
                       <Link
                         to={`/teacher/courses/${id}/modules/${module.id}/lessons/create`}
-                        className="flex items-center gap-2 text-green-700 hover:text-green-800 text-sm font-medium"
+                        className="flex items-center gap-2 text-emerald-700 hover:text-emerald-800 text-sm font-medium"
                       >
                         <Plus className="w-4 h-4" />
                         Add Lesson

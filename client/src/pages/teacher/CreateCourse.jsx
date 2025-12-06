@@ -29,10 +29,10 @@ export default function CreateCourse() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Link to="/teacher" className="flex items-center gap-2 text-green-200 hover:text-white transition">
+            <Link to="/teacher" className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Dashboard
             </Link>
@@ -56,7 +56,7 @@ export default function CreateCourse() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Introduction to Arabic"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                 required
               />
             </div>
@@ -71,7 +71,7 @@ export default function CreateCourse() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what students will learn in this course..."
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
               />
             </div>
 
@@ -86,17 +86,17 @@ export default function CreateCourse() {
                   onClick={() => setType('RECORDED')}
                   className={`p-4 border-2 rounded-lg text-left transition ${
                     type === 'RECORDED'
-                      ? 'border-green-500 bg-green-50'
+                      ? 'border-emerald-500 bg-emerald-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      type === 'RECORDED' ? 'bg-green-100' : 'bg-gray-100'
+                      type === 'RECORDED' ? 'bg-emerald-100' : 'bg-gray-100'
                     }`}>
-                      <Video className={`w-5 h-5 ${type === 'RECORDED' ? 'text-green-600' : 'text-gray-500'}`} />
+                      <Video className={`w-5 h-5 ${type === 'RECORDED' ? 'text-emerald-600' : 'text-gray-500'}`} />
                     </div>
-                    <span className={`font-medium ${type === 'RECORDED' ? 'text-green-700' : 'text-gray-700'}`}>
+                    <span className={`font-medium ${type === 'RECORDED' ? 'text-emerald-700' : 'text-gray-700'}`}>
                       Recorded Video
                     </span>
                   </div>
@@ -148,7 +148,7 @@ export default function CreateCourse() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create Course'}
               </button>
