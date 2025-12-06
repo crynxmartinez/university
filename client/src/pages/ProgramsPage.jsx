@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, GraduationCap, Folder, Clock, ArrowRight } from 'lucide-react'
+import { BookOpen, GraduationCap, Folder, Clock, ArrowRight, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
@@ -11,6 +11,7 @@ export default function ProgramsPage() {
   const [programs, setPrograms] = useState([])
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedProgram, setSelectedProgram] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -121,12 +122,12 @@ export default function ProgramsPage() {
                           <span>{program.duration}</span>
                         </div>
                       )}
-                      <Link 
-                        to="/login" 
+                      <button 
+                        onClick={() => setSelectedProgram(program)}
                         className="inline-flex items-center gap-2 text-[#f7941d] font-semibold hover:gap-3 transition-all"
                       >
                         Learn More <ArrowRight className="w-4 h-4" />
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -196,6 +197,73 @@ export default function ProgramsPage() {
       </section>
 
       <Footer />
+
+      {/* Program Details Modal */}
+      {selectedProgram && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header with Image */}
+            {selectedProgram.image ? (
+              <div className="h-48 relative">
+                <img 
+                  src={selectedProgram.image} 
+                  alt={selectedProgram.name} 
+                  className="w-full h-full object-cover"
+                />
+                <button 
+                  onClick={() => setSelectedProgram(null)}
+                  className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            ) : (
+              <div className="h-32 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] relative flex items-center justify-center">
+                <Folder className="w-16 h-16 text-white/50" />
+                <button 
+                  onClick={() => setSelectedProgram(null)}
+                  className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-2 transition"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            )}
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-12rem)]">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedProgram.name}</h2>
+              
+              {selectedProgram.duration && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                  <Clock className="w-4 h-4" />
+                  <span>{selectedProgram.duration}</span>
+                </div>
+              )}
+              
+              <div className="prose prose-gray max-w-none mb-6">
+                <p className="text-gray-600 whitespace-pre-wrap">
+                  {selectedProgram.description || 'No description available for this program.'}
+                </p>
+              </div>
+              
+              <div className="border-t pt-6 flex flex-col sm:flex-row gap-3">
+                <Link 
+                  to="/signup" 
+                  className="flex-1 bg-[#f7941d] hover:bg-[#e8850f] text-white py-3 rounded-lg font-semibold text-center transition"
+                >
+                  Sign Up to Enroll
+                </Link>
+                <button 
+                  onClick={() => setSelectedProgram(null)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
