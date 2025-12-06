@@ -15,10 +15,13 @@ router.get('/public', async (req, res) => {
         id: true,
         name: true,
         description: true,
+        programType: true,
+        schedule: true,
+        location: true,
         image: true,
         isActive: true,
         createdAt: true
-        // price is NOT included for public view
+        // price and meetingLink are NOT included for public view
       }
     })
 
@@ -56,8 +59,12 @@ router.get('/student', async (req, res) => {
         id: true,
         name: true,
         description: true,
-        price: true, // Include price for students
+        price: true,
         priceType: true,
+        programType: true,
+        schedule: true,
+        location: true,
+        meetingLink: true, // Students can see meeting link
         image: true,
         isActive: true,
         createdAt: true
@@ -122,7 +129,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only admins can create programs' })
     }
 
-    const { name, description, price, priceType, image, isActive } = req.body
+    const { name, description, price, priceType, programType, schedule, location, meetingLink, image, isActive } = req.body
 
     if (!name) {
       return res.status(400).json({ error: 'Program name is required' })
@@ -134,6 +141,10 @@ router.post('/', authenticate, async (req, res) => {
         description: description || '',
         price: parseFloat(price) || 0,
         priceType: priceType || 'ONE_TIME',
+        programType: programType || 'ONLINE',
+        schedule: schedule || null,
+        location: location || null,
+        meetingLink: meetingLink || null,
         image: image || null,
         isActive: isActive !== undefined ? isActive : true
       }
@@ -154,13 +165,17 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const { id } = req.params
-    const { name, description, price, priceType, image, isActive } = req.body
+    const { name, description, price, priceType, programType, schedule, location, meetingLink, image, isActive } = req.body
 
     const updateData = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
     if (price !== undefined) updateData.price = parseFloat(price)
     if (priceType !== undefined) updateData.priceType = priceType
+    if (programType !== undefined) updateData.programType = programType
+    if (schedule !== undefined) updateData.schedule = schedule
+    if (location !== undefined) updateData.location = location
+    if (meetingLink !== undefined) updateData.meetingLink = meetingLink
     if (image !== undefined) updateData.image = image
     if (isActive !== undefined) updateData.isActive = isActive
 

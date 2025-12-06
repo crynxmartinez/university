@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 
@@ -381,7 +381,40 @@ export default function StudentDashboard() {
                         </div>
                       )}
                       <div className="p-5">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">{program.name}</h3>
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                            program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                            program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                            program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {program.programType === 'WEBINAR' ? 'Webinar' :
+                             program.programType === 'IN_PERSON' ? 'In-Person' :
+                             program.programType === 'EVENT' ? 'Event' :
+                             program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                          </span>
+                        </div>
+                        
+                        {/* Schedule & Location */}
+                        {(program.schedule || program.location) && (
+                          <div className="text-xs text-gray-500 mb-3 space-y-1">
+                            {program.schedule && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                <span>{program.schedule}</span>
+                              </div>
+                            )}
+                            {program.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                <span>{program.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
                         <div 
                           className="text-gray-600 text-sm mb-4 line-clamp-2 rich-text-content"
                           dangerouslySetInnerHTML={{ __html: program.description || 'No description available' }}
@@ -406,6 +439,20 @@ export default function StudentDashboard() {
                             </>
                           )}
                         </div>
+                        
+                        {/* Meeting Link for enrolled students */}
+                        {program.meetingLink && (
+                          <a 
+                            href={program.meetingLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full mb-2 flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 rounded-lg font-semibold transition"
+                          >
+                            <Video className="w-4 h-4" />
+                            Join Meeting
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
                         
                         <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition">
                           Enroll Now

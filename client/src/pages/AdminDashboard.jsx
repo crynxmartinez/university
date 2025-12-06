@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image } from 'lucide-react'
+import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image, MapPin, Video, Calendar, Link as LinkIcon } from 'lucide-react'
 import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
 import { getPrograms, createProgram, updateProgram, deleteProgram } from '../api/programs'
 import ReactQuill from 'react-quill'
@@ -45,6 +45,10 @@ export default function AdminDashboard() {
     description: '',
     price: '',
     priceType: 'ONE_TIME',
+    programType: 'ONLINE',
+    schedule: '',
+    location: '',
+    meetingLink: '',
     image: '',
     isActive: true
   })
@@ -138,6 +142,10 @@ export default function AdminDashboard() {
       description: '',
       price: '',
       priceType: 'ONE_TIME',
+      programType: 'ONLINE',
+      schedule: '',
+      location: '',
+      meetingLink: '',
       image: '',
       isActive: true
     })
@@ -152,6 +160,10 @@ export default function AdminDashboard() {
       description: program.description || '',
       price: program.price?.toString() || '',
       priceType: program.priceType || 'ONE_TIME',
+      programType: program.programType || 'ONLINE',
+      schedule: program.schedule || '',
+      location: program.location || '',
+      meetingLink: program.meetingLink || '',
       image: program.image || '',
       isActive: program.isActive
     })
@@ -973,6 +985,72 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Program Type</label>
+                <select
+                  value={programForm.programType}
+                  onChange={(e) => setProgramForm({ ...programForm, programType: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                >
+                  <option value="ONLINE">Online Course</option>
+                  <option value="WEBINAR">Webinar (Live)</option>
+                  <option value="IN_PERSON">In-Person Class</option>
+                  <option value="EVENT">Event</option>
+                  <option value="HYBRID">Hybrid (Online + In-Person)</option>
+                </select>
+              </div>
+              
+              {/* Schedule - show for webinar, in-person, event, hybrid */}
+              {programForm.programType !== 'ONLINE' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Schedule
+                  </label>
+                  <input
+                    type="text"
+                    value={programForm.schedule}
+                    onChange={(e) => setProgramForm({ ...programForm, schedule: e.target.value })}
+                    placeholder="e.g., Every Tuesday, 7:00 PM or March 15, 2025"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+              )}
+              
+              {/* Location - show for in-person, event, hybrid */}
+              {['IN_PERSON', 'EVENT', 'HYBRID'].includes(programForm.programType) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <MapPin className="w-4 h-4 inline mr-1" />
+                    Location / Address
+                  </label>
+                  <input
+                    type="text"
+                    value={programForm.location}
+                    onChange={(e) => setProgramForm({ ...programForm, location: e.target.value })}
+                    placeholder="e.g., Masjid Al-Noor, 123 Main St, Brooke's Point"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+              )}
+              
+              {/* Meeting Link - show for webinar, online, hybrid */}
+              {['WEBINAR', 'ONLINE', 'HYBRID'].includes(programForm.programType) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Video className="w-4 h-4 inline mr-1" />
+                    Meeting Link (Zoom/Google Meet)
+                  </label>
+                  <input
+                    type="url"
+                    value={programForm.meetingLink}
+                    onChange={(e) => setProgramForm({ ...programForm, meetingLink: e.target.value })}
+                    placeholder="https://zoom.us/j/123456789"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
                 <input

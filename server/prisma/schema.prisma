@@ -40,6 +40,14 @@ enum PriceType {
   YEARLY
 }
 
+enum ProgramType {
+  WEBINAR
+  IN_PERSON
+  ONLINE
+  EVENT
+  HYBRID
+}
+
 // ============ MODELS ============
 
 // User - for authentication
@@ -126,17 +134,21 @@ model IdSequence {
 
 // ============ PROGRAM MODELS ============
 
-// Program - created by admin
+// Program - created by admin (initiatives like webinars, events, classes)
 model Program {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   description String?
-  price       Float     @default(0)
-  priceType   PriceType @default(ONE_TIME)
-  image       String?   // URL for card image
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  price       Float       @default(0)
+  priceType   PriceType   @default(ONE_TIME)
+  programType ProgramType @default(ONLINE)
+  schedule    String?     // e.g., "Every Tuesday, 7:00 PM" or "March 15, 2025"
+  location    String?     // Address for in-person programs
+  meetingLink String?     // Zoom/Meet link for webinars
+  image       String?     // URL for card image
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   
   courses     Course[]
 }

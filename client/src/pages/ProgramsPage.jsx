@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, GraduationCap, Folder, ArrowRight, X } from 'lucide-react'
+import { BookOpen, GraduationCap, Folder, ArrowRight, X, Calendar, MapPin, Video, Globe } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
@@ -226,6 +226,45 @@ export default function ProgramsPage() {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-12rem)]">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedProgram.name}</h2>
+              
+              {/* Program Type Badge */}
+              <div className="mb-4">
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                  selectedProgram.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                  selectedProgram.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                  selectedProgram.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                  selectedProgram.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {selectedProgram.programType === 'WEBINAR' && <Video className="w-3 h-3" />}
+                  {selectedProgram.programType === 'IN_PERSON' && <MapPin className="w-3 h-3" />}
+                  {selectedProgram.programType === 'EVENT' && <Calendar className="w-3 h-3" />}
+                  {selectedProgram.programType === 'HYBRID' && <Globe className="w-3 h-3" />}
+                  {selectedProgram.programType === 'ONLINE' && <BookOpen className="w-3 h-3" />}
+                  {selectedProgram.programType === 'WEBINAR' ? 'Webinar' :
+                   selectedProgram.programType === 'IN_PERSON' ? 'In-Person' :
+                   selectedProgram.programType === 'EVENT' ? 'Event' :
+                   selectedProgram.programType === 'HYBRID' ? 'Hybrid' : 'Online Course'}
+                </span>
+              </div>
+
+              {/* Schedule & Location Info */}
+              {(selectedProgram.schedule || selectedProgram.location) && (
+                <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+                  {selectedProgram.schedule && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Calendar className="w-4 h-4 text-[#1e3a5f]" />
+                      <span>{selectedProgram.schedule}</span>
+                    </div>
+                  )}
+                  {selectedProgram.location && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <MapPin className="w-4 h-4 text-[#1e3a5f]" />
+                      <span>{selectedProgram.location}</span>
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div 
                 className="rich-text-content text-gray-600 mb-6"
