@@ -5,6 +5,7 @@ import userRoutes from './routes/users.js'
 import courseRoutes from './routes/courses.js'
 import moduleRoutes from './routes/modules.js'
 import lessonRoutes from './routes/lessons.js'
+import enrollmentRoutes from './routes/enrollments.js'
 
 dotenv.config()
 
@@ -30,6 +31,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/courses', courseRoutes)
 app.use('/api/modules', moduleRoutes)
 app.use('/api/lessons', lessonRoutes)
+app.use('/api/enrollments', enrollmentRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

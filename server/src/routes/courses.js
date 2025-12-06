@@ -80,7 +80,8 @@ router.get('/:id', authenticate, async (req, res) => {
             }
           },
           orderBy: { order: 'asc' }
-        }
+        },
+        enrollments: true
       }
     })
 

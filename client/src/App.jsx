@@ -8,6 +8,9 @@ import CreateCourse from './pages/teacher/CreateCourse'
 import CourseDetail from './pages/teacher/CourseDetail'
 import CreateModule from './pages/teacher/CreateModule'
 import CreateLesson from './pages/teacher/CreateLesson'
+import EnrollStudents from './pages/teacher/EnrollStudents'
+import StudentDashboard from './pages/student/StudentDashboard'
+import StudentCourseView from './pages/student/StudentCourseView'
 
 function App() {
   return (
@@ -21,6 +24,9 @@ function App() {
       <Route path="/teacher/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/courses/:id/modules/create" element={<CreateModule />} />
       <Route path="/teacher/courses/:id/modules/:moduleId/lessons/create" element={<CreateLesson />} />
+      <Route path="/teacher/courses/:id/students" element={<EnrollStudents />} />
+      <Route path="/student" element={<StudentDashboard />} />
+      <Route path="/student/courses/:id" element={<StudentCourseView />} />
     </Routes>
   )
 }

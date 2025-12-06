@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, ChevronDown, ChevronRight, Video, Radio, FileText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, ChevronDown, ChevronRight, Video, Radio, FileText, Trash2, Users } from 'lucide-react'
 import { getCourse } from '../../api/courses'
 
 export default function CourseDetail() {
@@ -88,6 +88,23 @@ export default function CourseDetail() {
                 <Radio className="w-5 h-5 text-purple-600" />
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Manage Students */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Students</h2>
+              <p className="text-sm text-gray-500">{course.enrollments?.length || 0} enrolled</p>
+            </div>
+            <Link
+              to={`/teacher/courses/${id}/students`}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition text-sm"
+            >
+              <Users className="w-4 h-4" />
+              Manage Students
+            </Link>
           </div>
         </div>
 
