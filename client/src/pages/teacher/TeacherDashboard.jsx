@@ -46,7 +46,7 @@ export default function TeacherDashboard() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
       </div>
     )
   }
@@ -54,25 +54,24 @@ export default function TeacherDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <span className="text-green-800 font-bold text-lg">AU</span>
-              </div>
-              <div>
-                <span className="text-lg font-semibold">Assalaam University</span>
-                <span className="text-green-200 text-sm ml-2">Teacher Portal</span>
-              </div>
+              <img 
+                src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
+                alt="ILM Learning Center" 
+                className="h-10"
+              />
+              <span className="text-emerald-200 text-sm ml-2">Teacher Portal</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-green-200">
+              <span className="text-emerald-200">
                 {user.profile?.firstName} {user.profile?.lastName}
               </span>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 bg-green-700 hover:bg-green-600 px-4 py-2 rounded-lg transition"
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-600 px-4 py-2 rounded-lg transition"
               >
                 <LogOut className="w-4 h-4" />
                 Logout
@@ -93,8 +92,8 @@ export default function TeacherDashboard() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-green-700" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-emerald-700" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
@@ -121,7 +120,7 @@ export default function TeacherDashboard() {
             <h2 className="text-xl font-semibold text-gray-900">My Courses</h2>
             <Link
               to="/teacher/courses/create"
-              className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition"
+              className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg transition"
             >
               <Plus className="w-4 h-4" />
               Create Course
@@ -135,7 +134,7 @@ export default function TeacherDashboard() {
               <p className="text-gray-500 mb-4">Create your first course to get started</p>
               <Link
                 to="/teacher/courses/create"
-                className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-lg transition"
+                className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg transition"
               >
                 <Plus className="w-5 h-5" />
                 Create Course

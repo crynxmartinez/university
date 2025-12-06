@@ -47,11 +47,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-700 to-green-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md relative">
         <Link 
           to="/" 
-          className="inline-flex items-center gap-2 text-green-200 hover:text-white mb-6 transition"
+          className="inline-flex items-center gap-2 text-emerald-200 hover:text-white mb-6 transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Home
@@ -59,9 +59,11 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-green-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold text-2xl">AU</span>
-            </div>
+            <img 
+              src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
+              alt="ILM Learning Center" 
+              className="h-14 mx-auto mb-4 bg-emerald-800 p-2 rounded-lg"
+            />
             <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
             <p className="text-gray-600 mt-1">Sign in to your account</p>
           </div>
@@ -77,7 +79,7 @@ export default function LoginPage() {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Enter your User ID"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
                 required
               />
             </div>
@@ -93,7 +95,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition pr-12"
                   required
                 />
                 <button
@@ -115,24 +117,15 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
-              New student?{' '}
-              <Link to="/register" className="text-green-700 hover:text-green-800 font-medium">
-                Register here
-              </Link>
-            </p>
-          </div>
         </div>
 
-        <p className="text-center text-green-200 text-sm mt-6">
-          © 2025 Assalaam University
+        <p className="text-center text-emerald-200 text-sm mt-6">
+          © 2025 ILM Learning Center Inc.
         </p>
       </div>
     </div>

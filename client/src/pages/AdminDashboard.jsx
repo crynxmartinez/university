@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
       </div>
     )
   }
@@ -82,25 +82,24 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-green-800 text-white shadow-lg">
+      <header className="bg-emerald-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <span className="text-green-800 font-bold text-lg">AU</span>
-              </div>
-              <div>
-                <span className="text-lg font-semibold">Assalaam University</span>
-                <span className="text-green-200 text-sm ml-2">Admin Panel</span>
-              </div>
+              <img 
+                src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
+                alt="ILM Learning Center" 
+                className="h-10"
+              />
+              <span className="text-emerald-200 text-sm ml-2">Admin Panel</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-green-200">
+              <span className="text-emerald-200">
                 {user.profile?.firstName} {user.profile?.lastName}
               </span>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 bg-green-700 hover:bg-green-600 px-4 py-2 rounded-lg transition"
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-600 px-4 py-2 rounded-lg transition"
               >
                 <LogOut className="w-4 h-4" />
                 Logout
@@ -121,8 +120,8 @@ export default function AdminDashboard() {
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-700" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-emerald-700" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">0</p>
@@ -161,8 +160,8 @@ export default function AdminDashboard() {
             onClick={() => setShowModal(true)}
             className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-left w-full md:w-auto"
           >
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <UserPlus className="w-5 h-5 text-green-700" />
+            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <UserPlus className="w-5 h-5 text-emerald-700" />
             </div>
             <div>
               <p className="font-medium text-gray-900">Create Account</p>
@@ -232,7 +231,7 @@ export default function AdminDashboard() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create Account'}
               </button>
@@ -246,8 +245,8 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-emerald-600" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Created!</h2>
               <p className="text-gray-600 mb-6">Save these credentials - they won't be shown again.</p>
@@ -262,7 +261,7 @@ export default function AdminDashboard() {
                     onClick={() => copyToClipboard(createdUser.userId, 'userId')}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    {copied === 'userId' ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                    {copied === 'userId' ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
                 <div className="flex justify-between items-center">
@@ -274,7 +273,7 @@ export default function AdminDashboard() {
                     onClick={() => copyToClipboard(createdUser.email, 'email')}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    {copied === 'email' ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                    {copied === 'email' ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
                 <div className="flex justify-between items-center">
@@ -286,7 +285,7 @@ export default function AdminDashboard() {
                     onClick={() => copyToClipboard('passwordtest123', 'password')}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    {copied === 'password' ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                    {copied === 'password' ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">User will be prompted to change password on first login.</p>
@@ -294,7 +293,7 @@ export default function AdminDashboard() {
 
               <button
                 onClick={() => { setShowSuccess(false); setCreatedUser(null) }}
-                className="w-full mt-6 bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition"
+                className="w-full mt-6 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition"
               >
                 Done
               </button>
