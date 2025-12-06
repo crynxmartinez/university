@@ -681,18 +681,16 @@ export default function StudentDashboard() {
               {/* My Enrolled Courses */}
               {enrollmentsTab === 'courses' && (
                 <>
-                  {/* Calendar Button - Top Right */}
-                  {myCourseEnrollments.some(c => c.type === 'LIVE' && c.schedule) && (
-                    <div className="flex justify-end mb-4">
-                      <button
-                        onClick={() => setShowCalendarModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
-                      >
-                        <Calendar className="w-4 h-4" />
-                        View Schedule
-                      </button>
-                    </div>
-                  )}
+                  {/* Calendar Button - Always visible */}
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => setShowCalendarModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      View Schedule
+                    </button>
+                  </div>
 
                   {myCourseEnrollments.length === 0 ? (
                     <div className="text-center py-12">
