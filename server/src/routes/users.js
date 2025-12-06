@@ -7,11 +7,14 @@ const router = express.Router()
 // POST /api/users/create - Create a new account (Registrar, Teacher, or Student)
 router.post('/create', async (req, res) => {
   try {
-    const { firstName, lastName, password, role } = req.body
+    const { firstName, lastName, role } = req.body
 
-    if (!firstName || !lastName || !password || !role) {
-      return res.status(400).json({ error: 'First name, last name, password, and role are required' })
+    if (!firstName || !lastName || !role) {
+      return res.status(400).json({ error: 'First name, last name, and role are required' })
     }
+
+    // Default password for all new accounts
+    const defaultPassword = 'passwordtest123'
 
     const validRoles = ['REGISTRAR', 'TEACHER', 'STUDENT']
     if (!validRoles.includes(role)) {
@@ -58,7 +61,7 @@ router.post('/create', async (req, res) => {
     const email = `${rolePrefix}${paddedNumber}_${firstName.toLowerCase()}@ilmlearningcenter.com`
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10)
 
     // Create user with profile
     const user = await prisma.user.create({
@@ -67,7 +70,7 @@ router.post('/create', async (req, res) => {
         email,
         password: hashedPassword,
         role,
-        mustChangePassword: false,
+        mustChangePassword: true,
         profileComplete: true,
         profile: {
           create: {

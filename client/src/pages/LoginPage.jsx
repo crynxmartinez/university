@@ -23,6 +23,12 @@ export default function LoginPage() {
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
       
+      // Check if user must change password first
+      if (data.user.mustChangePassword) {
+        navigate('/change-password')
+        return
+      }
+      
       // Redirect based on role
       if (data.user.role === 'SUPER_ADMIN') {
         navigate('/admin')

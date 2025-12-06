@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Users, UserPlus, Settings, X, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { LogOut, Users, UserPlus, Settings, X, Copy, Check } from 'lucide-react'
 import { createUser } from '../api/users'
 
 export default function AdminDashboard() {
@@ -14,9 +14,7 @@ export default function AdminDashboard() {
   // Form state
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [password, setPassword] = useState('')
   const [role, setRole] = useState('STUDENT')
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -45,7 +43,6 @@ export default function AdminDashboard() {
   const resetForm = () => {
     setFirstName('')
     setLastName('')
-    setPassword('')
     setRole('STUDENT')
     setError('')
   }
@@ -56,8 +53,8 @@ export default function AdminDashboard() {
     setLoading(true)
 
     try {
-      const data = await createUser({ firstName, lastName, password, role })
-      setCreatedUser({ ...data.user, password })
+      const data = await createUser({ firstName, lastName, role })
+      setCreatedUser(data.user)
       setShowModal(false)
       setShowSuccess(true)
       resetForm()
@@ -222,25 +219,10 @@ export default function AdminDashboard() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none pr-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+              <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-sm">
+                Default password: <span className="font-mono font-semibold">passwordtest123</span>
+                <br />
+                <span className="text-blue-600 text-xs">User will be asked to change it on first login.</span>
               </div>
               {error && (
                 <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -297,16 +279,17 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-xs text-gray-500">Password</p>
-                    <p className="font-mono font-semibold text-gray-900">{createdUser.password}</p>
+                    <p className="text-xs text-gray-500">Default Password</p>
+                    <p className="font-mono font-semibold text-gray-900">passwordtest123</p>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(createdUser.password, 'password')}
+                    onClick={() => copyToClipboard('passwordtest123', 'password')}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     {copied === 'password' ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">User will be prompted to change password on first login.</p>
               </div>
 
               <button

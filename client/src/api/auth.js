@@ -12,3 +12,11 @@ export const getMe = async (token) => {
   })
   return response.data
 }
+
+export const changePassword = async (newPassword) => {
+  const token = localStorage.getItem('token')
+  const response = await axios.post(`${API_URL}/auth/change-password`, { newPassword }, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  return response.data
+}
