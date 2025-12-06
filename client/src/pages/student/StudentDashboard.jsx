@@ -385,9 +385,9 @@ export default function StudentDashboard() {
                         <p className="text-gray-600 text-sm mb-4 line-clamp-2">{program.description || 'No description available'}</p>
                         
                         {/* Price - Prominently displayed */}
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                          <p className="text-xs text-green-600 font-medium">Program Fee</p>
-                          <p className="text-2xl font-bold text-green-700">₱{program.price?.toLocaleString() || '0'}</p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                          <p className="text-xs text-[#1e3a5f] font-medium">Program Fee</p>
+                          <p className="text-2xl font-bold text-[#1e3a5f]">₱{program.price?.toLocaleString() || '0'}</p>
                         </div>
                         
                         {program.duration && (

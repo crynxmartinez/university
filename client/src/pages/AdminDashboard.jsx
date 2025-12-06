@@ -656,7 +656,7 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-semibold text-green-600">₱{p.price?.toLocaleString() || '0'}</span>
+                            <span className="text-sm font-semibold text-[#1e3a5f]">₱{p.price?.toLocaleString() || '0'}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-gray-900">{p.duration || '-'}</span>
