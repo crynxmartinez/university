@@ -47,11 +47,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2d5a87] to-[#1e3a5f] flex items-center justify-center p-4">
       <div className="w-full max-w-md relative">
         <Link 
           to="/" 
-          className="inline-flex items-center gap-2 text-emerald-200 hover:text-white mb-6 transition"
+          className="inline-flex items-center gap-2 text-blue-200 hover:text-white mb-6 transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Home
@@ -62,7 +62,7 @@ export default function LoginPage() {
             <img 
               src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
               alt="ILM Learning Center" 
-              className="h-14 mx-auto mb-4 bg-emerald-800 p-2 rounded-lg"
+              className="h-14 mx-auto mb-4 bg-[#1e3a5f] p-2 rounded-lg"
             />
             <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
             <p className="text-gray-600 mt-1">Sign in to your account</p>
@@ -79,7 +79,7 @@ export default function LoginPage() {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Enter your User ID"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none transition"
                 required
               />
             </div>
@@ -95,7 +95,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none transition pr-12"
                   required
                 />
                 <button
@@ -117,14 +117,23 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-[#f7941d] hover:text-[#e8850f] font-semibold">
+                Sign Up
+              </Link>
+            </p>
+          </div>
         </div>
 
-        <p className="text-center text-emerald-200 text-sm mt-6">
+        <p className="text-center text-blue-200 text-sm mt-6">
           © 2025 ILM Learning Center Inc.
         </p>
       </div>

@@ -38,8 +38,11 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link to="/login" className="bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-2 rounded-full font-semibold transition">
-              Enroll Now
+            <Link to="/login" className="text-white hover:text-[#f7941d] transition">
+              Login
+            </Link>
+            <Link to="/signup" className="bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-2 rounded-full font-semibold transition">
+              Sign Up
             </Link>
           </div>
 
@@ -67,10 +70,17 @@ export default function Navbar() {
             ))}
             <Link 
               to="/login" 
-              className="block mt-4 bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-2 rounded-full font-semibold transition text-center"
+              className="block py-2 hover:text-[#f7941d]"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Enroll Now
+              Login
+            </Link>
+            <Link 
+              to="/signup" 
+              className="block mt-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-2 rounded-full font-semibold transition text-center"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign Up
             </Link>
           </div>
         )}

@@ -6,6 +6,7 @@ import ProgramsPage from './pages/ProgramsPage'
 import ContactPage from './pages/ContactPage'
 import BlogPage from './pages/BlogPage'
 import LoginPage from './pages/LoginPage'
+import SignUpPage from './pages/SignUpPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminDashboard from './pages/AdminDashboard'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
@@ -38,6 +39,7 @@ function App() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/teacher" element={<TeacherDashboard />} />

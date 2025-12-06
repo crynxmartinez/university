@@ -5,6 +5,94 @@ import prisma from '../lib/prisma.js'
 
 const router = express.Router()
 
+// Helper function to generate student ID
+async function generateStudentId() {
+  const year = new Date().getFullYear()
+  
+  // Get or create sequence for this year
+  let sequence = await prisma.idSequence.findUnique({
+    where: { type_year: { type: 'STUDENT', year } }
+  })
+  
+  if (!sequence) {
+    sequence = await prisma.idSequence.create({
+      data: { type: 'STUDENT', year, lastNumber: 0 }
+    })
+  }
+  
+  // Increment and get new number
+  const updated = await prisma.idSequence.update({
+    where: { type_year: { type: 'STUDENT', year } },
+    data: { lastNumber: { increment: 1 } }
+  })
+  
+  return `STU-${year}${String(updated.lastNumber).padStart(4, '0')}`
+}
+
+// POST /api/auth/signup - Student self-registration
+router.post('/signup', async (req, res) => {
+  try {
+    const { firstName, lastName, email, password } = req.body
+
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' })
+    }
+
+    // Check if email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already registered' })
+    }
+
+    // Generate student ID
+    const studentId = await generateStudentId()
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    // Create user with student record
+    const user = await prisma.user.create({
+      data: {
+        userId: studentId,
+        email,
+        password: hashedPassword,
+        role: 'STUDENT',
+        mustChangePassword: false,
+        profileComplete: false,
+        profile: {
+          create: {
+            firstName,
+            lastName
+          }
+        },
+        student: {
+          create: {
+            studentId,
+            status: 'APPLICANT'
+          }
+        }
+      },
+      include: {
+        profile: true,
+        student: true
+      }
+    })
+
+    res.status(201).json({
+      message: 'Registration successful. Please wait for approval.',
+      userId: user.userId
+    })
+  } catch (error) {
+    console.error('Signup error:', error)
+    res.status(500).json({ error: 'Registration failed' })
+  }
+})
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
