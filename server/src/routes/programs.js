@@ -5,17 +5,70 @@ import jwt from 'jsonwebtoken'
 const router = express.Router()
 
 // GET /api/programs/public - Get all public programs (no auth required)
+// Returns programs WITHOUT price for public display
 router.get('/public', async (req, res) => {
   try {
     const programs = await prisma.program.findMany({
-      orderBy: { createdAt: 'desc' }
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        duration: true,
+        image: true,
+        isActive: true,
+        createdAt: true
+        // price is NOT included for public view
+      }
     })
 
     res.json(programs)
   } catch (error) {
     console.error('Get public programs error:', error)
-    // Return empty array if table doesn't exist yet
     res.json([])
+  }
+})
+
+// GET /api/programs/student - Get all programs with price (for students)
+router.get('/student', async (req, res) => {
+  try {
+    // Verify token
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id }
+    })
+
+    if (!user || user.role !== 'STUDENT') {
+      return res.status(403).json({ error: 'Only students can access this' })
+    }
+
+    const programs = await prisma.program.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true, // Include price for students
+        duration: true,
+        image: true,
+        isActive: true,
+        createdAt: true
+      }
+    })
+
+    res.json(programs)
+  } catch (error) {
+    console.error('Get student programs error:', error)
+    res.status(500).json({ error: 'Failed to get programs' })
   }
 })
 
@@ -70,7 +123,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only admins can create programs' })
     }
 
-    const { name, description } = req.body
+    const { name, description, price, duration, image, isActive } = req.body
 
     if (!name) {
       return res.status(400).json({ error: 'Program name is required' })
@@ -79,7 +132,11 @@ router.post('/', authenticate, async (req, res) => {
     const program = await prisma.program.create({
       data: {
         name,
-        description: description || ''
+        description: description || '',
+        price: parseFloat(price) || 0,
+        duration: duration || null,
+        image: image || null,
+        isActive: isActive !== undefined ? isActive : true
       }
     })
 
@@ -98,11 +155,19 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const { id } = req.params
-    const { name, description } = req.body
+    const { name, description, price, duration, image, isActive } = req.body
+
+    const updateData = {}
+    if (name !== undefined) updateData.name = name
+    if (description !== undefined) updateData.description = description
+    if (price !== undefined) updateData.price = parseFloat(price)
+    if (duration !== undefined) updateData.duration = duration
+    if (image !== undefined) updateData.image = image
+    if (isActive !== undefined) updateData.isActive = isActive
 
     const program = await prisma.program.update({
       where: { id },
-      data: { name, description }
+      data: updateData
     })
 
     res.json(program)

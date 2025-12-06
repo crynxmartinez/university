@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, Clock } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
+import { getStudentPrograms } from '../../api/programs'
 
 export default function StudentDashboard() {
   const [user, setUser] = useState(null)
   const [courses, setCourses] = useState([])
+  const [programs, setPrograms] = useState([])
   const [loading, setLoading] = useState(true)
+  const [programsLoading, setProgramsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const navigate = useNavigate()
@@ -26,6 +29,7 @@ export default function StudentDashboard() {
     
     setUser(userData)
     fetchCourses()
+    fetchPrograms()
   }, [navigate])
 
   const fetchCourses = async () => {
@@ -39,6 +43,17 @@ export default function StudentDashboard() {
     }
   }
 
+  const fetchPrograms = async () => {
+    try {
+      const data = await getStudentPrograms()
+      setPrograms(data)
+    } catch (error) {
+      console.error('Failed to fetch programs:', error)
+    } finally {
+      setProgramsLoading(false)
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -47,6 +62,7 @@ export default function StudentDashboard() {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'programs', label: 'Programs', icon: Folder },
     { id: 'courses', label: 'My Courses', icon: BookOpen },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'grades', label: 'Grades', icon: Award },
@@ -326,6 +342,66 @@ export default function StudentDashboard() {
                         </span>
                       </div>
                     </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'programs' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Available Programs</h2>
+              
+              {programsLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f] mx-auto"></div>
+                </div>
+              ) : programs.length === 0 ? (
+                <div className="text-center py-12">
+                  <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No programs available</h3>
+                  <p className="text-gray-500">Programs will appear here once they are created.</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {programs.map((program) => (
+                    <div key={program.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group">
+                      {/* Program Image or Default Header */}
+                      {program.image ? (
+                        <div className="h-40 overflow-hidden">
+                          <img 
+                            src={program.image} 
+                            alt={program.name} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center">
+                          <Folder className="w-16 h-16 text-white/50" />
+                        </div>
+                      )}
+                      <div className="p-5">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{program.name}</h3>
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{program.description || 'No description available'}</p>
+                        
+                        {/* Price - Prominently displayed */}
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                          <p className="text-xs text-green-600 font-medium">Program Fee</p>
+                          <p className="text-2xl font-bold text-green-700">₱{program.price?.toLocaleString() || '0'}</p>
+                        </div>
+                        
+                        {program.duration && (
+                          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                            <Clock className="w-4 h-4" />
+                            <span>{program.duration}</span>
+                          </div>
+                        )}
+                        
+                        <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition">
+                          Enroll Now
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

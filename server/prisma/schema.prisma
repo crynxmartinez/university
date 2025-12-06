@@ -125,8 +125,14 @@ model Program {
   id          String   @id @default(cuid())
   name        String
   description String?
+  price       Float    @default(0)
+  duration    String?  // e.g., "3 months", "1 semester"
+  image       String?  // URL for card image
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  courses     Course[]
 }
 
 // ============ COURSE MODELS ============
@@ -138,10 +144,12 @@ model Course {
   description String?
   type        CourseType @default(RECORDED)
   teacherId   String
+  programId   String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  program     Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
   modules     Module[]
   enrollments Enrollment[]
 }

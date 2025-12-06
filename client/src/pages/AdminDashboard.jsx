@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image } from 'lucide-react'
 import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
+import { getPrograms, createProgram, updateProgram, deleteProgram } from '../api/programs'
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
@@ -31,6 +32,23 @@ export default function AdminDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [resetConfirm, setResetConfirm] = useState(null)
 
+  // Programs state
+  const [programs, setPrograms] = useState([])
+  const [programsLoading, setProgramsLoading] = useState(true)
+  const [showProgramModal, setShowProgramModal] = useState(false)
+  const [editingProgram, setEditingProgram] = useState(null)
+  const [deleteProgramConfirm, setDeleteProgramConfirm] = useState(null)
+  const [programForm, setProgramForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    duration: '',
+    image: '',
+    isActive: true
+  })
+  const [programError, setProgramError] = useState('')
+  const [programLoading, setProgramLoading] = useState(false)
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     if (!storedUser) {
@@ -51,6 +69,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) {
       fetchUsers()
+      fetchPrograms()
     }
   }, [user, roleFilter, pagination.page])
 
@@ -95,6 +114,76 @@ export default function AdminDashboard() {
       setResetConfirm(null)
     } catch (err) {
       console.error('Failed to reset password:', err)
+    }
+  }
+
+  // Programs functions
+  const fetchPrograms = async () => {
+    setProgramsLoading(true)
+    try {
+      const data = await getPrograms()
+      setPrograms(data)
+    } catch (err) {
+      console.error('Failed to fetch programs:', err)
+    } finally {
+      setProgramsLoading(false)
+    }
+  }
+
+  const resetProgramForm = () => {
+    setProgramForm({
+      name: '',
+      description: '',
+      price: '',
+      duration: '',
+      image: '',
+      isActive: true
+    })
+    setProgramError('')
+    setEditingProgram(null)
+  }
+
+  const openEditProgram = (program) => {
+    setEditingProgram(program)
+    setProgramForm({
+      name: program.name,
+      description: program.description || '',
+      price: program.price?.toString() || '',
+      duration: program.duration || '',
+      image: program.image || '',
+      isActive: program.isActive
+    })
+    setShowProgramModal(true)
+  }
+
+  const handleSaveProgram = async (e) => {
+    e.preventDefault()
+    setProgramError('')
+    setProgramLoading(true)
+
+    try {
+      if (editingProgram) {
+        await updateProgram(editingProgram.id, programForm)
+      } else {
+        await createProgram(programForm)
+      }
+      setShowProgramModal(false)
+      resetProgramForm()
+      fetchPrograms()
+    } catch (err) {
+      setProgramError(err.response?.data?.error || 'Failed to save program')
+    } finally {
+      setProgramLoading(false)
+    }
+  }
+
+  const handleDeleteProgram = async (programId) => {
+    try {
+      await deleteProgram(programId)
+      setDeleteProgramConfirm(null)
+      fetchPrograms()
+    } catch (err) {
+      console.error('Failed to delete program:', err)
     }
   }
 
@@ -506,9 +595,106 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === 'programs' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Programs</h2>
-              <p className="text-gray-500">Program management coming soon...</p>
+            <div className="bg-white rounded-xl shadow-sm">
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-lg font-semibold text-gray-900">Programs ({programs.length})</h2>
+                <button 
+                  onClick={() => { resetProgramForm(); setShowProgramModal(true) }}
+                  className="flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-4 py-2 rounded-lg transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Program
+                </button>
+              </div>
+
+              {/* Programs Table */}
+              <div className="overflow-visible">
+                {programsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div>
+                  </div>
+                ) : programs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No programs yet</p>
+                    <button 
+                      onClick={() => { resetProgramForm(); setShowProgramModal(true) }}
+                      className="mt-4 text-[#f7941d] hover:underline"
+                    >
+                      Create your first program
+                    </button>
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {programs.map((p) => (
+                        <tr key={p.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              {p.image ? (
+                                <img src={p.image} alt={p.name} className="w-12 h-12 rounded-lg object-cover" />
+                              ) : (
+                                <div className="w-12 h-12 bg-[#1e3a5f] rounded-lg flex items-center justify-center">
+                                  <BookOpen className="w-6 h-6 text-white" />
+                                </div>
+                              )}
+                              <div className="ml-3">
+                                <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                                <p className="text-sm text-gray-500 line-clamp-1">{p.description || 'No description'}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-green-600">₱{p.price?.toLocaleString() || '0'}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-900">{p.duration || '-'}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {p.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(p.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openEditProgram(p)}
+                                className="text-gray-400 hover:text-[#1e3a5f] p-1"
+                                title="Edit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteProgramConfirm(p)}
+                                className="text-gray-400 hover:text-red-600 p-1"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           )}
 
@@ -710,6 +896,132 @@ export default function AdminDashboard() {
                   className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg transition"
                 >
                   Reset Password
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Program Modal (Create/Edit) */}
+      {showProgramModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingProgram ? 'Edit Program' : 'Create Program'}
+              </h2>
+              <button onClick={() => { setShowProgramModal(false); resetProgramForm() }} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveProgram} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Program Name *</label>
+                <input
+                  type="text"
+                  value={programForm.name}
+                  onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
+                  placeholder="e.g., Islamic Studies Certificate"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={programForm.description}
+                  onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })}
+                  placeholder="Brief description of the program..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (₱)</label>
+                  <input
+                    type="number"
+                    value={programForm.price}
+                    onChange={(e) => setProgramForm({ ...programForm, price: e.target.value })}
+                    placeholder="0"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                  <input
+                    type="text"
+                    value={programForm.duration}
+                    onChange={(e) => setProgramForm({ ...programForm, duration: e.target.value })}
+                    placeholder="e.g., 3 months"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <input
+                  type="url"
+                  value={programForm.image}
+                  onChange={(e) => setProgramForm({ ...programForm, image: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={programForm.isActive}
+                  onChange={(e) => setProgramForm({ ...programForm, isActive: e.target.checked })}
+                  className="w-4 h-4 text-[#1e3a5f] border-gray-300 rounded focus:ring-[#1e3a5f]"
+                />
+                <label htmlFor="isActive" className="text-sm text-gray-700">Active (visible to students)</label>
+              </div>
+              {programError && (
+                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                  {programError}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={programLoading}
+                className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+              >
+                {programLoading ? 'Saving...' : (editingProgram ? 'Update Program' : 'Create Program')}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Program Confirmation Modal */}
+      {deleteProgramConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Delete Program?</h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{deleteProgramConfirm.name}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteProgramConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteProgram(deleteProgramConfirm.id)}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+                >
+                  Delete
                 </button>
               </div>
             </div>

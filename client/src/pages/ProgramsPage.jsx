@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, GraduationCap, Folder } from 'lucide-react'
+import { BookOpen, GraduationCap, Folder, Clock, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../components/Navbar'
@@ -91,17 +91,43 @@ export default function ProgramsPage() {
             programs.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {programs.map((program) => (
-                  <div key={program.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition">
-                    <div className="bg-[#1e3a5f] p-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-[#f7941d] rounded-lg flex items-center justify-center">
-                          <Folder className="w-7 h-7 text-white" />
-                        </div>
-                        <h3 className="text-xl font-bold text-white">{program.name}</h3>
+                  <div key={program.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition group">
+                    {/* Program Image or Default Header */}
+                    {program.image ? (
+                      <div className="h-48 overflow-hidden">
+                        <img 
+                          src={program.image} 
+                          alt={program.name} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        />
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] p-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-[#f7941d] rounded-lg flex items-center justify-center">
+                            <Folder className="w-7 h-7 text-white" />
+                          </div>
+                          <h3 className="text-xl font-bold text-white">{program.name}</h3>
+                        </div>
+                      </div>
+                    )}
                     <div className="p-6">
-                      <p className="text-gray-600">{program.description || 'No description available'}</p>
+                      {program.image && (
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{program.name}</h3>
+                      )}
+                      <p className="text-gray-600 mb-4 line-clamp-3">{program.description || 'No description available'}</p>
+                      {program.duration && (
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                          <Clock className="w-4 h-4" />
+                          <span>{program.duration}</span>
+                        </div>
+                      )}
+                      <Link 
+                        to="/login" 
+                        className="inline-flex items-center gap-2 text-[#f7941d] font-semibold hover:gap-3 transition-all"
+                      >
+                        Learn More <ArrowRight className="w-4 h-4" />
+                      </Link>
                     </div>
                   </div>
                 ))}
