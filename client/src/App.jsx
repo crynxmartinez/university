@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import ProgramsPage from './pages/ProgramsPage'
@@ -16,9 +17,21 @@ import EnrollStudents from './pages/teacher/EnrollStudents'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentCourseView from './pages/student/StudentCourseView'
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  
+  return null
+}
+
 function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/programs" element={<ProgramsPage />} />
@@ -36,6 +49,7 @@ function App() {
       <Route path="/student" element={<StudentDashboard />} />
       <Route path="/student/courses/:id" element={<StudentCourseView />} />
     </Routes>
+    </>
   )
 }
 
