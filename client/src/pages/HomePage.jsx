@@ -47,6 +47,49 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ILM Logo Explanation Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Left - Text Content */}
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8 leading-tight">
+                The <span className="text-[#f7941d]">ILM Learning Center Inc.</span> is enthusiastic to release the wisdom and explanation behind its logo.
+              </h2>
+              
+              <div className="space-y-6 text-gray-600">
+                <div>
+                  <p>
+                    <span className="font-bold text-[#f7941d]">ILM term</span> : Inspired by Arabic calligraphy, the "ILM" term can be seen and read from the logo itself. ILM connotes meaning of knowledge, learning and wisdom
+                  </p>
+                </div>
+                
+                <div>
+                  <p>
+                    <span className="font-bold text-[#f7941d]">2 DOTS, SHADED ROUNDS, PEN</span> : These represent pen for writing and embracing the knowledge and wisdom coming from the two (2) authentic sources of Islamic education and foundation – the Qur'an and Hadith.
+                  </p>
+                </div>
+                
+                <div>
+                  <p>
+                    <span className="font-bold text-[#f7941d]">LIGHT</span> : This symbol ignites the light or the guidance from the Almighty Allah in pursuit of Islamic educational empowerment and development
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right - Logo breakdown image */}
+            <div className="flex justify-center">
+              <img 
+                src="https://ilmlearningcenter.com/wp-content/uploads/2024/04/Screenshot-2024-04-07-165639.png"
+                alt="ILM Logo Explanation"
+                className="max-w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   )
