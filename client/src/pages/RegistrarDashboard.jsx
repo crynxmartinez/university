@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar } from 'lucide-react'
-import { getCourses } from '../../api/courses'
+import { useNavigate } from 'react-router-dom'
+import { LogOut, Users, UserPlus, GraduationCap, LayoutDashboard, ClipboardList, Settings, Menu, FileText, CheckCircle, XCircle } from 'lucide-react'
 
-export default function TeacherDashboard() {
+export default function RegistrarDashboard() {
   const [user, setUser] = useState(null)
-  const [courses, setCourses] = useState([])
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const navigate = useNavigate()
@@ -19,25 +16,13 @@ export default function TeacherDashboard() {
     }
     
     const userData = JSON.parse(storedUser)
-    if (userData.role !== 'TEACHER') {
+    if (userData.role !== 'REGISTRAR') {
       navigate('/login')
       return
     }
     
     setUser(userData)
-    fetchCourses()
   }, [navigate])
-
-  const fetchCourses = async () => {
-    try {
-      const data = await getCourses()
-      setCourses(data)
-    } catch (error) {
-      console.error('Failed to fetch courses:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -47,9 +32,9 @@ export default function TeacherDashboard() {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'courses', label: 'My Courses', icon: BookOpen },
     { id: 'students', label: 'Students', icon: GraduationCap },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'applications', label: 'Applications', icon: ClipboardList },
+    { id: 'enrollments', label: 'Enrollments', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
 
@@ -75,7 +60,7 @@ export default function TeacherDashboard() {
             />
           </div>
           {sidebarOpen && (
-            <p className="text-blue-200 text-xs mt-2">Teacher Portal</p>
+            <p className="text-blue-200 text-xs mt-2">Registrar Portal</p>
           )}
         </div>
 
@@ -105,7 +90,7 @@ export default function TeacherDashboard() {
           {sidebarOpen && (
             <div className="mb-3">
               <p className="text-white font-medium text-sm">{user.profile?.firstName} {user.profile?.lastName}</p>
-              <p className="text-blue-200 text-xs">Teacher</p>
+              <p className="text-blue-200 text-xs">Registrar</p>
             </div>
           )}
           <button
@@ -147,22 +132,11 @@ export default function TeacherDashboard() {
           {activeTab === 'dashboard' && (
             <>
               {/* Stats Cards */}
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
+              <div className="grid md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#1e3a5f]">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-[#1e3a5f]" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
-                      <p className="text-gray-600 text-sm">My Courses</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#f7941d]">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <GraduationCap className="w-6 h-6 text-[#f7941d]" />
+                      <GraduationCap className="w-6 h-6 text-[#1e3a5f]" />
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-gray-900">0</p>
@@ -170,14 +144,36 @@ export default function TeacherDashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#f7941d]">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-green-600" />
+                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <ClipboardList className="w-6 h-6 text-[#f7941d]" />
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-gray-900">0</p>
-                      <p className="text-gray-600 text-sm">Upcoming Classes</p>
+                      <p className="text-gray-600 text-sm">Pending Applications</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      <p className="text-gray-600 text-sm">Approved</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      <p className="text-gray-600 text-sm">Enrollments</p>
                     </div>
                   </div>
                 </div>
@@ -187,157 +183,93 @@ export default function TeacherDashboard() {
               <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <Link 
-                    to="/teacher/courses/create"
-                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition"
-                  >
-                    <div className="w-10 h-10 bg-[#f7941d] rounded-lg flex items-center justify-center">
-                      <Plus className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Create Course</p>
-                      <p className="text-sm text-gray-500">Add new course</p>
-                    </div>
-                  </Link>
                   <button 
-                    onClick={() => setActiveTab('courses')}
+                    onClick={() => setActiveTab('applications')}
                     className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition text-left"
                   >
-                    <div className="w-10 h-10 bg-[#1e3a5f] rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-white" />
+                    <div className="w-10 h-10 bg-[#f7941d] rounded-lg flex items-center justify-center">
+                      <ClipboardList className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">View Courses</p>
-                      <p className="text-sm text-gray-500">Manage courses</p>
+                      <p className="font-medium text-gray-900">Review Applications</p>
+                      <p className="text-sm text-gray-500">Pending approvals</p>
                     </div>
                   </button>
                   <button 
                     onClick={() => setActiveTab('students')}
                     className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition text-left"
                   >
-                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                      <Users className="w-5 h-5 text-white" />
+                    <div className="w-10 h-10 bg-[#1e3a5f] rounded-lg flex items-center justify-center">
+                      <GraduationCap className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">View Students</p>
-                      <p className="text-sm text-gray-500">Enrolled students</p>
+                      <p className="font-medium text-gray-900">Manage Students</p>
+                      <p className="text-sm text-gray-500">View all students</p>
+                    </div>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('enrollments')}
+                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition text-left"
+                  >
+                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Enrollments</p>
+                      <p className="text-sm text-gray-500">Manage enrollments</p>
                     </div>
                   </button>
                 </div>
               </div>
 
-              {/* Recent Courses */}
+              {/* Recent Applications */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Courses</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Recent Applications</h2>
                   <button 
-                    onClick={() => setActiveTab('courses')}
+                    onClick={() => setActiveTab('applications')}
                     className="text-[#f7941d] hover:text-[#e8850f] text-sm font-medium"
                   >
                     View All
                   </button>
                 </div>
-                {courses.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No courses yet</p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {courses.slice(0, 3).map((course) => (
-                      <Link
-                        key={course.id}
-                        to={`/teacher/courses/${course.id}`}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-medium text-gray-900">{course.name}</h3>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            course.type === 'RECORDED' 
-                              ? 'bg-blue-100 text-blue-700' 
-                              : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 line-clamp-2">{course.description}</p>
-                        <div className="mt-3 text-xs text-gray-400">
-                          {course.modules?.length || 0} modules
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                <div className="text-center py-8">
+                  <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No pending applications</p>
+                </div>
               </div>
             </>
           )}
 
-          {activeTab === 'courses' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">My Courses</h2>
-                <Link
-                  to="/teacher/courses/create"
-                  className="flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-4 py-2 rounded-lg transition"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Course
-                </Link>
-              </div>
-
-              {courses.length === 0 ? (
-                <div className="text-center py-12">
-                  <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No courses yet</h3>
-                  <p className="text-gray-500 mb-4">Create your first course to get started</p>
-                  <Link
-                    to="/teacher/courses/create"
-                    className="inline-flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-3 rounded-lg transition"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create Course
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {courses.map((course) => (
-                    <Link
-                      key={course.id}
-                      to={`/teacher/courses/${course.id}`}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-medium text-gray-900">{course.name}</h3>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          course.type === 'RECORDED' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-purple-100 text-purple-700'
-                        }`}>
-                          {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 line-clamp-2">{course.description}</p>
-                      <div className="mt-3 text-xs text-gray-400">
-                        {course.modules?.length || 0} modules
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {activeTab === 'students' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">My Students</h2>
-              <p className="text-gray-500">Student management coming soon...</p>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">All Students</h2>
+              </div>
+              <div className="text-center py-12">
+                <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Student management coming soon...</p>
+              </div>
             </div>
           )}
 
-          {activeTab === 'schedule' && (
+          {activeTab === 'applications' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Class Schedule</h2>
-              <p className="text-gray-500">Schedule management coming soon...</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Student Applications</h2>
+              <div className="text-center py-12">
+                <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Application review coming soon...</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'enrollments' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Enrollments</h2>
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Enrollment management coming soon...</p>
+              </div>
             </div>
           )}
 

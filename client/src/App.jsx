@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminDashboard from './pages/AdminDashboard'
+import RegistrarDashboard from './pages/RegistrarDashboard'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import CreateCourse from './pages/teacher/CreateCourse'
 import CourseDetail from './pages/teacher/CourseDetail'
@@ -42,6 +43,7 @@ function App() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/registrar" element={<RegistrarDashboard />} />
       <Route path="/teacher" element={<TeacherDashboard />} />
       <Route path="/teacher/courses/create" element={<CreateCourse />} />
       <Route path="/teacher/courses/:id" element={<CourseDetail />} />
