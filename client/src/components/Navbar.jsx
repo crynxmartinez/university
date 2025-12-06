@@ -12,15 +12,14 @@ export default function Navbar() {
     { path: '/', label: 'Home' },
     { path: '/about', label: 'About Us' },
     { path: '/programs', label: 'Programs' },
-    { path: '/contact', label: 'Contact' },
-    { path: '/blog', label: 'Blog' },
+    { path: '/contact', label: 'Contact Us' },
   ]
 
   return (
-    <nav className="bg-emerald-800 text-white sticky top-0 z-50">
+    <nav className="bg-[#1a3c34] text-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/" className="flex items-center">
             <img 
               src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
               alt="ILM Learning Center" 
@@ -34,12 +33,12 @@ export default function Navbar() {
               <Link 
                 key={link.path}
                 to={link.path} 
-                className={`transition ${isActive(link.path) ? 'text-amber-400 font-semibold' : 'hover:text-emerald-200'}`}
+                className={`transition ${isActive(link.path) ? 'text-[#c9a227]' : 'hover:text-[#c9a227]'}`}
               >
                 {link.label}
               </Link>
             ))}
-            <Link to="/login" className="bg-amber-500 hover:bg-amber-400 text-emerald-900 px-6 py-2 rounded-lg font-semibold transition">
+            <Link to="/login" className="bg-[#c9a227] hover:bg-[#b89223] text-white px-6 py-2 rounded font-semibold transition">
               Enroll Now
             </Link>
           </div>
@@ -60,7 +59,7 @@ export default function Navbar() {
               <Link 
                 key={link.path}
                 to={link.path} 
-                className={`block py-2 ${isActive(link.path) ? 'text-amber-400 font-semibold' : 'hover:text-emerald-200'}`}
+                className={`block py-2 ${isActive(link.path) ? 'text-[#c9a227]' : 'hover:text-[#c9a227]'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.label}
@@ -68,7 +67,7 @@ export default function Navbar() {
             ))}
             <Link 
               to="/login" 
-              className="block mt-4 bg-amber-500 hover:bg-amber-400 text-emerald-900 px-6 py-2 rounded-lg font-semibold transition text-center"
+              className="block mt-4 bg-[#c9a227] hover:bg-[#b89223] text-white px-6 py-2 rounded font-semibold transition text-center"
               onClick={() => setMobileMenuOpen(false)}
             >
               Enroll Now
