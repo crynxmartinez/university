@@ -1,0 +1,115 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+
+export default function LoginPage() {
+  const [userId, setUserId] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    // TODO: Implement login API call
+    setTimeout(() => {
+      setError('Login functionality coming soon')
+      setLoading(false)
+    }, 1000)
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-700 to-green-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md relative">
+        <Link 
+          to="/" 
+          className="inline-flex items-center gap-2 text-green-200 hover:text-white mb-6 transition"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </Link>
+
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-green-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-white font-bold text-2xl">AU</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
+            <p className="text-gray-600 mt-1">Sign in to your account</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="userId" className="block text-sm font-medium text-gray-700 mb-1">
+                User ID
+              </label>
+              <input
+                id="userId"
+                type="text"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="Enter your User ID"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-green-700 hover:bg-green-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 text-sm">
+              New student?{' '}
+              <Link to="/register" className="text-green-700 hover:text-green-800 font-medium">
+                Register here
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        <p className="text-center text-green-200 text-sm mt-6">
+          © 2025 Assalaam University
+        </p>
+      </div>
+    </div>
+  )
+}
