@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Video, Radio, Calendar, LinkIcon } from 'lucide-react'
+import { ArrowLeft, Video, Radio, Info } from 'lucide-react'
 import { createCourse } from '../../api/courses'
 
 export default function CreateCourse() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('RECORDED')
-  const [schedule, setSchedule] = useState('')
-  const [meetingLink, setMeetingLink] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -19,8 +17,9 @@ export default function CreateCourse() {
     setLoading(true)
 
     try {
-      const course = await createCourse({ name, description, type, schedule, meetingLink })
-      navigate(`/teacher/courses/${course.id}`)
+      const course = await createCourse({ name, description, type })
+      // Redirect to Course Dashboard after creation
+      navigate(`/teacher/courses/${course.id}/dashboard`)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create course')
     } finally {
@@ -31,10 +30,10 @@ export default function CreateCourse() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-emerald-800 text-white shadow-lg">
+      <header className="bg-[#1e3a5f] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Link to="/teacher" className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
+            <Link to="/teacher" className="flex items-center gap-2 text-blue-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Dashboard
             </Link>
@@ -58,7 +57,7 @@ export default function CreateCourse() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Introduction to Arabic"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                 required
               />
             </div>
@@ -73,7 +72,7 @@ export default function CreateCourse() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what students will learn in this course..."
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
               />
             </div>
 
@@ -88,17 +87,17 @@ export default function CreateCourse() {
                   onClick={() => setType('RECORDED')}
                   className={`p-4 border-2 rounded-lg text-left transition ${
                     type === 'RECORDED'
-                      ? 'border-emerald-500 bg-emerald-50'
+                      ? 'border-[#1e3a5f] bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      type === 'RECORDED' ? 'bg-emerald-100' : 'bg-gray-100'
+                      type === 'RECORDED' ? 'bg-blue-100' : 'bg-gray-100'
                     }`}>
-                      <Video className={`w-5 h-5 ${type === 'RECORDED' ? 'text-emerald-600' : 'text-gray-500'}`} />
+                      <Video className={`w-5 h-5 ${type === 'RECORDED' ? 'text-[#1e3a5f]' : 'text-gray-500'}`} />
                     </div>
-                    <span className={`font-medium ${type === 'RECORDED' ? 'text-emerald-700' : 'text-gray-700'}`}>
+                    <span className={`font-medium ${type === 'RECORDED' ? 'text-[#1e3a5f]' : 'text-gray-700'}`}>
                       Recorded Video
                     </span>
                   </div>
@@ -133,39 +132,15 @@ export default function CreateCourse() {
               </div>
             </div>
 
-            {/* Schedule & Meeting Link - Only for LIVE courses */}
+            {/* Info for LIVE courses */}
             {type === 'LIVE' && (
-              <>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Schedule *
-                  </label>
-                  <input
-                    type="text"
-                    value={schedule}
-                    onChange={(e) => setSchedule(e.target.value)}
-                    placeholder="e.g., Mon/Wed/Fri 7:00 PM or Every Saturday 10:00 AM"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">When will the live sessions be held?</p>
+                  <p className="text-sm text-purple-800 font-medium">Schedule sessions after creation</p>
+                  <p className="text-sm text-purple-600">You'll be able to add class dates, times, and meeting links in the Course Dashboard.</p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <LinkIcon className="w-4 h-4 inline mr-1" />
-                    Meeting Link
-                  </label>
-                  <input
-                    type="url"
-                    value={meetingLink}
-                    onChange={(e) => setMeetingLink(e.target.value)}
-                    placeholder="https://zoom.us/j/123456789 or https://meet.google.com/abc-defg-hij"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Zoom or Google Meet link for students to join</p>
-                </div>
-              </>
+              </div>
             )}
 
             {error && (
@@ -185,7 +160,7 @@ export default function CreateCourse() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                className="flex-1 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create Course'}
               </button>
