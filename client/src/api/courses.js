@@ -29,3 +29,8 @@ export const deleteCourse = async (id) => {
   const response = await axios.delete(`${API_URL}/courses/${id}`, getAuthHeader())
   return response.data
 }
+
+export const toggleCourseActive = async (id) => {
+  const response = await axios.put(`${API_URL}/courses/${id}/toggle-active`, {}, getAuthHeader())
+  return response.data
+}

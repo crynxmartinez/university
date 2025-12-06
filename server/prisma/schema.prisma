@@ -34,6 +34,12 @@ enum CourseType {
   LIVE
 }
 
+enum SessionType {
+  CLASS
+  EXAM
+  REVIEW
+}
+
 enum PriceType {
   ONE_TIME
   MONTHLY
@@ -52,6 +58,15 @@ enum EnrollmentStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+enum NotificationType {
+  CLASS_5HR
+  CLASS_2HR
+  CLASS_10MIN
+  CLASS_LIVE
+  EXAM_REMINDER
+  MATERIAL_ADDED
 }
 
 // ============ MODELS ============
@@ -73,6 +88,7 @@ model User {
   teacher  Teacher?
   registrar Registrar?
   programEnrollments ProgramEnrollment[]
+  notifications Notification[]
 }
 
 // Profile - personal information
@@ -183,17 +199,48 @@ model Course {
   name        String
   description String?
   type        CourseType @default(RECORDED)
-  schedule    String?    // For LIVE courses: e.g., "Mon/Wed/Fri 7:00 PM" or specific dates
-  meetingLink String?    // Zoom/Meet link for LIVE courses
+  isActive    Boolean    @default(false)
+  startDate   DateTime?
+  endDate     DateTime?
   teacherId   String
   programId   String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  program     Program?     @relation(fields: [programId], references: [id], onDelete: SetNull)
+  teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  program     Program?        @relation(fields: [programId], references: [id], onDelete: SetNull)
   modules     Module[]
   enrollments Enrollment[]
+  sessions    CourseSession[]
+}
+
+// CourseSession - individual class/exam sessions for LIVE courses
+model CourseSession {
+  id          String      @id @default(cuid())
+  courseId    String
+  date        DateTime
+  startTime   String      // e.g., "19:00" or "7:00 PM"
+  endTime     String?     // e.g., "21:00" or "9:00 PM"
+  type        SessionType @default(CLASS)
+  title       String?     // Optional custom title, e.g., "Chapter 5 Discussion"
+  meetingLink String?     // Zoom/Meet link for this session
+  notes       String?     // Teacher notes for students
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  course    Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  materials SessionMaterial[]
+}
+
+// SessionMaterial - materials attached to a session
+model SessionMaterial {
+  id        String   @id @default(cuid())
+  sessionId String
+  name      String   // e.g., "Chapter 5 Notes.pdf"
+  driveUrl  String   // Google Drive link
+  createdAt DateTime @default(now())
+
+  session CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 // Module - sections within a course
@@ -238,4 +285,22 @@ model Enrollment {
   course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, courseId])
+}
+
+// ============ NOTIFICATION MODELS ============
+
+// Notification - for student reminders
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  type         NotificationType
+  title        String
+  message      String
+  courseId     String?
+  sessionId    String?
+  isRead       Boolean          @default(false)
+  scheduledFor DateTime         // When to show the notification
+  createdAt    DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

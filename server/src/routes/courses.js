@@ -69,6 +69,9 @@ router.get('/', authenticate, async (req, res) => {
             lessons: true
           },
           orderBy: { order: 'asc' }
+        },
+        sessions: {
+          orderBy: { date: 'asc' }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -104,6 +107,12 @@ router.get('/:id', authenticate, async (req, res) => {
           },
           orderBy: { order: 'asc' }
         },
+        sessions: {
+          include: {
+            materials: true
+          },
+          orderBy: { date: 'asc' }
+        },
         enrollments: true
       }
     })
@@ -131,7 +140,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only teachers can create courses' })
     }
 
-    const { name, description, type, schedule, meetingLink } = req.body
+    const { name, description, type } = req.body
 
     if (!name) {
       return res.status(400).json({ error: 'Course name is required' })
@@ -142,12 +151,12 @@ router.post('/', authenticate, async (req, res) => {
         name,
         description: description || '',
         type: type || 'RECORDED',
-        schedule: type === 'LIVE' ? schedule : null,
-        meetingLink: type === 'LIVE' ? meetingLink : null,
+        isActive: false,
         teacherId: req.user.teacher.id
       },
       include: {
-        modules: true
+        modules: true,
+        sessions: true
       }
     })
 
@@ -162,7 +171,7 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, type, schedule, meetingLink } = req.body
+    const { name, description, type, isActive, startDate, endDate } = req.body
 
     // Check ownership
     const existing = await prisma.course.findUnique({ where: { id } })
@@ -179,16 +188,56 @@ router.put('/:id', authenticate, async (req, res) => {
         name, 
         description, 
         type,
-        schedule: type === 'LIVE' ? schedule : null,
-        meetingLink: type === 'LIVE' ? meetingLink : null
+        isActive: isActive !== undefined ? isActive : existing.isActive,
+        startDate: startDate ? new Date(startDate) : existing.startDate,
+        endDate: endDate ? new Date(endDate) : existing.endDate
       },
-      include: { modules: true }
+      include: { modules: true, sessions: true }
     })
 
     res.json(course)
   } catch (error) {
     console.error('Update course error:', error)
     res.status(500).json({ error: 'Failed to update course' })
+  }
+})
+
+// PUT /api/courses/:id/toggle-active - Toggle course active status
+router.put('/:id/toggle-active', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can update courses' })
+    }
+
+    const { id } = req.params
+
+    // Check ownership
+    const existing = await prisma.course.findUnique({ 
+      where: { id },
+      include: { sessions: true }
+    })
+    if (!existing) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+    if (existing.teacherId !== req.user.teacher?.id) {
+      return res.status(403).json({ error: 'Not authorized to update this course' })
+    }
+
+    // For LIVE courses, require at least one session before activating
+    if (!existing.isActive && existing.type === 'LIVE' && existing.sessions.length === 0) {
+      return res.status(400).json({ error: 'LIVE courses need at least one session before activation' })
+    }
+
+    const course = await prisma.course.update({
+      where: { id },
+      data: { isActive: !existing.isActive },
+      include: { modules: true, sessions: true }
+    })
+
+    res.json(course)
+  } catch (error) {
+    console.error('Toggle course active error:', error)
+    res.status(500).json({ error: 'Failed to toggle course status' })
   }
 })
 
