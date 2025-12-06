@@ -16,7 +16,7 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="bg-[#1a3c34] text-white sticky top-0 z-50">
+    <nav className="bg-[#1e3a5f] text-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link to="/" className="flex items-center">
@@ -33,12 +33,12 @@ export default function Navbar() {
               <Link 
                 key={link.path}
                 to={link.path} 
-                className={`transition ${isActive(link.path) ? 'text-[#c9a227]' : 'hover:text-[#c9a227]'}`}
+                className={`transition ${isActive(link.path) ? 'text-[#f7941d]' : 'hover:text-[#f7941d]'}`}
               >
                 {link.label}
               </Link>
             ))}
-            <Link to="/login" className="bg-[#c9a227] hover:bg-[#b89223] text-white px-6 py-2 rounded font-semibold transition">
+            <Link to="/login" className="bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-2 rounded-full font-semibold transition">
               Enroll Now
             </Link>
           </div>
@@ -59,7 +59,7 @@ export default function Navbar() {
               <Link 
                 key={link.path}
                 to={link.path} 
-                className={`block py-2 ${isActive(link.path) ? 'text-[#c9a227]' : 'hover:text-[#c9a227]'}`}
+                className={`block py-2 ${isActive(link.path) ? 'text-[#f7941d]' : 'hover:text-[#f7941d]'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.label}
@@ -67,7 +67,7 @@ export default function Navbar() {
             ))}
             <Link 
               to="/login" 
-              className="block mt-4 bg-[#c9a227] hover:bg-[#b89223] text-white px-6 py-2 rounded font-semibold transition text-center"
+              className="block mt-4 bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-2 rounded-full font-semibold transition text-center"
               onClick={() => setMobileMenuOpen(false)}
             >
               Enroll Now
