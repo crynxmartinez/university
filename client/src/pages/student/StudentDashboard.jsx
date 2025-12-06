@@ -486,9 +486,9 @@ export default function StudentDashboard() {
                               </div>
                             )}
                             
-                            <div className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1"
-                              dangerouslySetInnerHTML={{ __html: program.description || 'No description available' }}
-                            />
+                            <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
+                              {program.description?.replace(/<[^>]*>/g, '') || 'No description available'}
+                            </p>
                             
                             <div className="mt-auto">
                               <div className={`rounded-lg p-3 mb-4 ${!program.price || program.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
