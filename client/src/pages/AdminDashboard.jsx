@@ -98,6 +98,15 @@ export default function AdminDashboard() {
     }
   }
 
+  // Close action menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActionMenuOpen(null)
+    if (actionMenuOpen) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [actionMenuOpen])
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -371,7 +380,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Users Table */}
-              <div className="overflow-x-auto">
+              <div className="overflow-visible">
                 {usersLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div>
@@ -434,13 +443,13 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="relative">
                               <button
-                                onClick={() => setActionMenuOpen(actionMenuOpen === u.id ? null : u.id)}
+                                onClick={(e) => { e.stopPropagation(); setActionMenuOpen(actionMenuOpen === u.id ? null : u.id) }}
                                 className="text-gray-400 hover:text-gray-600 p-1"
                               >
                                 <MoreVertical className="w-5 h-5" />
                               </button>
                               {actionMenuOpen === u.id && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                   <button
                                     onClick={() => { setActionMenuOpen(null); setResetConfirm(u) }}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
