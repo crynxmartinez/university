@@ -522,10 +522,19 @@ export default function CourseDashboard() {
                   </h2>
                   <div className="flex items-center gap-2">
                     {copiedSession && (
-                      <span className="text-sm text-green-600 flex items-center gap-1">
-                        <Clipboard className="w-4 h-4" />
-                        Session copied
-                      </span>
+                      <div className="relative group">
+                        <span className="text-sm text-green-600 flex items-center gap-1 cursor-help">
+                          <Clipboard className="w-4 h-4" />
+                          Session copied
+                          <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold">i</span>
+                        </span>
+                        {/* Tooltip */}
+                        <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg">
+                          <p className="font-semibold mb-1">How to paste:</p>
+                          <p className="text-gray-300">Right-click on any empty date to paste this session with the same time, type, and meeting link.</p>
+                          <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 rotate-45"></div>
+                        </div>
+                      </div>
                     )}
                     <button
                       onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
