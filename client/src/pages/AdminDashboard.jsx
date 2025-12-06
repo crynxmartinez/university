@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu } from 'lucide-react'
-import { createUser } from '../api/users'
+import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
@@ -20,6 +20,17 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Users list state
+  const [users, setUsers] = useState([])
+  const [stats, setStats] = useState({ total: 0, students: 0, teachers: 0, registrars: 0 })
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [roleFilter, setRoleFilter] = useState('ALL')
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 })
+  const [actionMenuOpen, setActionMenuOpen] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [resetConfirm, setResetConfirm] = useState(null)
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     if (!storedUser) {
@@ -35,6 +46,57 @@ export default function AdminDashboard() {
     
     setUser(userData)
   }, [navigate])
+
+  // Fetch users when filters change
+  useEffect(() => {
+    if (user) {
+      fetchUsers()
+    }
+  }, [user, roleFilter, pagination.page])
+
+  const fetchUsers = async () => {
+    setUsersLoading(true)
+    try {
+      const data = await getUsers({
+        role: roleFilter,
+        search: searchTerm,
+        page: pagination.page,
+        limit: pagination.limit
+      })
+      setUsers(data.users)
+      setStats(data.stats)
+      setPagination(prev => ({ ...prev, ...data.pagination }))
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    setPagination(prev => ({ ...prev, page: 1 }))
+    fetchUsers()
+  }
+
+  const handleDeleteUser = async (userId) => {
+    try {
+      await deleteUser(userId)
+      setDeleteConfirm(null)
+      fetchUsers()
+    } catch (err) {
+      console.error('Failed to delete user:', err)
+    }
+  }
+
+  const handleResetPassword = async (userId) => {
+    try {
+      await resetUserPassword(userId)
+      setResetConfirm(null)
+    } catch (err) {
+      console.error('Failed to reset password:', err)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -60,6 +122,7 @@ export default function AdminDashboard() {
       setShowModal(false)
       setShowSuccess(true)
       resetForm()
+      fetchUsers() // Refresh user list
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create account')
     } finally {
@@ -181,7 +244,7 @@ export default function AdminDashboard() {
                       <Users className="w-6 h-6 text-[#1e3a5f]" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                       <p className="text-gray-600 text-sm">Total Users</p>
                     </div>
                   </div>
@@ -192,7 +255,7 @@ export default function AdminDashboard() {
                       <GraduationCap className="w-6 h-6 text-[#f7941d]" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.students}</p>
                       <p className="text-gray-600 text-sm">Students</p>
                     </div>
                   </div>
@@ -203,7 +266,7 @@ export default function AdminDashboard() {
                       <UserPlus className="w-6 h-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.teachers}</p>
                       <p className="text-gray-600 text-sm">Teachers</p>
                     </div>
                   </div>
@@ -214,8 +277,8 @@ export default function AdminDashboard() {
                       <BookOpen className="w-6 h-6 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                      <p className="text-gray-600 text-sm">Programs</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.registrars}</p>
+                      <p className="text-gray-600 text-sm">Registrars</p>
                     </div>
                   </div>
                 </div>
@@ -267,18 +330,169 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === 'users' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">All Users</h2>
-                <button 
-                  onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-4 py-2 rounded-lg transition"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Add User
-                </button>
+            <div className="bg-white rounded-xl shadow-sm">
+              {/* Header with search and filters */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <h2 className="text-lg font-semibold text-gray-900">All Users ({stats.total})</h2>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    {/* Search */}
+                    <form onSubmit={handleSearch} className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none w-full md:w-64"
+                      />
+                    </form>
+                    {/* Role Filter */}
+                    <select
+                      value={roleFilter}
+                      onChange={(e) => { setRoleFilter(e.target.value); setPagination(prev => ({ ...prev, page: 1 })) }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                    >
+                      <option value="ALL">All Roles</option>
+                      <option value="STUDENT">Students</option>
+                      <option value="TEACHER">Teachers</option>
+                      <option value="REGISTRAR">Registrars</option>
+                    </select>
+                    {/* Add User Button */}
+                    <button 
+                      onClick={() => setShowModal(true)}
+                      className="flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-4 py-2 rounded-lg transition"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Add User
+                    </button>
+                  </div>
+                </div>
               </div>
-              <p className="text-gray-500">User management coming soon...</p>
+
+              {/* Users Table */}
+              <div className="overflow-x-auto">
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No users found</p>
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-medium">
+                                {u.profile?.firstName?.[0]}{u.profile?.lastName?.[0]}
+                              </div>
+                              <div className="ml-3">
+                                <p className="text-sm font-medium text-gray-900">{u.profile?.firstName} {u.profile?.lastName}</p>
+                                <p className="text-sm text-gray-500">{u.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-mono text-gray-900">{u.userId}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              u.role === 'STUDENT' ? 'bg-orange-100 text-orange-700' :
+                              u.role === 'TEACHER' ? 'bg-green-100 text-green-700' :
+                              'bg-purple-100 text-purple-700'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              u.status === 'ACTIVE' || u.status === 'ENROLLED' ? 'bg-green-100 text-green-700' :
+                              u.status === 'APPLICANT' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {u.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(u.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="relative">
+                              <button
+                                onClick={() => setActionMenuOpen(actionMenuOpen === u.id ? null : u.id)}
+                                className="text-gray-400 hover:text-gray-600 p-1"
+                              >
+                                <MoreVertical className="w-5 h-5" />
+                              </button>
+                              {actionMenuOpen === u.id && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                                  <button
+                                    onClick={() => { setActionMenuOpen(null); setResetConfirm(u) }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <KeyRound className="w-4 h-4" />
+                                    Reset Password
+                                  </button>
+                                  <button
+                                    onClick={() => { setActionMenuOpen(null); setDeleteConfirm(u) }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete User
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <p className="text-sm text-gray-500">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                      disabled={pagination.page === 1}
+                      className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm text-gray-700">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </span>
+                    <button
+                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                      disabled={pagination.page === pagination.totalPages}
+                      className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -424,6 +638,71 @@ export default function AdminDashboard() {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Delete User?</h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{deleteConfirm.profile?.firstName} {deleteConfirm.profile?.lastName}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(deleteConfirm.id)}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Confirmation Modal */}
+      {resetConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <KeyRound className="w-8 h-8 text-[#1e3a5f]" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Reset Password?</h2>
+              <p className="text-gray-600 mb-2">
+                Reset password for <strong>{resetConfirm.profile?.firstName} {resetConfirm.profile?.lastName}</strong>?
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                Password will be reset to: <span className="font-mono font-semibold">passwordtest123</span>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setResetConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleResetPassword(resetConfirm.id)}
+                  className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg transition"
+                >
+                  Reset Password
+                </button>
+              </div>
             </div>
           </div>
         </div>
