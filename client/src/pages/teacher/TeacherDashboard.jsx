@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar } from 'lucide-react'
-import { getCourses } from '../../api/courses'
+import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ToggleLeft, ToggleRight, Edit3, ExternalLink } from 'lucide-react'
+import { getCourses, toggleCourseActive } from '../../api/courses'
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -36,6 +36,17 @@ export default function TeacherDashboard() {
       console.error('Failed to fetch courses:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleActive = async (courseId, e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      const updated = await toggleCourseActive(courseId)
+      setCourses(prev => prev.map(c => c.id === updated.id ? updated : c))
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to toggle course status')
     }
   }
 
@@ -247,20 +258,29 @@ export default function TeacherDashboard() {
                     {courses.slice(0, 3).map((course) => (
                       <Link
                         key={course.id}
-                        to={`/teacher/courses/${course.id}`}
+                        to={`/teacher/courses/${course.id}/dashboard`}
                         className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-medium text-gray-900">{course.name}</h3>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            course.type === 'RECORDED' 
-                              ? 'bg-blue-100 text-blue-700' 
-                              : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              course.type === 'RECORDED' 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              course.isActive 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {course.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500 line-clamp-2">{course.description}</p>
+                        <p className="text-sm text-gray-500 line-clamp-2">{course.description || 'No description'}</p>
                         <div className="mt-3 text-xs text-gray-400">
                           {course.modules?.length || 0} modules
                         </div>
@@ -273,7 +293,7 @@ export default function TeacherDashboard() {
           )}
 
           {activeTab === 'courses' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">My Courses</h2>
                 <Link
@@ -286,7 +306,7 @@ export default function TeacherDashboard() {
               </div>
 
               {courses.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No courses yet</h3>
                   <p className="text-gray-500 mb-4">Create your first course to get started</p>
@@ -299,28 +319,78 @@ export default function TeacherDashboard() {
                   </Link>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {courses.map((course) => (
-                    <Link
+                    <div
                       key={course.id}
-                      to={`/teacher/courses/${course.id}`}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
+                      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-medium text-gray-900">{course.name}</h3>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          course.type === 'RECORDED' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-purple-100 text-purple-700'
-                        }`}>
-                          {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                        </span>
+                      {/* Course Header */}
+                      <div className={`h-2 ${course.type === 'LIVE' ? 'bg-purple-500' : 'bg-[#1e3a5f]'}`}></div>
+                      
+                      <div className="p-5">
+                        {/* Type & Status Badges */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                            course.type === 'RECORDED' 
+                              ? 'bg-blue-100 text-blue-700' 
+                              : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {course.type === 'RECORDED' ? <Video className="w-3 h-3" /> : <Radio className="w-3 h-3" />}
+                            {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            course.isActive 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {course.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+
+                        {/* Course Name */}
+                        <h3 className="font-semibold text-gray-900 text-lg mb-2">{course.name}</h3>
+                        
+                        {/* Description */}
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-4">
+                          {course.description || 'No description'}
+                        </p>
+                        
+                        {/* Stats */}
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                          <span>{course.modules?.length || 0} modules</span>
+                          {course.type === 'LIVE' && (
+                            <span>{course.sessions?.length || 0} sessions</span>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 pt-4 border-t">
+                          <Link
+                            to={`/teacher/courses/${course.id}/dashboard`}
+                            className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Dashboard
+                          </Link>
+                          <button
+                            onClick={(e) => handleToggleActive(course.id, e)}
+                            className={`flex items-center justify-center gap-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                              course.isActive
+                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                            title={course.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            {course.isActive ? (
+                              <ToggleRight className="w-4 h-4" />
+                            ) : (
+                              <ToggleLeft className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500 line-clamp-2">{course.description}</p>
-                      <div className="mt-3 text-xs text-gray-400">
-                        {course.modules?.length || 0} modules
-                      </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}
