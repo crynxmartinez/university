@@ -34,13 +34,14 @@ export default function HomePage() {
               </Link>
             </div>
             
-            {/* Right - Image placeholder */}
+            {/* Right - Student Image */}
             <div className="hidden lg:flex justify-end z-10">
-              <div className="w-80 h-96 bg-white/10 rounded-3xl flex items-center justify-center">
-                <div className="text-center text-white/50">
-                  <div className="w-32 h-32 bg-white/20 rounded-full mx-auto mb-4"></div>
-                  <p>Student Image</p>
-                </div>
+              <div className="w-80 h-96 rounded-3xl overflow-hidden">
+                <img 
+                  src="https://images.pexels.com/photos/5905445/pexels-photo-5905445.jpeg?auto=compress&cs=tinysrgb&w=600"
+                  alt="Muslim Student"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </div>
