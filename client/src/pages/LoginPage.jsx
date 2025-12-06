@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { login } from '../api/auth'
 
 export default function LoginPage() {
   const [userId, setUserId] = useState('')
@@ -8,17 +9,35 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    // TODO: Implement login API call
-    setTimeout(() => {
-      setError('Login functionality coming soon')
+    try {
+      const data = await login(userId, password)
+      
+      // Save token to localStorage
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      
+      // Redirect based on role
+      if (data.user.role === 'SUPER_ADMIN') {
+        navigate('/admin')
+      } else if (data.user.role === 'REGISTRAR') {
+        navigate('/registrar')
+      } else if (data.user.role === 'TEACHER') {
+        navigate('/teacher')
+      } else {
+        navigate('/student')
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Login failed')
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   return (
