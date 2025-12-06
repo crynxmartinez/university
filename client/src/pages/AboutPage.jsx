@@ -1,4 +1,4 @@
-import { Star, Target, Heart, CheckCircle } from 'lucide-react'
+import { Star, Target } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
@@ -16,10 +16,10 @@ export default function AboutPage() {
       <Navbar />
 
       {/* Hero Banner */}
-      <section className="bg-emerald-800 text-white py-20">
+      <section className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">About Us</h1>
-          <p className="text-xl text-emerald-200">Learn more about ILM Learning Center Inc.</p>
+          <p className="text-xl text-blue-200">Learn more about ILM Learning Center Inc.</p>
         </div>
       </section>
 
@@ -28,9 +28,8 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <p className="text-emerald-600 font-semibold mb-2 uppercase tracking-wide">Our Story</p>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                ILM Learning Center Inc.
+                <span className="text-[#f7941d]">ILM</span> Learning Center Inc.
               </h2>
               <p className="text-lg text-gray-700 mb-6 leading-relaxed">
                 ILM Learning Center, Inc. (ILM-LC) is a training and learning hub in Southern Palawan, 
@@ -57,25 +56,25 @@ export default function AboutPage() {
       </section>
 
       {/* Vision & Mission */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-[#1e3a5f] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-emerald-600">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
-                <Star className="w-8 h-8 text-emerald-700" />
+            <div className="bg-white/10 p-8 rounded-2xl">
+              <div className="w-16 h-16 bg-[#f7941d] rounded-full flex items-center justify-center mb-6">
+                <Star className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Vision</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold mb-4 text-[#f7941d]">Vision</h3>
+              <p className="text-gray-300 leading-relaxed">
                 To produce competent and quality Islamic educators and propagators to be of service 
                 and commitment towards the general Muslim community.
               </p>
             </div>
-            <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-amber-500">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
-                <Target className="w-8 h-8 text-amber-600" />
+            <div className="bg-white/10 p-8 rounded-2xl">
+              <div className="w-16 h-16 bg-[#f7941d] rounded-full flex items-center justify-center mb-6">
+                <Target className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Mission</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold mb-4 text-[#f7941d]">Mission</h3>
+              <p className="text-gray-300 leading-relaxed">
                 Providing quality instructions and short-term courses, mastering program development in Qur'an 
                 and Arabic language, center for best practices learning and benchmarking in non-formal Islamic 
                 education through the guidance of scholars and Du'ats driven by true Aqeedah based from the 
@@ -87,21 +86,20 @@ export default function AboutPage() {
       </section>
 
       {/* Goals & Objectives */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-gradient-to-r from-[#f7941d] to-[#f15a24] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <p className="text-emerald-600 font-semibold mb-2 uppercase tracking-wide">Our Purpose</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Goals and Objectives</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">Goals and Objectives</h2>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {goals.map((goal, index) => (
-              <div key={index} className="bg-gray-50 p-6 rounded-xl border border-gray-100">
+              <div key={index} className="bg-white/20 p-6 rounded-xl">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
+                  <div className="w-10 h-10 bg-white text-[#f7941d] rounded-full flex items-center justify-center flex-shrink-0 font-bold">
                     {String(index + 1).padStart(2, '0')}
                   </div>
-                  <p className="text-gray-700">{goal}</p>
+                  <p>{goal}</p>
                 </div>
               </div>
             ))}
@@ -109,27 +107,53 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Core Values */}
-      <section className="py-20 bg-emerald-800 text-white">
+      {/* Core Values and Principles */}
+      <section className="py-20 bg-[#1e3a5f] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <p className="text-emerald-200 font-semibold mb-2 uppercase tracking-wide">What We Stand For</p>
-            <h2 className="text-3xl md:text-4xl font-bold">Core Values and Principles</h2>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {[
-              "Competence and Excellence",
-              "Service and Commitment", 
-              "Adaptability",
-              "Quality Instruction",
-              "Collaboration, Linkage and Network Building"
-            ].map((value, index) => (
-              <div key={index} className="bg-emerald-700/50 p-6 rounded-xl text-center">
-                <CheckCircle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-                <p className="font-semibold">{value}</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+            <span className="text-[#f7941d]">CORE</span> AND PRINCIPLES
+          </h2>
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-[#f7941d] rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
               </div>
-            ))}
+              <h4 className="font-semibold">Competence and Excellence</h4>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 bg-[#f7941d] rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+              <h4 className="font-semibold">Service and Commitment</h4>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 bg-[#f7941d] rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <h4 className="font-semibold">Adaptability</h4>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 bg-[#f7941d] rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <h4 className="font-semibold">Quality Instruction</h4>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 bg-[#f7941d] rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h4 className="font-semibold">Collaboration & Network Building</h4>
+            </div>
           </div>
         </div>
       </section>
