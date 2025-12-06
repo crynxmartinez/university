@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ ENUMS ============
+enum Role {
+  SUPER_ADMIN
+  REGISTRAR
+  TEACHER
+  STUDENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum StudentStatus {
+  APPLICANT
+  ADMITTED
+  ENROLLED
+  NOT_ENROLLED
+  GRADUATED
+  DROPPED
+}
+
+// ============ MODELS ============
+
+// User - for authentication
+model User {
+  id                String   @id @default(cuid())
+  userId            String   @unique // ADMIN-001, STU-20250001, etc.
+  email             String?  @unique
+  password          String
+  role              Role
+  mustChangePassword Boolean @default(true)
+  profileComplete   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  profile  Profile?
+  student  Student?
+  teacher  Teacher?
+  registrar Registrar?
+}
+
+// Profile - personal information
+model Profile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  firstName  String
+  lastName   String
+  middleName String?
+  gender     Gender?
+  birthDate  DateTime?
+  phone      String?
+  address    String?
+  avatar     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Student record
+model Student {
+  id         String        @id @default(cuid())
+  userId     String        @unique
+  studentId  String        @unique // STU-20250001
+  status     StudentStatus @default(APPLICANT)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Teacher record
+model Teacher {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  teacherId  String   @unique // TEA-20250001
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Registrar record
+model Registrar {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  registrarId String   @unique // REG-20250001
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ID Sequence tracker
+model IdSequence {
+  id        String   @id @default(cuid())
+  type      String   // STUDENT, TEACHER, REGISTRAR
+  year      Int
+  lastNumber Int     @default(0)
+  
+  @@unique([type, year])
+}
