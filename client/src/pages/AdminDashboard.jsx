@@ -633,7 +633,6 @@ export default function AdminDashboard() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -653,15 +652,12 @@ export default function AdminDashboard() {
                               )}
                               <div className="ml-3">
                                 <p className="text-sm font-medium text-gray-900">{p.name}</p>
-                                <p className="text-sm text-gray-500 line-clamp-1">{p.description || 'No description'}</p>
+                                <p className="text-sm text-gray-500 line-clamp-1">{p.description ? p.description.replace(/<[^>]*>/g, '') : 'No description'}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm font-semibold text-[#1e3a5f]">₱{p.price?.toLocaleString() || '0'}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">{p.duration || '-'}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
