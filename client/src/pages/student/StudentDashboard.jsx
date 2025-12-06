@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, FileText } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
+import { getUpcomingSessions } from '../../api/sessions'
 import axios from 'axios'
 import API_URL from '../../api/config'
 
@@ -24,6 +25,8 @@ export default function StudentDashboard() {
   const [selectedProgram, setSelectedProgram] = useState(null) // For browse modal
   const [selectedEnrolledProgram, setSelectedEnrolledProgram] = useState(null) // For enrolled modal
   const [showCalendarModal, setShowCalendarModal] = useState(false) // For course schedule calendar
+  const [upcomingSessions, setUpcomingSessions] = useState([]) // Upcoming sessions from enrolled courses
+  const [selectedSession, setSelectedSession] = useState(null) // For viewing session materials
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -66,6 +69,14 @@ export default function StudentDashboard() {
         setAllCourses(coursesRes.data)
       } catch (e) {
         console.error('Failed to fetch courses:', e)
+      }
+
+      // Fetch upcoming sessions for enrolled courses
+      try {
+        const sessions = await getUpcomingSessions()
+        setUpcomingSessions(sessions)
+      } catch (e) {
+        console.error('Failed to fetch sessions:', e)
       }
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -998,7 +1009,7 @@ export default function StudentDashboard() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Course Schedule</h2>
-                  <p className="text-sm text-gray-500">Your LIVE course sessions</p>
+                  <p className="text-sm text-gray-500">Your upcoming LIVE sessions</p>
                 </div>
               </div>
               <button 
@@ -1011,45 +1022,94 @@ export default function StudentDashboard() {
             
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto flex-1">
-              {myCourseEnrollments.filter(c => c.type === 'LIVE' && c.schedule).length === 0 ? (
+              {upcomingSessions.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No scheduled classes</h3>
-                  <p className="text-gray-500">You don't have any LIVE courses with schedules yet.</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming sessions</h3>
+                  <p className="text-gray-500">You don't have any scheduled LIVE sessions yet.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {myCourseEnrollments
-                    .filter(c => c.type === 'LIVE' && c.schedule)
-                    .map((course) => (
-                      <div key={course.id} className="border border-purple-200 bg-purple-50 rounded-lg p-4">
+                  {upcomingSessions.map((session) => {
+                    const sessionDate = new Date(session.date)
+                    const isToday = sessionDate.toDateString() === new Date().toDateString()
+                    const isTomorrow = sessionDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
+                    
+                    return (
+                      <div 
+                        key={session.id} 
+                        className={`border rounded-lg p-4 ${
+                          session.type === 'EXAM' ? 'border-red-200 bg-red-50' :
+                          session.type === 'REVIEW' ? 'border-yellow-200 bg-yellow-50' :
+                          'border-blue-200 bg-blue-50'
+                        }`}
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{course.name}</h3>
-                            <div className="flex items-center gap-2 mt-2 text-purple-700">
-                              <Calendar className="w-4 h-4" />
-                              <span className="font-medium">{course.schedule}</span>
+                            {/* Course Name & Session Type */}
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full text-white ${
+                                session.type === 'EXAM' ? 'bg-red-500' :
+                                session.type === 'REVIEW' ? 'bg-yellow-500' :
+                                'bg-blue-500'
+                              }`}>
+                                {session.type}
+                              </span>
+                              {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white">TODAY</span>}
+                              {isTomorrow && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500 text-white">TOMORROW</span>}
                             </div>
-                            {course.meetingLink && (
-                              <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                                <Video className="w-4 h-4" />
-                                <a 
-                                  href={course.meetingLink} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-[#1e3a5f] hover:underline"
-                                >
-                                  {course.meetingLink}
-                                </a>
+                            
+                            <h3 className="font-semibold text-gray-900">{session.course?.name}</h3>
+                            {session.title && (
+                              <p className="text-sm text-gray-600 mt-1">{session.title}</p>
+                            )}
+                            
+                            {/* Date & Time */}
+                            <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                {sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                {session.startTime}{session.endTime && ` - ${session.endTime}`}
+                              </div>
+                            </div>
+                            
+                            {/* Notes */}
+                            {session.notes && (
+                              <p className="text-sm text-gray-500 mt-2 italic">{session.notes}</p>
+                            )}
+                            
+                            {/* Materials */}
+                            {session.materials?.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Materials ({session.materials.length})</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {session.materials.map(material => (
+                                    <a
+                                      key={material.id}
+                                      href={material.driveUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-xs px-2 py-1 bg-white border rounded hover:bg-gray-50 text-gray-700"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {material.name}
+                                    </a>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
-                          {course.meetingLink && (
+                          
+                          {/* Join Button */}
+                          {session.meetingLink && (
                             <a 
-                              href={course.meetingLink} 
+                              href={session.meetingLink} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+                              className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition ml-4"
                             >
                               <Video className="w-4 h-4" />
                               Join
@@ -1057,7 +1117,8 @@ export default function StudentDashboard() {
                           )}
                         </div>
                       </div>
-                    ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
