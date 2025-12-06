@@ -115,7 +115,7 @@ export default function ProgramsPage() {
                       {program.image && (
                         <h3 className="text-xl font-bold text-gray-900 mb-2">{program.name}</h3>
                       )}
-                      <p className="text-gray-600 mb-4 line-clamp-3">{program.description || 'No description available'}</p>
+                      <p className="text-gray-600 mb-4 line-clamp-3">{program.description ? program.description.replace(/<[^>]*>/g, '') : 'No description available'}</p>
                       <button 
                         onClick={() => setSelectedProgram(program)}
                         className="inline-flex items-center gap-2 text-[#f7941d] font-semibold hover:gap-3 transition-all"
