@@ -1,35 +1,15 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Users, GraduationCap, Award, Mail, MapPin, Phone, ChevronRight, Star, Target, Heart } from 'lucide-react'
+import { ChevronRight, Star, Target, Heart, BookOpen, Award, GraduationCap, Users } from 'lucide-react'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="bg-emerald-800 text-white sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
-              <img 
-                src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
-                alt="ILM Learning Center" 
-                className="h-12"
-              />
-            </div>
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#home" className="hover:text-emerald-200 transition">Home</a>
-              <a href="#about" className="hover:text-emerald-200 transition">About Us</a>
-              <a href="#programs" className="hover:text-emerald-200 transition">Programs</a>
-              <a href="#contact" className="hover:text-emerald-200 transition">Contact</a>
-              <Link to="/login" className="bg-amber-500 hover:bg-amber-400 text-emerald-900 px-6 py-2 rounded-lg font-semibold transition">
-                Login
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section - ILM Style */}
-      <section id="home" className="relative">
+      <section className="relative">
         <div className="grid lg:grid-cols-2 min-h-[600px]">
           {/* Left - White Background with ILM Logo */}
           <div className="bg-white flex items-center justify-center p-8 lg:p-16">
@@ -45,15 +25,9 @@ export default function HomePage() {
           {/* Right - Green Content */}
           <div className="bg-emerald-800 text-white flex items-center">
             <div className="p-8 lg:p-16">
-              <p className="font-arabic text-2xl md:text-3xl text-amber-400 mb-2">
-                طَلَبُ الْعِلْمِ فَرِيضَةٌ عَلَى كُلِّ مُسْلِمٍ
-              </p>
-              <p className="text-emerald-200 mb-8 text-lg italic">
-                "Seeking knowledge is an obligation upon every Muslim"
-              </p>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                Empowering Minds Through
-                <span className="text-amber-400"> Islamic Education</span>
+                Empowering Minds, Inspiring Futures:
+                <span className="text-amber-400"> Excellence in Education</span>
               </h1>
               <p className="text-lg text-emerald-100 mb-8">
                 ILM Learning Center is dedicated to producing competent Islamic educators 
@@ -61,11 +35,8 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/login" className="bg-amber-500 hover:bg-amber-400 text-emerald-900 px-8 py-4 rounded-lg font-semibold text-lg transition flex items-center justify-center gap-2">
-                  Get Started <ChevronRight className="w-5 h-5" />
+                  Explore Now <ChevronRight className="w-5 h-5" />
                 </Link>
-                <a href="#programs" className="border-2 border-white hover:bg-white hover:text-emerald-800 px-8 py-4 rounded-lg font-semibold text-lg transition text-center">
-                  Our Programs
-                </a>
               </div>
             </div>
           </div>
@@ -73,62 +44,152 @@ export default function HomePage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-20 bg-white">
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-emerald-600 font-semibold mb-2 uppercase tracking-wide">About Us</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">ILM Learning Center Inc.</h2>
+          </div>
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-lg text-gray-700 leading-relaxed">
+              ILM Learning Center, Inc. (ILM-LC) is a training and learning hub in Southern Palawan, 
+              a non-formal Islamic institution that provides short-term courses, quality instructions and education. 
+              The institution's main core is centered in Qur'an and Arabic program. The goal is to produce quality 
+              and competent Islamic educators to better serve the general Muslim community.
+            </p>
+            <p className="text-gray-600 mt-4">
+              Its primary office, learning and training facility are located in 3rd Avenue, Barangay Tubtub, Brooke's Point, Palawan.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ILM Term - Logo Explanation Section */}
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left - Building Image */}
-            <div className="relative">
-              <div className="bg-gray-100 rounded-2xl overflow-hidden">
-                <img 
-                  src="https://ilmlearningcenter.com/wp-content/uploads/2024/04/Screenshot-2024-04-07-165639.png"
-                  alt="ILM Learning Center Building"
-                  className="w-full h-auto object-cover rounded-2xl"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = '<div class="h-80 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center"><div class="text-center"><div class="w-24 h-24 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg></div><p class="text-emerald-700 font-semibold">ILM Learning Center</p></div></div>';
-                  }}
-                />
-              </div>
-              <div className="absolute -bottom-6 -right-6 bg-amber-500 text-emerald-900 p-6 rounded-2xl shadow-lg hidden lg:block">
-                <p className="text-3xl font-bold">10+</p>
-                <p className="text-sm font-medium">Years of Excellence</p>
+            {/* Left - Text Content */}
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8">
+                The <span className="text-amber-500">ILM Learning Center Inc.</span> is enthusiastic to release the wisdom and explanation behind its logo.
+              </h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2">ILM term:</h4>
+                  <p className="text-gray-600">
+                    Inspired by Arabic calligraphy, the "ILM" term can be seen and read from the logo itself. 
+                    ILM connotes meaning of knowledge, learning and wisdom.
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2">2 DOTS, SHADED ROUNDS, PEN:</h4>
+                  <p className="text-gray-600">
+                    These represent pen for writing and embracing the knowledge and wisdom coming from the two (2) 
+                    authentic sources of Islamic education and foundation – the Qur'an and Hadith.
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2">LIGHT:</h4>
+                  <p className="text-gray-600">
+                    This symbol ignites the light or the guidance from the Almighty Allah in pursuit of 
+                    Islamic educational empowerment and development.
+                  </p>
+                </div>
               </div>
             </div>
             
-            {/* Right - Content */}
-            <div>
-              <p className="text-emerald-600 font-semibold mb-2 uppercase tracking-wide">About Us</p>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                ILM Learning Center Inc.
-              </h2>
-              <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                ILM Learning Center Inc. is an Islamic institution providing short-term courses 
-                focused on Quran and Arabic programs. Our mission is to produce competent Islamic 
-                educators who can serve the Muslim community.
-              </p>
-              <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                Founded on the principles of authentic Islamic teachings, we combine traditional 
-                knowledge with modern educational methods to nurture both the intellectual and 
-                spiritual development of our students.
-              </p>
+            {/* Right - Logo with breakdown */}
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Stacked-with-Sec-Reg-1-364x302x0x0x364x302x1711677866.png"
+                alt="ILM Learning Center Logo"
+                className="w-64 mb-8"
+              />
               
-              <div className="grid grid-cols-2 gap-6">
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-6 h-6 text-emerald-700" />
+              {/* Logo Elements */}
+              <div className="grid grid-cols-4 gap-4 w-full max-w-md">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-12 bg-gradient-to-b from-amber-400 to-amber-500 rounded-t-full"></div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">Quran Studies</h4>
-                    <p className="text-gray-600 text-sm">Tajweed, Hifz, and Tafsir</p>
+                  <p className="text-xs font-semibold text-gray-700">ILM</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-12 bg-gradient-to-b from-gray-400 to-gray-500 rounded-t-full"></div>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">PEN</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-12 bg-gradient-to-b from-gray-400 to-gray-500 rounded-t-full"></div>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">2 DOTS</p>
+                  <p className="text-xs text-gray-500">(QURAN & SUNNAH)</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-12 bg-gradient-to-b from-amber-300 to-amber-400 rounded-t-full"></div>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">LIGHT</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Proposed ILM Educational Center */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold">
+              PROPOSED <span className="text-amber-500">ILM</span> EDUCATIONAL CENTER
+            </h2>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left - Orthographic Section */}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mb-4">
+                <div className="text-center">
+                  <div className="w-32 h-32 bg-emerald-600 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-600 text-sm">Building Floor Plan</p>
+                  <p className="text-xs text-gray-500 mt-1">Student's Quarter • Lecture Hall • Kitchen</p>
+                </div>
+              </div>
+              <p className="text-center font-semibold text-gray-700">ORTHOGRAPHIC Section</p>
+            </div>
+            
+            {/* Right - Perspective Views */}
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <div className="text-center mb-2">
+                  <p className="text-sm text-gray-600">PROPOSED <span className="text-amber-500">ILM</span> EDUCATIONAL CENTER</p>
+                  <p className="font-semibold text-gray-800">PERSPECTIVE</p>
+                </div>
+                <div className="aspect-video bg-gradient-to-br from-emerald-50 to-amber-50 rounded-xl flex items-center justify-center">
+                  <div className="w-24 h-20 bg-white rounded-lg shadow-lg flex items-center justify-center">
+                    <svg className="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="w-6 h-6 text-emerald-700" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">Arabic Language</h4>
-                    <p className="text-gray-600 text-sm">Classical & Modern Arabic</p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <div className="aspect-video bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl flex items-center justify-center">
+                  <div className="w-32 h-20 bg-white rounded-lg shadow-lg flex items-center justify-center">
+                    <svg className="w-16 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -269,67 +330,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <p className="text-emerald-600 font-semibold mb-2 uppercase tracking-wide">Get In Touch</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Contact Us</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-xl shadow-sm text-center hover:shadow-lg transition">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-8 h-8 text-emerald-700" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Address</h3>
-              <p className="text-gray-600">
-                Marawi City<br />
-                Lanao del Sur, Philippines
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-sm text-center hover:shadow-lg transition">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Phone className="w-8 h-8 text-emerald-700" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Phone</h3>
-              <p className="text-gray-600">
-                +63 912 345 6789
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-sm text-center hover:shadow-lg transition">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-8 h-8 text-emerald-700" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Email</h3>
-              <p className="text-gray-600">
-                info@ilmlearningcenter.com
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-emerald-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-6">
-              <img 
-                src="https://ilmlearningcenter.com/wp-content/uploads/brizy/imgs/ILM-Logo-Landscape-with-Sec-Reg-white-189x69x0x3x189x63x1711677866.png" 
-                alt="ILM Learning Center" 
-                className="h-16"
-              />
-            </div>
-            <p className="font-arabic text-xl text-emerald-300 mb-2">العلم نور</p>
-            <p className="text-emerald-400 mb-6">"Knowledge is Light"</p>
-            <div className="border-t border-emerald-800 pt-6">
-              <p className="text-emerald-400 text-sm">
-                © 2025 ILM Learning Center Inc. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

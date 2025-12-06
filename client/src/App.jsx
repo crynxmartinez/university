@@ -1,5 +1,9 @@
 import { Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage'
+import AboutPage from './pages/AboutPage'
+import ProgramsPage from './pages/ProgramsPage'
+import ContactPage from './pages/ContactPage'
+import BlogPage from './pages/BlogPage'
 import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminDashboard from './pages/AdminDashboard'
@@ -16,6 +20,10 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/programs" element={<ProgramsPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/blog" element={<BlogPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
