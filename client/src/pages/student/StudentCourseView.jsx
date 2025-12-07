@@ -9,7 +9,7 @@ import { getMyCourses } from '../../api/enrollments'
 import { getCourseSessions } from '../../api/sessions'
 import { getNoteForLesson, getNoteForSession, saveNoteForLesson, saveNoteForSession } from '../../api/notes'
 import { markJoinAttendance } from '../../api/attendance'
-import { getStudentGrade } from '../../api/exams'
+import { getStudentGrade, getAvailableExams } from '../../api/exams'
 import { useToast } from '../../components/Toast'
 
 export default function StudentCourseView() {
@@ -39,6 +39,10 @@ export default function StudentCourseView() {
   // Grade state
   const [gradeData, setGradeData] = useState(null)
   const [loadingGrade, setLoadingGrade] = useState(false)
+
+  // Exams state
+  const [availableExams, setAvailableExams] = useState([])
+  const [loadingExams, setLoadingExams] = useState(false)
 
   const handleMaterialClick = (url, name) => {
     setDownloadConfirm({ url, name: name || 'this material' })
@@ -123,6 +127,26 @@ export default function StudentCourseView() {
       console.error('Failed to fetch grade:', error)
     } finally {
       setLoadingGrade(false)
+    }
+  }
+
+  // Fetch exams when switching to exams view
+  useEffect(() => {
+    if (course?.id && viewMode === 'exams') {
+      fetchExams()
+    }
+  }, [course?.id, viewMode])
+
+  const fetchExams = async () => {
+    if (!course?.id) return
+    setLoadingExams(true)
+    try {
+      const data = await getAvailableExams(course.id)
+      setAvailableExams(data)
+    } catch (error) {
+      console.error('Failed to fetch exams:', error)
+    } finally {
+      setLoadingExams(false)
     }
   }
 
@@ -327,31 +351,40 @@ export default function StudentCourseView() {
             </div>
           )}
 
-          {/* View Mode Toggle for LIVE courses */}
-          {course.type === 'LIVE' && (
-            <div className="p-4 border-b border-[#2d5a87]">
-              <div className="flex bg-[#2d5a87] rounded-lg p-1">
+          {/* View Mode Toggle */}
+          <div className="p-4 border-b border-[#2d5a87]">
+            <div className="flex bg-[#2d5a87] rounded-lg p-1">
+              {course.type === 'LIVE' && (
                 <button
                   onClick={() => setViewMode('sessions')}
-                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition ${
+                  className={`flex-1 py-2 px-2 rounded-md text-sm font-medium transition ${
                     viewMode === 'sessions' ? 'bg-[#f7941d] text-white' : 'text-blue-200 hover:text-white'
                   }`}
                 >
                   <Calendar className="w-4 h-4 inline mr-1" />
                   Sessions
                 </button>
-                <button
-                  onClick={() => setViewMode('lessons')}
-                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition ${
-                    viewMode === 'lessons' ? 'bg-[#f7941d] text-white' : 'text-blue-200 hover:text-white'
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4 inline mr-1" />
-                  Lessons
-                </button>
-              </div>
+              )}
+              <button
+                onClick={() => setViewMode('lessons')}
+                className={`flex-1 py-2 px-2 rounded-md text-sm font-medium transition ${
+                  viewMode === 'lessons' ? 'bg-[#f7941d] text-white' : 'text-blue-200 hover:text-white'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 inline mr-1" />
+                Lessons
+              </button>
+              <button
+                onClick={() => setViewMode('exams')}
+                className={`flex-1 py-2 px-2 rounded-md text-sm font-medium transition ${
+                  viewMode === 'exams' ? 'bg-[#f7941d] text-white' : 'text-blue-200 hover:text-white'
+                }`}
+              >
+                <FileText className="w-4 h-4 inline mr-1" />
+                Exams
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Course Content */}
           <div className="flex-1 overflow-y-auto p-4">
@@ -432,7 +465,7 @@ export default function StudentCourseView() {
             )}
 
             {/* Lessons View (both RECORDED and LIVE) */}
-            {(course.type === 'RECORDED' || viewMode === 'lessons') && (
+            {viewMode === 'lessons' && (
               <>
                 {course.modules?.length === 0 ? (
                   <p className="text-blue-200 text-sm text-center py-8">No content available yet.</p>
@@ -493,6 +526,72 @@ export default function StudentCourseView() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* Exams View */}
+            {viewMode === 'exams' && (
+              <div className="space-y-3">
+                {loadingExams ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-300" />
+                  </div>
+                ) : availableExams.length === 0 ? (
+                  <p className="text-blue-200 text-sm text-center py-8">No exams available yet.</p>
+                ) : (
+                  availableExams.map((exam) => (
+                    <button
+                      key={exam.id}
+                      onClick={() => navigate(`/student/courses/${id}/exam/${exam.id}`)}
+                      className="w-full p-4 bg-[#2d5a87] hover:bg-[#3d6a97] rounded-lg text-left transition"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-medium text-white">{exam.title}</h3>
+                        {exam.attempt ? (
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            exam.attempt.status === 'SUBMITTED' 
+                              ? 'bg-green-500/20 text-green-300'
+                              : exam.attempt.status === 'IN_PROGRESS'
+                              ? 'bg-yellow-500/20 text-yellow-300'
+                              : 'bg-red-500/20 text-red-300'
+                          }`}>
+                            {exam.attempt.status === 'SUBMITTED' ? 'Completed' : 
+                             exam.attempt.status === 'IN_PROGRESS' ? 'In Progress' : 'Flagged'}
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">
+                            Not Started
+                          </span>
+                        )}
+                      </div>
+                      {exam.description && (
+                        <p className="text-sm text-blue-200 mb-2 line-clamp-2">{exam.description}</p>
+                      )}
+                      <div className="flex items-center gap-4 text-xs text-blue-300">
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          {exam.questionCount} questions
+                        </span>
+                        <span>{exam.totalPoints} pts</span>
+                        {exam.timeLimit && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {exam.timeLimit} min
+                          </span>
+                        )}
+                      </div>
+                      {exam.attempt?.status === 'SUBMITTED' && exam.attempt.score !== null && (
+                        <div className="mt-2 pt-2 border-t border-[#3d6a97]">
+                          <span className={`text-sm font-medium ${
+                            (exam.attempt.score / exam.totalPoints) >= 0.75 ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            Score: {exam.attempt.score}/{exam.totalPoints} ({Math.round((exam.attempt.score / exam.totalPoints) * 100)}%)
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
             )}
           </div>
         </div>
