@@ -19,3 +19,13 @@ export const deleteModule = async (id) => {
   const response = await axios.delete(`${API_URL}/modules/${id}`, getAuthHeader())
   return response.data
 }
+
+export const getModuleDeleteInfo = async (id) => {
+  const response = await axios.get(`${API_URL}/modules/${id}/delete-info`, getAuthHeader())
+  return response.data
+}
+
+export const reorderModules = async (courseId, moduleIds) => {
+  const response = await axios.put(`${API_URL}/modules/reorder`, { courseId, moduleIds }, getAuthHeader())
+  return response.data
+}

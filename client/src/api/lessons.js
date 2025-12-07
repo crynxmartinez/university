@@ -24,3 +24,13 @@ export const deleteLesson = async (id) => {
   const response = await axios.delete(`${API_URL}/lessons/${id}`, getAuthHeader())
   return response.data
 }
+
+export const getLessonDeleteInfo = async (id) => {
+  const response = await axios.get(`${API_URL}/lessons/${id}/delete-info`, getAuthHeader())
+  return response.data
+}
+
+export const reorderLessons = async (moduleId, lessonIds) => {
+  const response = await axios.put(`${API_URL}/lessons/reorder`, { moduleId, lessonIds }, getAuthHeader())
+  return response.data
+}

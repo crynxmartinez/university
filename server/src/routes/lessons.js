@@ -143,6 +143,38 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/lessons/:id/delete-info - Get info about what will be deleted
+router.get('/:id/delete-info', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const lesson = await prisma.lesson.findUnique({
+      where: { id },
+      include: {
+        module: {
+          include: { course: true }
+        },
+        sessions: true
+      }
+    })
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' })
+    }
+    if (lesson.module.course.teacherId !== req.user.teacher?.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    res.json({
+      lessonName: lesson.name,
+      sessionCount: lesson.sessions.length
+    })
+  } catch (error) {
+    console.error('Get lesson delete info error:', error)
+    res.status(500).json({ error: 'Failed to get delete info' })
+  }
+})
+
 // DELETE /api/lessons/:id - Delete a lesson
 router.delete('/:id', authenticate, async (req, res) => {
   try {
@@ -170,6 +202,44 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Delete lesson error:', error)
     res.status(500).json({ error: 'Failed to delete lesson' })
+  }
+})
+
+// PUT /api/lessons/reorder - Reorder lessons within a module
+router.put('/reorder', authenticate, async (req, res) => {
+  try {
+    const { moduleId, lessonIds } = req.body
+
+    if (!moduleId || !lessonIds || !Array.isArray(lessonIds)) {
+      return res.status(400).json({ error: 'Module ID and lesson IDs array are required' })
+    }
+
+    // Verify module ownership
+    const module = await prisma.module.findUnique({
+      where: { id: moduleId },
+      include: { course: true }
+    })
+    if (!module) {
+      return res.status(404).json({ error: 'Module not found' })
+    }
+    if (module.course.teacherId !== req.user.teacher?.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Update order for each lesson
+    const updates = lessonIds.map((lessonId, index) =>
+      prisma.lesson.update({
+        where: { id: lessonId },
+        data: { order: index + 1 }
+      })
+    )
+
+    await prisma.$transaction(updates)
+
+    res.json({ message: 'Lessons reordered successfully' })
+  } catch (error) {
+    console.error('Reorder lessons error:', error)
+    res.status(500).json({ error: 'Failed to reorder lessons' })
   }
 })
 

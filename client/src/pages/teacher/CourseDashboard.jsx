@@ -4,11 +4,159 @@ import {
   ArrowLeft, BookOpen, Calendar, Users, Settings, Menu, 
   Plus, Video, Radio, ChevronDown, ChevronRight, Play,
   ToggleLeft, ToggleRight, Trash2, Edit3, Save, X,
-  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard
+  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard, GripVertical
 } from 'lucide-react'
 import { getCourse, updateCourse, toggleCourseActive, deleteCourse } from '../../api/courses'
 import { getCourseSessions, createSession, updateSession, deleteSession, addMaterial, deleteMaterial } from '../../api/sessions'
+import { updateModule, deleteModule, getModuleDeleteInfo, reorderModules } from '../../api/modules'
+import { updateLesson, deleteLesson, getLessonDeleteInfo, reorderLessons } from '../../api/lessons'
 import { useToast, ConfirmModal } from '../../components/Toast'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+// Sortable Lesson Component
+function SortableLesson({ lesson, onEdit, onDelete, courseType }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lesson.id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="p-4 flex items-center justify-between hover:bg-gray-50 group">
+      <div className="flex items-center gap-3">
+        <button {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600 touch-none">
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
+        <div>
+          <span className="text-gray-900 font-medium">{lesson.name}</span>
+          {lesson.description && (
+            <p className="text-sm text-gray-500 mt-0.5">{lesson.description}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {lesson.materials && (
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Materials</span>
+        )}
+        {courseType === 'RECORDED' && lesson.videoUrl && (
+          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Video</span>
+        )}
+        <button
+          onClick={() => onEdit(lesson)}
+          className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100"
+          title="Edit class"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onDelete(lesson.id)}
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100"
+          title="Delete class"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Sortable Module Component
+function SortableModule({ module, index, courseId, expanded, onToggle, onEdit, onDelete, onEditLesson, onDeleteLesson, onLessonDragEnd, sensors, courseType }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: module.id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition group">
+        <div className="flex items-center gap-3 flex-1">
+          <button {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600 touch-none">
+            <GripVertical className="w-5 h-5" />
+          </button>
+          <span className="w-8 h-8 bg-[#1e3a5f] text-white rounded-lg flex items-center justify-center text-sm font-bold">
+            {index + 1}
+          </span>
+          <button onClick={onToggle} className="flex items-center gap-2 flex-1 text-left">
+            <span className="font-medium text-gray-900">{module.name}</span>
+            <span className="text-sm text-gray-500">({module.lessons?.length || 0} classes)</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100"
+            title="Edit module"
+          >
+            <Edit3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100"
+            title="Delete module"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button onClick={onToggle} className="p-1">
+            {expanded ? (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+        </div>
+      </div>
+      
+      {expanded && (
+        <div className="border-t">
+          {module.lessons?.length === 0 ? (
+            <div className="p-4 text-center">
+              <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
+              <Link
+                to={`/teacher/courses/${courseId}/modules/${module.id}/lessons/create`}
+                className="text-[#f7941d] hover:underline text-sm font-medium"
+              >
+                + Add Class
+              </Link>
+            </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onLessonDragEnd}>
+              <SortableContext items={module.lessons.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                <div className="divide-y">
+                  {module.lessons.map((lesson) => (
+                    <SortableLesson 
+                      key={lesson.id} 
+                      lesson={lesson} 
+                      onEdit={onEditLesson}
+                      onDelete={onDeleteLesson}
+                      courseType={courseType}
+                    />
+                  ))}
+                  <div className="p-4">
+                    <Link
+                      to={`/teacher/courses/${courseId}/modules/${module.id}/lessons/create`}
+                      className="text-[#f7941d] hover:underline text-sm font-medium"
+                    >
+                      + Add Class
+                    </Link>
+                  </div>
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function CourseDashboard() {
   const { id } = useParams()
@@ -33,6 +181,13 @@ export default function CourseDashboard() {
   const [deleting, setDeleting] = useState(false)
   const [deleteSessionConfirm, setDeleteSessionConfirm] = useState(null)
   const [deleteMaterialConfirm, setDeleteMaterialConfirm] = useState(null)
+
+  // Module/Lesson edit state
+  const [editModuleModal, setEditModuleModal] = useState(null) // { id, name }
+  const [editLessonModal, setEditLessonModal] = useState(null) // { id, name, description, materials, videoUrl }
+  const [deleteModuleConfirm, setDeleteModuleConfirm] = useState(null) // { id, info }
+  const [deleteLessonConfirm, setDeleteLessonConfirm] = useState(null) // { id, info }
+  const [lessonMaterialUrls, setLessonMaterialUrls] = useState([''])
 
   // Schedule state
   const [sessions, setSessions] = useState([])
@@ -150,6 +305,151 @@ export default function CourseDashboard() {
       ...prev,
       [moduleId]: !prev[moduleId]
     }))
+  }
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  // Module handlers
+  const openEditModule = (module) => {
+    setEditModuleModal({ id: module.id, name: module.name })
+  }
+
+  const handleSaveModule = async () => {
+    if (!editModuleModal) return
+    try {
+      await updateModule(editModuleModal.id, { name: editModuleModal.name })
+      await fetchCourse()
+      setEditModuleModal(null)
+      toast.success('Module updated')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update module')
+    }
+  }
+
+  const openDeleteModule = async (moduleId) => {
+    try {
+      const info = await getModuleDeleteInfo(moduleId)
+      setDeleteModuleConfirm({ id: moduleId, info })
+    } catch (error) {
+      toast.error('Failed to get module info')
+    }
+  }
+
+  const handleDeleteModule = async () => {
+    if (!deleteModuleConfirm) return
+    try {
+      await deleteModule(deleteModuleConfirm.id)
+      await fetchCourse()
+      setDeleteModuleConfirm(null)
+      toast.success('Module deleted')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to delete module')
+    }
+  }
+
+  const handleModuleDragEnd = async (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = course.modules.findIndex(m => m.id === active.id)
+    const newIndex = course.modules.findIndex(m => m.id === over.id)
+    
+    const newModules = arrayMove(course.modules, oldIndex, newIndex)
+    setCourse({ ...course, modules: newModules })
+
+    try {
+      await reorderModules(course.id, newModules.map(m => m.id))
+    } catch (error) {
+      toast.error('Failed to reorder modules')
+      fetchCourse()
+    }
+  }
+
+  // Lesson handlers
+  const openEditLesson = (lesson) => {
+    const urls = lesson.materials ? lesson.materials.split('\n').filter(u => u.trim()) : ['']
+    setLessonMaterialUrls(urls.length > 0 ? urls : [''])
+    setEditLessonModal({
+      id: lesson.id,
+      name: lesson.name,
+      description: lesson.description || '',
+      videoUrl: lesson.videoUrl || ''
+    })
+  }
+
+  const handleSaveLesson = async () => {
+    if (!editLessonModal) return
+    const materials = lessonMaterialUrls.filter(u => u.trim()).join('\n')
+    try {
+      await updateLesson(editLessonModal.id, {
+        name: editLessonModal.name,
+        description: editLessonModal.description,
+        materials,
+        videoUrl: editLessonModal.videoUrl || null
+      })
+      await fetchCourse()
+      setEditLessonModal(null)
+      toast.success('Class updated')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update class')
+    }
+  }
+
+  const openDeleteLesson = async (lessonId) => {
+    try {
+      const info = await getLessonDeleteInfo(lessonId)
+      setDeleteLessonConfirm({ id: lessonId, info })
+    } catch (error) {
+      toast.error('Failed to get class info')
+    }
+  }
+
+  const handleDeleteLesson = async () => {
+    if (!deleteLessonConfirm) return
+    try {
+      await deleteLesson(deleteLessonConfirm.id)
+      await fetchCourse()
+      setDeleteLessonConfirm(null)
+      toast.success('Class deleted')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to delete class')
+    }
+  }
+
+  const handleLessonDragEnd = async (moduleId, event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const module = course.modules.find(m => m.id === moduleId)
+    if (!module) return
+
+    const oldIndex = module.lessons.findIndex(l => l.id === active.id)
+    const newIndex = module.lessons.findIndex(l => l.id === over.id)
+    
+    const newLessons = arrayMove(module.lessons, oldIndex, newIndex)
+    const newModules = course.modules.map(m => 
+      m.id === moduleId ? { ...m, lessons: newLessons } : m
+    )
+    setCourse({ ...course, modules: newModules })
+
+    try {
+      await reorderLessons(moduleId, newLessons.map(l => l.id))
+    } catch (error) {
+      toast.error('Failed to reorder classes')
+      fetchCourse()
+    }
+  }
+
+  const addLessonMaterialUrl = () => setLessonMaterialUrls([...lessonMaterialUrls, ''])
+  const removeLessonMaterialUrl = (index) => setLessonMaterialUrls(lessonMaterialUrls.filter((_, i) => i !== index))
+  const updateLessonMaterialUrl = (index, value) => {
+    const updated = [...lessonMaterialUrls]
+    updated[index] = value
+    setLessonMaterialUrls(updated)
   }
 
   // Calendar helpers
@@ -481,86 +781,29 @@ export default function CourseDashboard() {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {course.modules.map((module, index) => (
-                    <div key={module.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                      <button
-                        onClick={() => toggleModule(module.id)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 bg-[#1e3a5f] text-white rounded-lg flex items-center justify-center text-sm font-bold">
-                            {index + 1}
-                          </span>
-                          <span className="font-medium text-gray-900">{module.name}</span>
-                          <span className="text-sm text-gray-500">({module.lessons?.length || 0} classes)</span>
-                        </div>
-                        {expandedModules[module.id] ? (
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
-                        )}
-                      </button>
-                      
-                      {expandedModules[module.id] && (
-                        <div className="border-t">
-                          {module.lessons?.length === 0 ? (
-                            <div className="p-4 text-center">
-                              <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
-                              <Link
-                                to={`/teacher/courses/${id}/modules/${module.id}/lessons/create`}
-                                className="text-[#f7941d] hover:underline text-sm font-medium"
-                              >
-                                + Add Class
-                              </Link>
-                            </div>
-                          ) : (
-                            <div className="divide-y">
-                              {module.lessons.map((lesson) => (
-                                <div key={lesson.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                                  <div className="flex items-center gap-3">
-                                    <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
-                                    <div>
-                                      <span className="text-gray-900 font-medium">{lesson.name}</span>
-                                      {lesson.description && (
-                                        <p className="text-sm text-gray-500 mt-0.5">{lesson.description}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {lesson.materials && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                        Has Materials
-                                      </span>
-                                    )}
-                                    {lesson.videoUrl && (
-                                      <a 
-                                        href={lesson.videoUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-[#1e3a5f] hover:underline"
-                                      >
-                                        View Video
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                              <div className="p-4">
-                                <Link
-                                  to={`/teacher/courses/${id}/modules/${module.id}/lessons/create`}
-                                  className="text-[#f7941d] hover:underline text-sm font-medium"
-                                >
-                                  + Add Class
-                                </Link>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleModuleDragEnd}>
+                  <SortableContext items={course.modules.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {course.modules.map((module, index) => (
+                        <SortableModule 
+                          key={module.id} 
+                          module={module} 
+                          index={index}
+                          courseId={id}
+                          expanded={expandedModules[module.id]}
+                          onToggle={() => toggleModule(module.id)}
+                          onEdit={() => openEditModule(module)}
+                          onDelete={() => openDeleteModule(module.id)}
+                          onEditLesson={openEditLesson}
+                          onDeleteLesson={openDeleteLesson}
+                          onLessonDragEnd={(event) => handleLessonDragEnd(module.id, event)}
+                          sensors={sensors}
+                          courseType={course.type}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           )}
@@ -1353,6 +1596,223 @@ export default function CourseDashboard() {
         confirmText="Delete"
         confirmStyle="danger"
       />
+
+      {/* Edit Module Modal */}
+      {editModuleModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Module</h3>
+              <button onClick={() => setEditModuleModal(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Module Name *</label>
+              <input
+                type="text"
+                value={editModuleModal.name}
+                onChange={(e) => setEditModuleModal({ ...editModuleModal, name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+              />
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setEditModuleModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveModule}
+                disabled={!editModuleModal.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lesson Modal */}
+      {editLessonModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Class</h3>
+              <button onClick={() => setEditLessonModal(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class Name *</label>
+                <input
+                  type="text"
+                  value={editLessonModal.name}
+                  onChange={(e) => setEditLessonModal({ ...editLessonModal, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={editLessonModal.description}
+                  onChange={(e) => setEditLessonModal({ ...editLessonModal, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Materials (URLs)</label>
+                <div className="space-y-2">
+                  {lessonMaterialUrls.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => updateLessonMaterialUrl(index, e.target.value)}
+                        placeholder="https://drive.google.com/..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      />
+                      {lessonMaterialUrls.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeLessonMaterialUrl(index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addLessonMaterialUrl}
+                  className="mt-2 flex items-center gap-1 text-sm text-[#1e3a5f] hover:text-[#2d5a87] font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Material
+                </button>
+              </div>
+              {course?.type === 'RECORDED' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center gap-2">
+                      <Video className="w-4 h-4 text-blue-600" />
+                      Video URL (YouTube)
+                    </div>
+                  </label>
+                  <input
+                    type="url"
+                    value={editLessonModal.videoUrl}
+                    onChange={(e) => setEditLessonModal({ ...editLessonModal, videoUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setEditLessonModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveLesson}
+                disabled={!editLessonModal.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Module Confirmation Modal */}
+      {deleteModuleConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Module</h3>
+              <p className="text-gray-500 text-center mb-4">
+                Are you sure you want to delete <span className="font-medium text-gray-900">"{deleteModuleConfirm.info.moduleName}"</span>?
+              </p>
+              {deleteModuleConfirm.info.lessonCount > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-yellow-800">
+                    This module contains <strong>{deleteModuleConfirm.info.lessonCount}</strong> class(es).
+                    {deleteModuleConfirm.info.totalSessions > 0 && (
+                      <> <strong>{deleteModuleConfirm.info.totalSessions}</strong> scheduled session(s) will also be deleted.</>
+                    )}
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteModuleConfirm(null)}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteModule}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Lesson Confirmation Modal */}
+      {deleteLessonConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Class</h3>
+              <p className="text-gray-500 text-center mb-4">
+                Are you sure you want to delete <span className="font-medium text-gray-900">"{deleteLessonConfirm.info.lessonName}"</span>?
+              </p>
+              {deleteLessonConfirm.info.sessionCount > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ This class is linked to <strong>{deleteLessonConfirm.info.sessionCount}</strong> scheduled session(s). 
+                    Deleting it will also remove those sessions from the calendar.
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteLessonConfirm(null)}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteLesson}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

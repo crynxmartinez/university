@@ -103,6 +103,51 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/modules/:id/delete-info - Get info about what will be deleted
+router.get('/:id/delete-info', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const module = await prisma.module.findUnique({
+      where: { id },
+      include: {
+        course: true,
+        lessons: {
+          include: {
+            sessions: true
+          }
+        }
+      }
+    })
+
+    if (!module) {
+      return res.status(404).json({ error: 'Module not found' })
+    }
+    if (module.course.teacherId !== req.user.teacher?.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Count sessions linked to lessons in this module
+    const lessonsWithSessions = module.lessons.map(lesson => ({
+      id: lesson.id,
+      name: lesson.name,
+      sessionCount: lesson.sessions.length
+    })).filter(l => l.sessionCount > 0)
+
+    const totalSessions = lessonsWithSessions.reduce((sum, l) => sum + l.sessionCount, 0)
+
+    res.json({
+      moduleName: module.name,
+      lessonCount: module.lessons.length,
+      lessonsWithSessions,
+      totalSessions
+    })
+  } catch (error) {
+    console.error('Get module delete info error:', error)
+    res.status(500).json({ error: 'Failed to get delete info' })
+  }
+})
+
 // DELETE /api/modules/:id - Delete a module
 router.delete('/:id', authenticate, async (req, res) => {
   try {
@@ -126,6 +171,41 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Delete module error:', error)
     res.status(500).json({ error: 'Failed to delete module' })
+  }
+})
+
+// PUT /api/modules/reorder - Reorder modules within a course
+router.put('/reorder', authenticate, async (req, res) => {
+  try {
+    const { courseId, moduleIds } = req.body
+
+    if (!courseId || !moduleIds || !Array.isArray(moduleIds)) {
+      return res.status(400).json({ error: 'Course ID and module IDs array are required' })
+    }
+
+    // Verify course ownership
+    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+    if (course.teacherId !== req.user.teacher?.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Update order for each module
+    const updates = moduleIds.map((moduleId, index) =>
+      prisma.module.update({
+        where: { id: moduleId },
+        data: { order: index + 1 }
+      })
+    )
+
+    await prisma.$transaction(updates)
+
+    res.json({ message: 'Modules reordered successfully' })
+  } catch (error) {
+    console.error('Reorder modules error:', error)
+    res.status(500).json({ error: 'Failed to reorder modules' })
   }
 })
 

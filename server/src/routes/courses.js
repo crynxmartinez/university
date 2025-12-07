@@ -52,8 +52,11 @@ router.get('/public', async (req, res) => {
         },
         modules: {
           include: {
-            lessons: true
-          }
+            lessons: {
+              orderBy: { order: 'asc' }
+            }
+          },
+          orderBy: { order: 'asc' }
         }
       },
       orderBy: { createdAt: 'desc' }
