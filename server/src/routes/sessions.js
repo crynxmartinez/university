@@ -107,11 +107,14 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid lesson for this course' })
     }
 
+    // Parse date as YYYY-MM-DD and store as noon UTC to avoid date boundary issues
+    const sessionDate = new Date(`${date}T12:00:00.000Z`)
+
     const session = await prisma.scheduledSession.create({
       data: {
         courseId,
         lessonId,
-        date: new Date(date),
+        date: sessionDate,
         startTime,
         endTime,
         type: type || 'CLASS',
@@ -166,11 +169,14 @@ router.put('/:id', authenticate, async (req, res) => {
       }
     }
 
+    // Parse date as noon UTC to avoid timezone boundary issues
+    const sessionDate = date ? new Date(`${date}T12:00:00.000Z`) : undefined
+
     const session = await prisma.scheduledSession.update({
       where: { id },
       data: {
         lessonId: lessonId || undefined,
-        date: date ? new Date(date) : undefined,
+        date: sessionDate,
         startTime,
         endTime,
         type,

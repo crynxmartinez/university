@@ -596,15 +596,21 @@ export default function CourseDashboard() {
   }
 
   const formatDate = (date) => {
-    return date.toISOString().split('T')[0]
+    // Format as YYYY-MM-DD in LOCAL timezone (PH), not UTC
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   const getSessionsForDate = (date) => {
     if (!date) return []
     const dateStr = formatDate(date)
     return sessions.filter(s => {
-      const sessionDate = new Date(s.date).toISOString().split('T')[0]
-      return sessionDate === dateStr
+      // Parse session date and format in local timezone
+      const sessionDate = new Date(s.date)
+      const sessionDateStr = formatDate(sessionDate)
+      return sessionDateStr === dateStr
     })
   }
 
