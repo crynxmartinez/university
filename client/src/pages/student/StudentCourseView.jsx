@@ -3,12 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
   ArrowLeft, ChevronDown, ChevronRight, Video, Radio, FileText, 
   ExternalLink, Calendar, Menu, BookOpen, Clock, Play, Download,
-  StickyNote, X, Save, Users, Loader2
+  StickyNote, X, Save, Users, Loader2, TrendingUp, CheckCircle, XCircle
 } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getCourseSessions } from '../../api/sessions'
 import { getNoteForLesson, getNoteForSession, saveNoteForLesson, saveNoteForSession } from '../../api/notes'
 import { markJoinAttendance } from '../../api/attendance'
+import { getStudentGrade } from '../../api/exams'
 import { useToast } from '../../components/Toast'
 
 export default function StudentCourseView() {
@@ -34,6 +35,10 @@ export default function StudentCourseView() {
   
   // Download confirmation state
   const [downloadConfirm, setDownloadConfirm] = useState(null) // { url, name }
+
+  // Grade state
+  const [gradeData, setGradeData] = useState(null)
+  const [loadingGrade, setLoadingGrade] = useState(false)
 
   const handleMaterialClick = (url, name) => {
     setDownloadConfirm({ url, name: name || 'this material' })
@@ -99,6 +104,26 @@ export default function StudentCourseView() {
       ...prev,
       [moduleId]: !prev[moduleId]
     }))
+  }
+
+  // Fetch grade when course loads
+  useEffect(() => {
+    if (course?.id) {
+      fetchGrade()
+    }
+  }, [course?.id])
+
+  const fetchGrade = async () => {
+    if (!course?.id) return
+    setLoadingGrade(true)
+    try {
+      const data = await getStudentGrade(course.id)
+      setGradeData(data)
+    } catch (error) {
+      console.error('Failed to fetch grade:', error)
+    } finally {
+      setLoadingGrade(false)
+    }
   }
 
   // Fetch note when lesson or session changes
@@ -264,6 +289,43 @@ export default function StudentCourseView() {
               </span>
             </div>
           </div>
+
+          {/* Grade Display */}
+          {gradeData && gradeData.examScores?.length > 0 && (
+            <div className="p-4 border-b border-[#2d5a87]">
+              <div className="bg-[#2d5a87] rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-blue-200" />
+                  <span className="text-sm text-blue-200 font-medium">My Grade</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className={`text-3xl font-bold ${
+                      gradeData.percentage >= 75 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {gradeData.percentage !== null ? `${gradeData.percentage}%` : '-'}
+                    </span>
+                    <p className="text-xs text-blue-200 mt-1">
+                      {gradeData.totalEarned}/{gradeData.totalPossible} points
+                    </p>
+                  </div>
+                  {gradeData.passed !== null && (
+                    <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                      gradeData.passed 
+                        ? 'bg-green-500/20 text-green-300' 
+                        : 'bg-red-500/20 text-red-300'
+                    }`}>
+                      {gradeData.passed ? (
+                        <><CheckCircle className="w-4 h-4" /> Passed</>
+                      ) : (
+                        <><XCircle className="w-4 h-4" /> Failed</>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* View Mode Toggle for LIVE courses */}
           {course.type === 'LIVE' && (
