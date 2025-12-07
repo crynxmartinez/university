@@ -188,6 +188,10 @@ export default function CourseDashboard() {
   const [deleteModuleConfirm, setDeleteModuleConfirm] = useState(null) // { id, info }
   const [deleteLessonConfirm, setDeleteLessonConfirm] = useState(null) // { id, info }
   const [lessonMaterialUrls, setLessonMaterialUrls] = useState([''])
+  const [savingModule, setSavingModule] = useState(false)
+  const [deletingModule, setDeletingModule] = useState(false)
+  const [savingLesson, setSavingLesson] = useState(false)
+  const [deletingLesson, setDeletingLesson] = useState(false)
 
   // Schedule state
   const [sessions, setSessions] = useState([])
@@ -320,6 +324,7 @@ export default function CourseDashboard() {
 
   const handleSaveModule = async () => {
     if (!editModuleModal) return
+    setSavingModule(true)
     try {
       await updateModule(editModuleModal.id, { name: editModuleModal.name })
       await fetchCourse()
@@ -327,6 +332,8 @@ export default function CourseDashboard() {
       toast.success('Module updated')
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to update module')
+    } finally {
+      setSavingModule(false)
     }
   }
 
@@ -341,6 +348,7 @@ export default function CourseDashboard() {
 
   const handleDeleteModule = async () => {
     if (!deleteModuleConfirm) return
+    setDeletingModule(true)
     try {
       await deleteModule(deleteModuleConfirm.id)
       await fetchCourse()
@@ -348,6 +356,8 @@ export default function CourseDashboard() {
       toast.success('Module deleted')
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete module')
+    } finally {
+      setDeletingModule(false)
     }
   }
 
@@ -383,6 +393,7 @@ export default function CourseDashboard() {
 
   const handleSaveLesson = async () => {
     if (!editLessonModal) return
+    setSavingLesson(true)
     const materials = lessonMaterialUrls.filter(u => u.trim()).join('\n')
     try {
       await updateLesson(editLessonModal.id, {
@@ -396,6 +407,8 @@ export default function CourseDashboard() {
       toast.success('Class updated')
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to update class')
+    } finally {
+      setSavingLesson(false)
     }
   }
 
@@ -410,6 +423,7 @@ export default function CourseDashboard() {
 
   const handleDeleteLesson = async () => {
     if (!deleteLessonConfirm) return
+    setDeletingLesson(true)
     try {
       await deleteLesson(deleteLessonConfirm.id)
       await fetchCourse()
@@ -417,6 +431,8 @@ export default function CourseDashboard() {
       toast.success('Class deleted')
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete class')
+    } finally {
+      setDeletingLesson(false)
     }
   }
 
@@ -1619,16 +1635,18 @@ export default function CourseDashboard() {
             <div className="p-6 border-t flex justify-end gap-3">
               <button
                 onClick={() => setEditModuleModal(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                disabled={savingModule}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveModule}
-                disabled={!editModuleModal.name.trim()}
-                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
+                disabled={!editModuleModal.name.trim() || savingModule}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
               >
-                Save
+                {savingModule && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {savingModule ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -1718,16 +1736,18 @@ export default function CourseDashboard() {
             <div className="p-6 border-t flex justify-end gap-3">
               <button
                 onClick={() => setEditLessonModal(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                disabled={savingLesson}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveLesson}
-                disabled={!editLessonModal.name.trim()}
-                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
+                disabled={!editLessonModal.name.trim() || savingLesson}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
               >
-                Save
+                {savingLesson && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {savingLesson ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -1759,15 +1779,21 @@ export default function CourseDashboard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteModuleConfirm(null)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                  disabled={deletingModule}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteModule}
-                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                  disabled={deletingModule}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <Trash2 className="w-4 h-4" /> Delete
+                  {deletingModule ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
                 </button>
               </div>
             </div>
@@ -1798,15 +1824,21 @@ export default function CourseDashboard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteLessonConfirm(null)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                  disabled={deletingLesson}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteLesson}
-                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                  disabled={deletingLesson}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <Trash2 className="w-4 h-4" /> Delete
+                  {deletingLesson ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
                 </button>
               </div>
             </div>
