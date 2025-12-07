@@ -69,7 +69,7 @@ function SortableLesson({ lesson, onEdit, onDelete, courseType }) {
 }
 
 // Sortable Module Component
-function SortableModule({ module, index, courseId, expanded, onToggle, onEdit, onDelete, onEditLesson, onDeleteLesson, onLessonDragEnd, sensors, courseType }) {
+function SortableModule({ module, index, courseId, courseSlug, expanded, onToggle, onEdit, onDelete, onEditLesson, onDeleteLesson, onLessonDragEnd, sensors, courseType }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: module.id })
   
   const style = {
@@ -124,7 +124,7 @@ function SortableModule({ module, index, courseId, expanded, onToggle, onEdit, o
             <div className="p-4 text-center">
               <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
               <Link
-                to={`/teacher/courses/${course?.slug || courseId}/modules/${module.id}/lessons/create`}
+                to={`/teacher/courses/${courseSlug || courseId}/modules/${module.id}/lessons/create`}
                 className="text-[#f7941d] hover:underline text-sm font-medium"
               >
                 + Add Class
@@ -145,7 +145,7 @@ function SortableModule({ module, index, courseId, expanded, onToggle, onEdit, o
                   ))}
                   <div className="p-4">
                     <Link
-                      to={`/teacher/courses/${course?.slug || courseId}/modules/${module.id}/lessons/create`}
+                      to={`/teacher/courses/${courseSlug || courseId}/modules/${module.id}/lessons/create`}
                       className="text-[#f7941d] hover:underline text-sm font-medium"
                     >
                       + Add Class
@@ -912,6 +912,7 @@ export default function CourseDashboard() {
                           module={module} 
                           index={index}
                           courseId={id}
+                          courseSlug={course.slug}
                           expanded={expandedModules[module.id]}
                           onToggle={() => toggleModule(module.id)}
                           onEdit={() => openEditModule(module)}
