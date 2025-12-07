@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ToggleLeft, ToggleRight, Edit3, ExternalLink } from 'lucide-react'
-import { getCourses, toggleCourseActive } from '../../api/courses'
+import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink } from 'lucide-react'
+import { getCourses } from '../../api/courses'
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -36,17 +36,6 @@ export default function TeacherDashboard() {
       console.error('Failed to fetch courses:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleToggleActive = async (courseId, e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    try {
-      const updated = await toggleCourseActive(courseId)
-      setCourses(prev => prev.map(c => c.id === updated.id ? updated : c))
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to toggle course status')
     }
   }
 
@@ -364,30 +353,15 @@ export default function TeacherDashboard() {
                           )}
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-4 border-t">
+                        {/* Action Button */}
+                        <div className="pt-4 border-t">
                           <Link
                             to={`/teacher/courses/${course.id}/dashboard`}
-                            className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
+                            className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
                           >
                             <ExternalLink className="w-4 h-4" />
                             Dashboard
                           </Link>
-                          <button
-                            onClick={(e) => handleToggleActive(course.id, e)}
-                            className={`flex items-center justify-center gap-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
-                              course.isActive
-                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            }`}
-                            title={course.isActive ? 'Deactivate' : 'Activate'}
-                          >
-                            {course.isActive ? (
-                              <ToggleRight className="w-4 h-4" />
-                            ) : (
-                              <ToggleLeft className="w-4 h-4" />
-                            )}
-                          </button>
                         </div>
                       </div>
                     </div>
