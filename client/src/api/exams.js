@@ -85,6 +85,11 @@ export const reorderQuestions = async (examId, questionIds) => {
   return response.data
 }
 
+export const saveAllQuestions = async (examId, data) => {
+  const response = await axios.put(`${API_URL}/exams/${examId}/questions/batch`, data, getAuthHeader())
+  return response.data
+}
+
 // ============ STUDENT EXAM TAKING APIS ============
 
 export const getAvailableExams = async (courseId) => {

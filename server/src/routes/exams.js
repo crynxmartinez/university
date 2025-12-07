@@ -708,6 +708,110 @@ router.put('/:examId/questions/reorder', authenticate, async (req, res) => {
   }
 })
 
+// PUT /api/exams/:examId/questions/batch - Batch save all questions
+router.put('/:examId/questions/batch', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can update questions' })
+    }
+
+    const { examId } = req.params
+    const { questions, deletedQuestionIds } = req.body
+
+    // Verify exam exists and teacher owns the course
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: { course: true }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    if (exam.course.teacherId !== req.user.teacher.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Delete removed questions
+    if (deletedQuestionIds && deletedQuestionIds.length > 0) {
+      await prisma.examQuestion.deleteMany({
+        where: { id: { in: deletedQuestionIds } }
+      })
+    }
+
+    // Process each question
+    for (const q of questions) {
+      if (q.id) {
+        // Update existing question
+        await prisma.examQuestion.update({
+          where: { id: q.id },
+          data: {
+            question: q.question,
+            points: q.points,
+            order: q.order
+          }
+        })
+
+        // Delete old choices and create new ones
+        await prisma.examChoice.deleteMany({ where: { questionId: q.id } })
+        if (q.choices && q.choices.length > 0) {
+          await prisma.examChoice.createMany({
+            data: q.choices.map((c, idx) => ({
+              questionId: q.id,
+              text: c.text,
+              isCorrect: c.isCorrect || false,
+              order: c.order !== undefined ? c.order : idx
+            }))
+          })
+        }
+      } else {
+        // Create new question
+        const newQuestion = await prisma.examQuestion.create({
+          data: {
+            examId,
+            question: q.question,
+            points: q.points || 10,
+            order: q.order
+          }
+        })
+
+        // Create choices
+        if (q.choices && q.choices.length > 0) {
+          await prisma.examChoice.createMany({
+            data: q.choices.map((c, idx) => ({
+              questionId: newQuestion.id,
+              text: c.text,
+              isCorrect: c.isCorrect || false,
+              order: c.order !== undefined ? c.order : idx
+            }))
+          })
+        }
+      }
+    }
+
+    // Update total points
+    await updateExamTotalPoints(examId)
+
+    // Return updated exam with questions
+    const updatedExam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        questions: {
+          orderBy: { order: 'asc' },
+          include: {
+            choices: { orderBy: { order: 'asc' } }
+          }
+        }
+      }
+    })
+
+    res.json(updatedExam)
+  } catch (error) {
+    console.error('Batch save questions error:', error)
+    res.status(500).json({ error: 'Failed to save questions', details: error.message })
+  }
+})
+
 // Helper function to update exam total points
 async function updateExamTotalPoints(examId) {
   const questions = await prisma.examQuestion.findMany({
