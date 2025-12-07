@@ -932,6 +932,13 @@ export default function CourseDashboard() {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                      <p className="px-4 py-3 bg-gray-100 rounded-lg text-gray-600">
+                        {course.type === 'LIVE' ? 'Live Class' : 'Recorded Video'}
+                        <span className="text-xs text-gray-400 ml-2">(cannot be changed)</span>
+                      </p>
+                    </div>
                     <div className="flex gap-3">
                       <button
                         onClick={() => {
