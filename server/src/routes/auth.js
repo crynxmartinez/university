@@ -241,7 +241,7 @@ router.post('/seed', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash('admin123', 10)
 
-    // Create Super Admin
+    // Create Super Admin (this is the main admin account)
     await prisma.user.create({
       data: {
         userId: 'ADMIN-001',
@@ -259,32 +259,10 @@ router.post('/seed', async (req, res) => {
       }
     })
 
-    // Create Registrar
-    await prisma.user.create({
-      data: {
-        userId: 'registrar-2025001',
-        email: 'registrar@ilm.edu.ph',
-        password: hashedPassword,
-        role: 'REGISTRAR',
-        mustChangePassword: false,
-        profileComplete: true,
-        profile: {
-          create: {
-            firstName: 'Main',
-            lastName: 'Registrar'
-          }
-        },
-        registrar: {
-          create: {}
-        }
-      }
-    })
-
     res.json({ 
       message: 'Database seeded successfully',
       accounts: [
-        { userId: 'ADMIN-001', password: 'admin123', role: 'SUPER_ADMIN' },
-        { userId: 'registrar-2025001', password: 'admin123', role: 'REGISTRAR' }
+        { userId: 'ADMIN-001', password: 'admin123', role: 'SUPER_ADMIN' }
       ]
     })
   } catch (error) {
