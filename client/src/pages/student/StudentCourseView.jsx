@@ -703,21 +703,25 @@ export default function StudentCourseView() {
                         </p>
                       </div>
                     </div>
-                    {isSessionLive(selectedSession) && selectedSession.meetingLink ? (
-                      <button
-                        onClick={async () => {
-                          try {
-                            await markJoinAttendance(selectedSession.id)
-                          } catch (error) {
-                            console.error('Failed to mark attendance:', error)
-                          }
-                          window.open(selectedSession.meetingLink, '_blank')
-                        }}
-                        className="flex items-center gap-2 bg-white text-red-600 px-6 py-3 rounded-lg font-medium hover:bg-red-50 transition shadow-lg"
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                        Join Class Now
-                      </button>
+                    {isSessionLive(selectedSession) ? (
+                      selectedSession.meetingLink ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await markJoinAttendance(selectedSession.id)
+                            } catch (error) {
+                              console.error('Failed to mark attendance:', error)
+                            }
+                            window.open(selectedSession.meetingLink, '_blank')
+                          }}
+                          className="flex items-center gap-2 bg-white text-red-600 px-6 py-3 rounded-lg font-medium hover:bg-red-50 transition shadow-lg"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                          Join Class Now
+                        </button>
+                      ) : (
+                        <span className="text-white/80 text-sm">No meeting link set by teacher</span>
+                      )
                     ) : isSessionPast(selectedSession) ? (
                       <span className="text-white/60 text-sm">This session has ended</span>
                     ) : (
