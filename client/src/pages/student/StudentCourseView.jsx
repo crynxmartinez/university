@@ -8,6 +8,7 @@ import {
 import { getMyCourses } from '../../api/enrollments'
 import { getCourseSessions } from '../../api/sessions'
 import { getNoteForLesson, getNoteForSession, saveNoteForLesson, saveNoteForSession } from '../../api/notes'
+import { markJoinAttendance } from '../../api/attendance'
 import { useToast } from '../../components/Toast'
 
 export default function StudentCourseView() {
@@ -541,15 +542,20 @@ export default function StudentCourseView() {
                       </div>
                     </div>
                     {isSessionLive(selectedSession) && selectedSession.meetingLink ? (
-                      <a
-                        href={selectedSession.meetingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={async () => {
+                          try {
+                            await markJoinAttendance(selectedSession.id)
+                          } catch (error) {
+                            console.error('Failed to mark attendance:', error)
+                          }
+                          window.open(selectedSession.meetingLink, '_blank')
+                        }}
                         className="flex items-center gap-2 bg-white text-red-600 px-6 py-3 rounded-lg font-medium hover:bg-red-50 transition shadow-lg"
                       >
                         <ExternalLink className="w-5 h-5" />
                         Join Class Now
-                      </a>
+                      </button>
                     ) : isSessionPast(selectedSession) ? (
                       <span className="text-white/60 text-sm">This session has ended</span>
                     ) : (

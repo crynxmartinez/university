@@ -6,6 +6,7 @@ import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
 import { getUpcomingSessions } from '../../api/sessions'
 import { getMyNotes, saveNote, deleteNote } from '../../api/notes'
+import { markJoinAttendance } from '../../api/attendance'
 import { useToast, ConfirmModal } from '../../components/Toast'
 import axios from 'axios'
 import API_URL from '../../api/config'
@@ -1323,15 +1324,20 @@ export default function StudentDashboard() {
                               </span>
                             ) : session.meetingLink ? (
                               isLinkVisible ? (
-                                <a 
-                                  href={session.meetingLink} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await markJoinAttendance(session.id)
+                                    } catch (error) {
+                                      console.error('Failed to mark attendance:', error)
+                                    }
+                                    window.open(session.meetingLink, '_blank')
+                                  }}
                                   className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
                                 >
                                   <Video className="w-4 h-4" />
                                   Join
-                                </a>
+                                </button>
                               ) : (
                                 <span className="text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg block text-center">
                                   Link available<br/>1hr before class
