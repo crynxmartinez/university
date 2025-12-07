@@ -683,7 +683,7 @@ export default function CourseDashboard() {
       } else {
         // Create new session
         const created = await createSession({
-          courseId: id,
+          courseId: course.id,
           date: formatDate(selectedDate),
           ...sessionForm
         })
