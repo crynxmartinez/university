@@ -4,13 +4,14 @@ import {
   ArrowLeft, BookOpen, Calendar, Users, Settings, Menu, 
   Plus, Video, Radio, ChevronDown, ChevronRight, Play,
   ToggleLeft, ToggleRight, Trash2, Edit3, Save, X,
-  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard, GripVertical
+  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard, GripVertical, CheckSquare
 } from 'lucide-react'
 import { getCourse, updateCourse, toggleCourseActive, deleteCourse } from '../../api/courses'
 import { getCourseSessions, createSession, updateSession, deleteSession, addMaterial, deleteMaterial } from '../../api/sessions'
 import { updateModule, deleteModule, getModuleDeleteInfo, reorderModules } from '../../api/modules'
 import { updateLesson, deleteLesson, getLessonDeleteInfo, reorderLessons } from '../../api/lessons'
 import { getEnrolledStudents, removeEnrollment } from '../../api/enrollments'
+import { getSessionAttendance, updateSessionAttendance } from '../../api/attendance'
 import { useToast, ConfirmModal } from '../../components/Toast'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -200,6 +201,13 @@ export default function CourseDashboard() {
   const [studentSearchTerm, setStudentSearchTerm] = useState('')
   const [removeStudentConfirm, setRemoveStudentConfirm] = useState(null)
   const [removingStudent, setRemovingStudent] = useState(false)
+
+  // Attendance state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false)
+  const [attendanceSession, setAttendanceSession] = useState(null)
+  const [attendanceList, setAttendanceList] = useState([])
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
+  const [savingAttendance, setSavingAttendance] = useState(false)
 
   // Schedule state
   const [sessions, setSessions] = useState([])
@@ -514,6 +522,55 @@ export default function CourseDashboard() {
     const updated = [...lessonMaterialUrls]
     updated[index] = value
     setLessonMaterialUrls(updated)
+  }
+
+  // Attendance handlers
+  const openAttendanceModal = async (session) => {
+    setAttendanceSession(session)
+    setShowAttendanceModal(true)
+    setLoadingAttendance(true)
+    try {
+      const data = await getSessionAttendance(session.id)
+      setAttendanceList(data)
+    } catch (error) {
+      toast.error('Failed to load attendance')
+      setShowAttendanceModal(false)
+    } finally {
+      setLoadingAttendance(false)
+    }
+  }
+
+  const toggleAttendance = (studentId) => {
+    setAttendanceList(prev => prev.map(item => 
+      item.studentId === studentId 
+        ? { ...item, status: item.status === 'PRESENT' ? 'ABSENT' : 'PRESENT' }
+        : item
+    ))
+  }
+
+  const markAllPresent = () => {
+    setAttendanceList(prev => prev.map(item => ({ ...item, status: 'PRESENT' })))
+  }
+
+  const markAllAbsent = () => {
+    setAttendanceList(prev => prev.map(item => ({ ...item, status: 'ABSENT' })))
+  }
+
+  const handleSaveAttendance = async () => {
+    setSavingAttendance(true)
+    try {
+      const attendance = attendanceList.map(item => ({
+        studentId: item.studentId,
+        status: item.status
+      }))
+      await updateSessionAttendance(attendanceSession.id, attendance)
+      toast.success('Attendance saved')
+      setShowAttendanceModal(false)
+    } catch (error) {
+      toast.error('Failed to save attendance')
+    } finally {
+      setSavingAttendance(false)
+    }
   }
 
   // Calendar helpers
@@ -1122,6 +1179,17 @@ export default function CourseDashboard() {
                               ) : (
                                 <p className="text-xs text-gray-400">No materials</p>
                               )}
+                            </div>
+
+                            {/* Attendance Button */}
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <button
+                                onClick={() => openAttendanceModal(session)}
+                                className="w-full flex items-center justify-center gap-2 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg text-sm font-medium transition"
+                              >
+                                <CheckSquare className="w-4 h-4" />
+                                View/Edit Attendance
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -1978,6 +2046,119 @@ export default function CourseDashboard() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attendance Modal */}
+      {showAttendanceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Session Attendance</h3>
+                {attendanceSession && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    {attendanceSession.lesson?.name} • {new Date(attendanceSession.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setShowAttendanceModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingAttendance ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading attendance...</p>
+                </div>
+              ) : attendanceList.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No students enrolled in this course</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-gray-600">
+                      {attendanceList.filter(a => a.status === 'PRESENT').length} / {attendanceList.length} present
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={markAllPresent}
+                        className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition"
+                      >
+                        Mark All Present
+                      </button>
+                      <button
+                        onClick={markAllAbsent}
+                        className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition"
+                      >
+                        Mark All Absent
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {attendanceList.map((item) => (
+                      <div
+                        key={item.studentId}
+                        className={`flex items-center justify-between p-3 rounded-lg border transition cursor-pointer ${
+                          item.status === 'PRESENT' 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-red-50 border-red-200'
+                        }`}
+                        onClick={() => toggleAttendance(item.studentId)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                            item.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-400'
+                          }`}>
+                            {(item.studentName || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{item.studentName || 'Unknown'}</p>
+                            <p className="text-xs text-gray-500">{item.email}</p>
+                            {item.joinedAt && (
+                              <p className="text-xs text-green-600 mt-0.5">
+                                Joined at {new Date(item.joinedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          item.status === 'PRESENT' 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-red-400 text-white'
+                        }`}>
+                          {item.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowAttendanceModal(false)}
+                disabled={savingAttendance}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAttendance}
+                disabled={savingAttendance || loadingAttendance}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingAttendance && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {savingAttendance ? 'Saving...' : 'Save Attendance'}
+              </button>
             </div>
           </div>
         </div>
