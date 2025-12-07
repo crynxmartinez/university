@@ -87,6 +87,15 @@ app.get('/api/debug/schema', async (req, res) => {
 // One-time migration endpoint - run raw SQL to add missing columns
 app.get('/api/debug/migrate', async (req, res) => {
   try {
+    // Create ExamAttemptStatus enum if not exists
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "ExamAttemptStatus" AS ENUM ('IN_PROGRESS', 'SUBMITTED', 'TIMED_OUT', 'FLAGGED');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `)
+
     // Add missing columns to Exam table
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "Exam" 
@@ -121,16 +130,19 @@ app.get('/api/debug/migrate', async (req, res) => {
       )
     `)
 
-    // Create ExamAttempt table if not exists
+    // Drop and recreate ExamAttempt table with proper enum type
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAnswer" CASCADE`)
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAttempt" CASCADE`)
+    
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "ExamAttempt" (
+      CREATE TABLE "ExamAttempt" (
         "id" TEXT NOT NULL,
         "examId" TEXT NOT NULL,
         "studentId" TEXT NOT NULL,
         "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "submittedAt" TIMESTAMP(3),
         "tabSwitchCount" INTEGER NOT NULL DEFAULT 0,
-        "status" TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+        "status" "ExamAttemptStatus" NOT NULL DEFAULT 'IN_PROGRESS',
         "score" DOUBLE PRECISION,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -140,9 +152,9 @@ app.get('/api/debug/migrate', async (req, res) => {
       )
     `)
 
-    // Create ExamAnswer table if not exists
+    // Create ExamAnswer table
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "ExamAnswer" (
+      CREATE TABLE "ExamAnswer" (
         "id" TEXT NOT NULL,
         "attemptId" TEXT NOT NULL,
         "questionId" TEXT NOT NULL,
