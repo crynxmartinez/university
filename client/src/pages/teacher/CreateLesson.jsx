@@ -11,8 +11,6 @@ export default function CreateLesson() {
   const [description, setDescription] = useState('')
   const [materials, setMaterials] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
-  const [zoomLink, setZoomLink] = useState('')
-  const [scheduledAt, setScheduledAt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -41,13 +39,11 @@ export default function CreateLesson() {
         description,
         materials,
         videoUrl: course?.type === 'RECORDED' ? videoUrl : null,
-        zoomLink: course?.type === 'LIVE' ? zoomLink : null,
-        scheduledAt: course?.type === 'LIVE' ? scheduledAt : null,
         moduleId
       })
       navigate(`/teacher/courses/${courseId}/dashboard`)
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create lesson')
+      setError(err.response?.data?.error || 'Failed to create class')
     } finally {
       setLoading(false)
     }
@@ -80,13 +76,18 @@ export default function CreateLesson() {
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Add New Lesson</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Add New Class</h1>
+          {isLive && (
+            <p className="text-sm text-gray-500 mb-6 -mt-4">
+              Create a class template. You can schedule it on the calendar later.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Lesson Name */}
+            {/* Class Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lesson Name *
+                Class Name *
               </label>
               <input
                 type="text"
@@ -148,38 +149,7 @@ export default function CreateLesson() {
               </div>
             )}
 
-            {/* Zoom Link & Schedule - for LIVE courses */}
-            {isLive && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <div className="flex items-center gap-2">
-                      <Radio className="w-4 h-4 text-purple-600" />
-                      Zoom/Meet Link
-                    </div>
-                  </label>
-                  <input
-                    type="url"
-                    value={zoomLink}
-                    onChange={(e) => setZoomLink(e.target.value)}
-                    placeholder="https://zoom.us/j/... or https://meet.google.com/..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Scheduled Date & Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={scheduledAt}
-                    onChange={(e) => setScheduledAt(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  />
-                </div>
-              </>
-            )}
-
+            
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -199,7 +169,7 @@ export default function CreateLesson() {
                 disabled={loading}
                 className="flex-1 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save Lesson'}
+                {loading ? 'Saving...' : 'Save Class'}
               </button>
             </div>
           </form>
