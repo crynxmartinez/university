@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, X } from 'lucide-react'
+import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, X, Clock } from 'lucide-react'
 import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
+import { getTeacherSchedule } from '../../api/sessions'
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -19,6 +20,11 @@ export default function TeacherDashboard() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [courseFilter, setCourseFilter] = useState('all')
   const [selectedStudent, setSelectedStudent] = useState(null)
+
+  // Schedule state
+  const [schedule, setSchedule] = useState(null)
+  const [loadingSchedule, setLoadingSchedule] = useState(false)
+  const [todayCount, setTodayCount] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -76,6 +82,64 @@ export default function TeacherDashboard() {
     return matchesSearch && matchesStatus && matchesCourse
   }) || []
 
+  // Fetch schedule on mount (for badge) and when schedule tab is active
+  useEffect(() => {
+    fetchSchedule()
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'schedule' && !schedule) {
+      fetchSchedule()
+    }
+  }, [activeTab])
+
+  const fetchSchedule = async () => {
+    setLoadingSchedule(true)
+    try {
+      const data = await getTeacherSchedule()
+      setSchedule(data.sessions)
+      setTodayCount(data.todayCount)
+    } catch (error) {
+      console.error('Failed to fetch schedule:', error)
+    } finally {
+      setLoadingSchedule(false)
+    }
+  }
+
+  // Group sessions by date
+  const groupSessionsByDate = (sessions) => {
+    if (!sessions) return {}
+    
+    const groups = {}
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    
+    sessions.forEach(session => {
+      const sessionDate = new Date(session.date)
+      sessionDate.setHours(0, 0, 0, 0)
+      
+      let label
+      if (sessionDate.getTime() === today.getTime()) {
+        label = 'Today'
+      } else if (sessionDate.getTime() === tomorrow.getTime()) {
+        label = 'Tomorrow'
+      } else {
+        label = sessionDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+      }
+      
+      if (!groups[label]) {
+        groups[label] = []
+      }
+      groups[label].push(session)
+    })
+    
+    return groups
+  }
+
+  const groupedSessions = groupSessionsByDate(schedule)
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -86,7 +150,7 @@ export default function TeacherDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'My Courses', icon: BookOpen },
     { id: 'students', label: 'Students', icon: GraduationCap },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'schedule', label: 'Schedule', icon: Calendar, badge: todayCount },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
@@ -130,8 +194,24 @@ export default function TeacherDashboard() {
                       : 'text-blue-200 hover:bg-[#2d5a87]'
                   }`}
                 >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {sidebarOpen && <span>{item.label}</span>}
+                  <div className="relative">
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {item.badge > 0 && !sidebarOpen && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {item.badge > 9 ? '9+' : item.badge}
+                      </span>
+                    )}
+                  </div>
+                  {sidebarOpen && (
+                    <span className="flex-1 flex items-center justify-between">
+                      {item.label}
+                      {item.badge > 0 && (
+                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -594,9 +674,92 @@ export default function TeacherDashboard() {
           )}
 
           {activeTab === 'schedule' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Class Schedule</h2>
-              <p className="text-gray-500">Schedule management coming soon...</p>
+            <div>
+              {loadingSchedule ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading schedule...</p>
+                </div>
+              ) : schedule && schedule.length > 0 ? (
+                <div className="space-y-6">
+                  {Object.entries(groupedSessions).map(([dateLabel, sessions]) => (
+                    <div key={dateLabel}>
+                      <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
+                        dateLabel === 'Today' ? 'text-red-600' : 'text-gray-700'
+                      }`}>
+                        <Calendar className="w-4 h-4" />
+                        {dateLabel}
+                        {dateLabel === 'Today' && (
+                          <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
+                            {sessions.length} class{sessions.length !== 1 ? 'es' : ''}
+                          </span>
+                        )}
+                      </h3>
+                      <div className="space-y-3">
+                        {sessions.map((session) => (
+                          <div key={session.id} className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-[#1e3a5f]">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {session.course?.type === 'LIVE' ? (
+                                    <Radio className="w-4 h-4 text-red-500" />
+                                  ) : (
+                                    <Video className="w-4 h-4 text-blue-500" />
+                                  )}
+                                  <span className="font-medium text-gray-900">{session.course?.name}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    session.course?.type === 'LIVE' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                  }`}>
+                                    {session.course?.type}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  {session.lesson?.name || 'Untitled Session'}
+                                </p>
+                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-4 h-4" />
+                                    {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                  </span>
+                                  {session.duration && (
+                                    <span>{session.duration} min</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {session.meetingLink && (
+                                  <a
+                                    href={session.meetingLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                    Join
+                                  </a>
+                                )}
+                                <Link
+                                  to={`/teacher/course/${session.course?.id}`}
+                                  className="flex items-center gap-1 px-3 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm rounded-lg font-medium transition"
+                                >
+                                  View Course
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No Upcoming Sessions</h3>
+                  <p className="text-gray-500 mb-4">You don't have any scheduled sessions.</p>
+                  <p className="text-sm text-gray-400">Go to a course to add sessions to your schedule.</p>
+                </div>
+              )}
             </div>
           )}
 
