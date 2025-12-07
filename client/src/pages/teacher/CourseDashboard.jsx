@@ -286,8 +286,9 @@ export default function CourseDashboard() {
   })
 
   const fetchSessions = async () => {
+    if (!course?.id) return
     try {
-      const data = await getCourseSessions(id)
+      const data = await getCourseSessions(course.id)
       setSessions(data)
     } catch (error) {
       console.error('Failed to fetch sessions:', error)
