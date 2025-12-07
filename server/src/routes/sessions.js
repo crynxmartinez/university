@@ -344,4 +344,57 @@ router.get('/student/upcoming', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/sessions/teacher/schedule - Get all sessions for teacher's courses (for teacher dashboard)
+router.get('/teacher/schedule', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can access this' })
+    }
+
+    const teacherId = req.user.teacher.id
+
+    // Get all courses for this teacher
+    const courses = await prisma.course.findMany({
+      where: { teacherId },
+      select: { id: true }
+    })
+
+    const courseIds = courses.map(c => c.id)
+
+    // Get today's start (midnight)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Get all sessions from today onwards
+    const sessions = await prisma.scheduledSession.findMany({
+      where: {
+        courseId: { in: courseIds },
+        date: { gte: today }
+      },
+      include: {
+        lesson: { select: { name: true } },
+        course: { select: { id: true, name: true, type: true } }
+      },
+      orderBy: { date: 'asc' }
+    })
+
+    // Count sessions for today (for notification badge)
+    const todayEnd = new Date(today)
+    todayEnd.setHours(23, 59, 59, 999)
+
+    const todayCount = sessions.filter(s => {
+      const sessionDate = new Date(s.date)
+      return sessionDate >= today && sessionDate <= todayEnd
+    }).length
+
+    res.json({
+      sessions,
+      todayCount
+    })
+  } catch (error) {
+    console.error('Get teacher schedule error:', error)
+    res.status(500).json({ error: 'Failed to get schedule' })
+  }
+})
+
 export default router

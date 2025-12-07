@@ -50,3 +50,10 @@ export const getUpcomingSessions = async () => {
   const response = await axios.get(`${API_URL}/sessions/student/upcoming`, getAuthHeader())
   return response.data
 }
+
+// ============ TEACHER APIS ============
+
+export const getTeacherSchedule = async () => {
+  const response = await axios.get(`${API_URL}/sessions/teacher/schedule`, getAuthHeader())
+  return response.data
+}
