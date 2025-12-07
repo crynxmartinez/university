@@ -946,10 +946,307 @@ export default function CourseDashboard() {
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">New Calendar Coming Soon</h3>
-              <p className="text-gray-500">A new and improved calendar is being built.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Calendar */}
+              <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {currentMonth.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' })}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    {copiedSession && (
+                      <div className="relative group">
+                        <span className="text-sm text-green-600 flex items-center gap-1 cursor-help">
+                          <Clipboard className="w-4 h-4" />
+                          Session copied
+                          <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold">i</span>
+                        </span>
+                        {/* Tooltip */}
+                        <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg">
+                          <p className="font-semibold mb-1">How to paste:</p>
+                          <p className="text-gray-300">Right-click on any empty date to paste this session with the same time, type, and meeting link.</p>
+                          <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 rotate-45"></div>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentMonth(new Date())}
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                      {day}
+                    </div>
+                  ))}
+                  {getDaysInMonth(currentMonth).map((date, index) => {
+                    const dateSessions = date ? getSessionsForDate(date) : []
+                    const isToday = date && formatDate(date) === formatDate(new Date())
+                    const isSelected = date && selectedDate && formatDate(date) === formatDate(selectedDate)
+                    const hasNoLinkSession = dateSessions.some(s => !s.meetingLink)
+                    
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => date && handleDateClick(date)}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          if (date && copiedSession) handlePasteSession(date)
+                        }}
+                        className={`min-h-[80px] p-1 border rounded-lg cursor-pointer transition ${
+                          !date ? 'bg-gray-50 cursor-default' :
+                          isSelected ? 'border-[#1e3a5f] bg-blue-50' :
+                          isToday ? 'border-[#f7941d] bg-orange-50' :
+                          'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {date && (
+                          <>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-sm font-medium ${isToday ? 'text-[#f7941d]' : 'text-gray-700'}`}>
+                                {date.getDate()}
+                              </span>
+                              {hasNoLinkSession && (
+                                <div className="group relative">
+                                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                  <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block z-10">
+                                    <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                      No meeting link
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              {dateSessions.slice(0, 2).map(session => (
+                                <div
+                                  key={session.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEditSession(session)
+                                  }}
+                                  className={`text-xs px-1 py-0.5 rounded truncate ${
+                                    !session.meetingLink 
+                                      ? 'bg-red-100 text-red-700 border border-red-300' 
+                                      : `${getSessionTypeColor(session.type)} text-white`
+                                  }`}
+                                >
+                                  {session.startTime}
+                                </div>
+                              ))}
+                              {dateSessions.length > 2 && (
+                                <div className="text-xs text-gray-500">+{dateSessions.length - 2} more</div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t">
+                  <span className="text-sm text-gray-500">Legend:</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded bg-blue-500"></div>
+                    <span className="text-sm text-gray-600">Class</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded bg-red-500"></div>
+                    <span className="text-sm text-gray-600">Exam</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded bg-yellow-500"></div>
+                    <span className="text-sm text-gray-600">Review</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sessions List */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {selectedDate 
+                    ? selectedDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' })
+                    : 'Select a date'}
+                </h3>
+                
+                {selectedDate ? (
+                  <>
+                    {getSessionsForDate(selectedDate).length === 0 ? (
+                      <div className="text-center py-8">
+                        <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 mb-3">No sessions scheduled</p>
+                        <button
+                          onClick={() => {
+                            setEditingSession(null)
+                            setSessionForm({
+                              type: 'CLASS',
+                              title: '',
+                              startTime: '19:00',
+                              endTime: '21:00',
+                              meetingLink: '',
+                              notes: ''
+                            })
+                            setShowSessionModal(true)
+                          }}
+                          className="text-[#f7941d] hover:underline font-medium"
+                        >
+                          + Add Session
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {getSessionsForDate(selectedDate).map(session => (
+                          <div key={session.id} className={`border rounded-lg p-3 ${!session.meetingLink ? 'border-red-300 bg-red-50' : getSessionTypeBgColor(session.type)}`}>
+                            {/* No meeting link warning */}
+                            {!session.meetingLink && (
+                              <div className="flex items-center gap-2 text-amber-600 text-xs mb-2 bg-amber-50 px-2 py-1 rounded">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>No meeting link</span>
+                              </div>
+                            )}
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${getSessionTypeColor(session.type)} text-white`}>
+                                  {session.type}
+                                </span>
+                                <p className="font-medium text-gray-900 mt-1">
+                                  {session.lesson?.name || 'Untitled'}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleCopySession(session)}
+                                  className="p-1 hover:bg-white/50 rounded"
+                                  title="Copy session"
+                                >
+                                  <Copy className="w-4 h-4 text-gray-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditSession(session)}
+                                  className="p-1 hover:bg-white/50 rounded"
+                                  title="Edit session"
+                                >
+                                  <Edit3 className="w-4 h-4 text-gray-500" />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                              <Clock className="w-4 h-4" />
+                              {session.startTime}{session.endTime && ` - ${session.endTime}`}
+                            </div>
+                            
+                            {session.meetingLink && (
+                              <div className="flex items-center gap-2 text-sm text-blue-600 mb-2">
+                                <LinkIcon className="w-4 h-4" />
+                                <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="hover:underline truncate">
+                                  Meeting Link
+                                </a>
+                              </div>
+                            )}
+                            
+                            {session.notes && (
+                              <p className="text-sm text-gray-600 mb-2">{session.notes}</p>
+                            )}
+                            
+                            {/* Materials */}
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">Materials</span>
+                                <button
+                                  onClick={() => handleAddMaterial(session.id)}
+                                  className="text-xs text-[#f7941d] hover:underline"
+                                >
+                                  + Add
+                                </button>
+                              </div>
+                              {session.materials?.length > 0 ? (
+                                <div className="space-y-1">
+                                  {session.materials.map(material => (
+                                    <div key={material.id} className="flex items-center justify-between text-sm">
+                                      <a
+                                        href={material.driveUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 text-gray-600 hover:text-[#1e3a5f]"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        {material.name}
+                                      </a>
+                                      <button
+                                        onClick={() => setDeleteMaterialConfirm({ sessionId: session.id, materialId: material.id })}
+                                        className="text-red-500 hover:text-red-700"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400">No materials</p>
+                              )}
+                            </div>
+
+                            {/* Attendance Button */}
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <button
+                                onClick={() => openAttendanceModal(session)}
+                                className="w-full flex items-center justify-center gap-2 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg text-sm font-medium transition"
+                              >
+                                <CheckSquare className="w-4 h-4" />
+                                View/Edit Attendance
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <button
+                          onClick={() => {
+                            setEditingSession(null)
+                            setSessionForm({
+                              type: 'CLASS',
+                              lessonId: '',
+                              startTime: '19:00',
+                              endTime: '21:00',
+                              meetingLink: '',
+                              notes: ''
+                            })
+                            setShowSessionModal(true)
+                          }}
+                          className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-[#1e3a5f] hover:text-[#1e3a5f] transition"
+                        >
+                          + Add Another Session
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">Click on a date to view or add sessions</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
