@@ -14,7 +14,7 @@ export default function CourseDashboard() {
   const navigate = useNavigate()
   const [course, setCourse] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('content')
+  const [activeTab, setActiveTab] = useState('class')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [expandedModules, setExpandedModules] = useState({})
   
@@ -320,7 +320,8 @@ export default function CourseDashboard() {
   }
 
   const menuItems = [
-    { id: 'content', label: 'Content', icon: BookOpen },
+    { id: 'class', label: 'Class', icon: BookOpen },
+    { id: 'exam', label: 'Exam', icon: FileText, liveOnly: true },
     { id: 'schedule', label: 'Schedule', icon: Calendar, liveOnly: true },
     { id: 'students', label: 'Students', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -401,7 +402,8 @@ export default function CourseDashboard() {
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold text-gray-900">
-              {activeTab === 'content' && 'Course Content'}
+              {activeTab === 'class' && 'Class Templates'}
+              {activeTab === 'exam' && 'Exam Templates'}
               {activeTab === 'schedule' && 'Schedule'}
               {activeTab === 'students' && 'Enrolled Students'}
               {activeTab === 'settings' && 'Settings'}
@@ -411,11 +413,11 @@ export default function CourseDashboard() {
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {/* Content Tab */}
-          {activeTab === 'content' && (
+          {/* Class Tab - Class Templates */}
+          {activeTab === 'class' && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-600">Manage your course modules and lessons</p>
+                <p className="text-gray-600">Create class templates that can be scheduled on the calendar</p>
                 <Link
                   to={`/teacher/courses/${id}/modules/create`}
                   className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
@@ -428,8 +430,8 @@ export default function CourseDashboard() {
               {course.modules?.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No modules yet</h3>
-                  <p className="text-gray-500 mb-4">Start building your course by adding modules</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No class templates yet</h3>
+                  <p className="text-gray-500 mb-4">Create modules and lessons to use as class templates</p>
                   <Link
                     to={`/teacher/courses/${id}/modules/create`}
                     className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
@@ -451,7 +453,7 @@ export default function CourseDashboard() {
                             {index + 1}
                           </span>
                           <span className="font-medium text-gray-900">{module.name}</span>
-                          <span className="text-sm text-gray-500">({module.lessons?.length || 0} lessons)</span>
+                          <span className="text-sm text-gray-500">({module.lessons?.length || 0} classes)</span>
                         </div>
                         {expandedModules[module.id] ? (
                           <ChevronDown className="w-5 h-5 text-gray-400" />
@@ -464,32 +466,44 @@ export default function CourseDashboard() {
                         <div className="border-t">
                           {module.lessons?.length === 0 ? (
                             <div className="p-4 text-center">
-                              <p className="text-gray-500 text-sm mb-3">No lessons in this module</p>
+                              <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
                               <Link
                                 to={`/teacher/courses/${id}/modules/${module.id}/lessons/create`}
                                 className="text-[#f7941d] hover:underline text-sm font-medium"
                               >
-                                + Add Lesson
+                                + Add Class
                               </Link>
                             </div>
                           ) : (
                             <div className="divide-y">
-                              {module.lessons.map((lesson, lessonIndex) => (
+                              {module.lessons.map((lesson) => (
                                 <div key={lesson.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
                                   <div className="flex items-center gap-3">
-                                    <Play className="w-4 h-4 text-gray-400" />
-                                    <span className="text-gray-700">{lesson.name}</span>
+                                    <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
+                                    <div>
+                                      <span className="text-gray-900 font-medium">{lesson.name}</span>
+                                      {lesson.description && (
+                                        <p className="text-sm text-gray-500 mt-0.5">{lesson.description}</p>
+                                      )}
+                                    </div>
                                   </div>
-                                  {lesson.videoUrl && (
-                                    <a 
-                                      href={lesson.videoUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-[#1e3a5f] hover:underline"
-                                    >
-                                      View Video
-                                    </a>
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    {lesson.materials && (
+                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                        Has Materials
+                                      </span>
+                                    )}
+                                    {lesson.videoUrl && (
+                                      <a 
+                                        href={lesson.videoUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-[#1e3a5f] hover:underline"
+                                      >
+                                        View Video
+                                      </a>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                               <div className="p-4">
@@ -497,7 +511,7 @@ export default function CourseDashboard() {
                                   to={`/teacher/courses/${id}/modules/${module.id}/lessons/create`}
                                   className="text-[#f7941d] hover:underline text-sm font-medium"
                                 >
-                                  + Add Lesson
+                                  + Add Class
                                 </Link>
                               </div>
                             </div>
@@ -508,6 +522,19 @@ export default function CourseDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Exam Tab - Coming Soon */}
+          {activeTab === 'exam' && (
+            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+              <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Exam Templates</h3>
+              <p className="text-gray-500 mb-4">Coming Soon</p>
+              <p className="text-sm text-gray-400 max-w-md mx-auto">
+                You'll be able to create exam templates here and schedule them on the calendar. 
+                Exams will include questions, time limits, and automatic grading.
+              </p>
             </div>
           )}
 
