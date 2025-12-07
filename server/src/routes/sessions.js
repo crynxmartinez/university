@@ -373,7 +373,7 @@ router.get('/teacher/schedule', authenticate, async (req, res) => {
       },
       include: {
         lesson: { select: { name: true } },
-        course: { select: { id: true, name: true, type: true } }
+        course: { select: { id: true, slug: true, name: true, type: true } }
       },
       orderBy: { date: 'asc' }
     })
