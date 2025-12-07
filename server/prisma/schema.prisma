@@ -37,7 +37,6 @@ enum CourseType {
 enum SessionType {
   CLASS
   EXAM
-  REVIEW
 }
 
 enum PriceType {
@@ -118,8 +117,9 @@ model Student {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   enrollments Enrollment[]
+  notes       StudentNote[] // Personal notes for scheduled sessions
 }
 
 // Teacher record
@@ -211,36 +211,38 @@ model Course {
   program     Program?        @relation(fields: [programId], references: [id], onDelete: SetNull)
   modules     Module[]
   enrollments Enrollment[]
-  sessions    CourseSession[]
+  sessions    ScheduledSession[]
 }
 
-// CourseSession - individual class/exam sessions for LIVE courses
-model CourseSession {
+// ScheduledSession - class/exam attached to calendar for LIVE courses
+model ScheduledSession {
   id          String      @id @default(cuid())
   courseId    String
+  lessonId    String      // Required - must link to class template
   date        DateTime
   startTime   String      // e.g., "19:00" or "7:00 PM"
-  endTime     String?     // e.g., "21:00" or "9:00 PM"
+  endTime     String      // e.g., "21:00" or "9:00 PM" - Required for link visibility
   type        SessionType @default(CLASS)
-  title       String?     // Optional custom title, e.g., "Chapter 5 Discussion"
   meetingLink String?     // Zoom/Meet link for this session
-  notes       String?     // Teacher notes for students
+  notes       String?     // Teacher notes visible to students
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  course    Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  materials SessionMaterial[]
+  course       Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson       Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  materials    SessionMaterial[]
+  studentNotes StudentNote[]
 }
 
-// SessionMaterial - materials attached to a session
+// SessionMaterial - date-specific materials attached to a scheduled session
 model SessionMaterial {
   id        String   @id @default(cuid())
   sessionId String
-  name      String   // e.g., "Chapter 5 Notes.pdf"
+  name      String   // e.g., "Dec 9 Worksheet.pdf"
   driveUrl  String   // Google Drive link
   createdAt DateTime @default(now())
 
-  session CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ScheduledSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 // Module - sections within a course
@@ -256,21 +258,20 @@ model Module {
   lessons Lesson[]
 }
 
-// Lesson - individual lessons within a module
+// Lesson - class template (content only, no schedule)
 model Lesson {
   id          String    @id @default(cuid())
   name        String
   description String?
-  materials   String?   // URLs to materials (comma separated or JSON)
+  materials   String?   // General materials - Google Drive links (reusable across all scheduled dates)
   videoUrl    String?   // For RECORDED courses - YouTube link
-  zoomLink    String?   // For LIVE courses - Zoom/Meet link
-  scheduledAt DateTime? // For LIVE courses - when the live class is
   order       Int       @default(0)
   moduleId    String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  module   Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  sessions ScheduledSession[] // Sessions that use this lesson as template
 }
 
 // Enrollment - student enrolled in a course
@@ -303,4 +304,21 @@ model Notification {
   createdAt    DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ STUDENT NOTES ============
+
+// StudentNote - personal notes by students for each scheduled session
+model StudentNote {
+  id        String   @id @default(cuid())
+  content   String   // The note text
+  studentId String
+  sessionId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ScheduledSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sessionId]) // One note per student per session
 }
