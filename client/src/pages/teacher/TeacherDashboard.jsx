@@ -25,6 +25,8 @@ export default function TeacherDashboard() {
   const [schedule, setSchedule] = useState(null)
   const [loadingSchedule, setLoadingSchedule] = useState(false)
   const [todayCount, setTodayCount] = useState(0)
+  const [showTodayPopup, setShowTodayPopup] = useState(false)
+  const [todaySessions, setTodaySessions] = useState([])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -99,6 +101,23 @@ export default function TeacherDashboard() {
       const data = await getTeacherSchedule()
       setSchedule(data.sessions)
       setTodayCount(data.todayCount)
+      
+      // Show popup if there are classes today (only on first load)
+      if (data.todayCount > 0 && !sessionStorage.getItem('teacherTodayPopupShown')) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const todayEnd = new Date(today)
+        todayEnd.setHours(23, 59, 59, 999)
+        
+        const sessionsToday = data.sessions.filter(s => {
+          const sessionDate = new Date(s.date)
+          return sessionDate >= today && sessionDate <= todayEnd
+        })
+        
+        setTodaySessions(sessionsToday)
+        setShowTodayPopup(true)
+        sessionStorage.setItem('teacherTodayPopupShown', 'true')
+      }
     } catch (error) {
       console.error('Failed to fetch schedule:', error)
     } finally {
@@ -866,6 +885,62 @@ export default function TeacherDashboard() {
                 className="w-full px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Today's Classes Popup */}
+      {showTodayPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] p-6 text-white text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Calendar className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold">You have classes today!</h2>
+              <p className="text-blue-200 mt-1">{todaySessions.length} session{todaySessions.length !== 1 ? 's' : ''} scheduled</p>
+            </div>
+            
+            <div className="p-4 max-h-64 overflow-y-auto">
+              {todaySessions.map((session) => (
+                <div key={session.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-2 last:mb-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    session.course?.type === 'LIVE' ? 'bg-red-100' : 'bg-blue-100'
+                  }`}>
+                    {session.course?.type === 'LIVE' ? (
+                      <Radio className="w-5 h-5 text-red-600" />
+                    ) : (
+                      <Video className="w-5 h-5 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{session.course?.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      {session.lesson?.name && ` • ${session.lesson.name}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 border-t flex gap-3">
+              <button
+                onClick={() => setShowTodayPopup(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => {
+                  setShowTodayPopup(false)
+                  setActiveTab('schedule')
+                }}
+                className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+              >
+                View Schedule
               </button>
             </div>
           </div>

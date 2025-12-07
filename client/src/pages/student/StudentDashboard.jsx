@@ -33,6 +33,8 @@ export default function StudentDashboard() {
   const [myNotes, setMyNotes] = useState([]) // Student's personal notes
   const [notesSearchTerm, setNotesSearchTerm] = useState('')
   const [deleteNoteConfirm, setDeleteNoteConfirm] = useState(null)
+  const [showTodayPopup, setShowTodayPopup] = useState(false)
+  const [todaySessions, setTodaySessions] = useState([])
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -79,6 +81,25 @@ export default function StudentDashboard() {
       try {
         const sessions = await getUpcomingSessions()
         setUpcomingSessions(sessions)
+        
+        // Show popup if there are classes today (only on first load)
+        if (!sessionStorage.getItem('studentTodayPopupShown')) {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const todayEnd = new Date(today)
+          todayEnd.setHours(23, 59, 59, 999)
+          
+          const sessionsToday = sessions.filter(s => {
+            const sessionDate = new Date(s.date)
+            return sessionDate >= today && sessionDate <= todayEnd
+          })
+          
+          if (sessionsToday.length > 0) {
+            setTodaySessions(sessionsToday)
+            setShowTodayPopup(true)
+            sessionStorage.setItem('studentTodayPopupShown', 'true')
+          }
+        }
       } catch (e) {
         console.error('Failed to fetch sessions:', e)
       }
@@ -1388,6 +1409,68 @@ export default function StudentDashboard() {
         confirmText="Delete"
         confirmStyle="danger"
       />
+
+      {/* Today's Classes Popup */}
+      {showTodayPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] p-6 text-white text-center">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Calendar className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold">You have classes today!</h2>
+              <p className="text-blue-200 mt-1">{todaySessions.length} session{todaySessions.length !== 1 ? 's' : ''} scheduled</p>
+            </div>
+            
+            <div className="p-4 max-h-64 overflow-y-auto">
+              {todaySessions.map((session) => (
+                <div key={session.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-2 last:mb-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    session.course?.type === 'LIVE' ? 'bg-red-100' : 'bg-blue-100'
+                  }`}>
+                    {session.course?.type === 'LIVE' ? (
+                      <Radio className="w-5 h-5 text-red-600" />
+                    ) : (
+                      <Video className="w-5 h-5 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{session.course?.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      {session.lesson?.name && ` • ${session.lesson.name}`}
+                    </p>
+                  </div>
+                  {session.meetingLink && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await markJoinAttendance(session.id)
+                        } catch (e) {
+                          console.error('Failed to mark attendance:', e)
+                        }
+                        window.open(session.meetingLink, '_blank')
+                      }}
+                      className="px-3 py-1.5 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+                    >
+                      Join
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 border-t">
+              <button
+                onClick={() => setShowTodayPopup(false)}
+                className="w-full px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
