@@ -227,4 +227,70 @@ router.post('/change-password', async (req, res) => {
   }
 })
 
+// POST /api/auth/seed - Initialize admin accounts (one-time use)
+router.post('/seed', async (req, res) => {
+  try {
+    // Check if admin already exists
+    const existingAdmin = await prisma.user.findUnique({
+      where: { userId: 'ADMIN-001' }
+    })
+
+    if (existingAdmin) {
+      return res.json({ message: 'Database already seeded', alreadySeeded: true })
+    }
+
+    const hashedPassword = await bcrypt.hash('admin123', 10)
+
+    // Create Super Admin
+    await prisma.user.create({
+      data: {
+        userId: 'ADMIN-001',
+        email: 'admin@ilm.edu.ph',
+        password: hashedPassword,
+        role: 'SUPER_ADMIN',
+        mustChangePassword: false,
+        profileComplete: true,
+        profile: {
+          create: {
+            firstName: 'Super',
+            lastName: 'Admin'
+          }
+        }
+      }
+    })
+
+    // Create Registrar
+    await prisma.user.create({
+      data: {
+        userId: 'registrar-2025001',
+        email: 'registrar@ilm.edu.ph',
+        password: hashedPassword,
+        role: 'REGISTRAR',
+        mustChangePassword: false,
+        profileComplete: true,
+        profile: {
+          create: {
+            firstName: 'Main',
+            lastName: 'Registrar'
+          }
+        },
+        registrar: {
+          create: {}
+        }
+      }
+    })
+
+    res.json({ 
+      message: 'Database seeded successfully',
+      accounts: [
+        { userId: 'ADMIN-001', password: 'admin123', role: 'SUPER_ADMIN' },
+        { userId: 'registrar-2025001', password: 'admin123', role: 'REGISTRAR' }
+      ]
+    })
+  } catch (error) {
+    console.error('Seed error:', error)
+    res.status(500).json({ error: 'Failed to seed database', details: error.message })
+  }
+})
+
 export default router
