@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, X, Clock } from 'lucide-react'
+import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, ChevronLeft, ChevronRight, X, Clock, Info } from 'lucide-react'
 import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
@@ -27,6 +27,10 @@ export default function TeacherDashboard() {
   const [todayCount, setTodayCount] = useState(0)
   const [showTodayPopup, setShowTodayPopup] = useState(false)
   const [todaySessions, setTodaySessions] = useState([])
+  
+  // Calendar state
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [selectedSession, setSelectedSession] = useState(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -158,6 +162,65 @@ export default function TeacherDashboard() {
   }
 
   const groupedSessions = groupSessionsByDate(schedule)
+
+  // Calendar helper functions
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDay = firstDay.getDay() // 0 = Sunday
+    
+    const days = []
+    
+    // Add empty slots for days before the first day of month
+    for (let i = 0; i < startingDay; i++) {
+      days.push(null)
+    }
+    
+    // Add all days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day))
+    }
+    
+    return days
+  }
+
+  const getSessionsForDay = (date) => {
+    if (!date || !schedule) return []
+    const dayStart = new Date(date)
+    dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(date)
+    dayEnd.setHours(23, 59, 59, 999)
+    
+    return schedule.filter(s => {
+      const sessionDate = new Date(s.date)
+      return sessionDate >= dayStart && sessionDate <= dayEnd
+    })
+  }
+
+  const isToday = (date) => {
+    if (!date) return false
+    const today = new Date()
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear()
+  }
+
+  const goToPrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  }
+
+  const goToToday = () => {
+    setCurrentMonth(new Date())
+  }
+
+  const calendarDays = getDaysInMonth(currentMonth)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -693,91 +756,100 @@ export default function TeacherDashboard() {
           )}
 
           {activeTab === 'schedule' && (
-            <div>
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               {loadingSchedule ? (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                <div className="p-12 text-center">
                   <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-gray-500">Loading schedule...</p>
                 </div>
-              ) : schedule && schedule.length > 0 ? (
-                <div className="space-y-6">
-                  {Object.entries(groupedSessions).map(([dateLabel, sessions]) => (
-                    <div key={dateLabel}>
-                      <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
-                        dateLabel === 'Today' ? 'text-red-600' : 'text-gray-700'
-                      }`}>
-                        <Calendar className="w-4 h-4" />
-                        {dateLabel}
-                        {dateLabel === 'Today' && (
-                          <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
-                            {sessions.length} class{sessions.length !== 1 ? 'es' : ''}
-                          </span>
-                        )}
-                      </h3>
-                      <div className="space-y-3">
-                        {sessions.map((session) => (
-                          <div key={session.id} className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-[#1e3a5f]">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  {session.course?.type === 'LIVE' ? (
-                                    <Radio className="w-4 h-4 text-red-500" />
-                                  ) : (
-                                    <Video className="w-4 h-4 text-blue-500" />
-                                  )}
-                                  <span className="font-medium text-gray-900">{session.course?.name}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                    session.course?.type === 'LIVE' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                                  }`}>
-                                    {session.course?.type}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600 mb-2">
-                                  {session.lesson?.name || 'Untitled Session'}
-                                </p>
-                                <div className="flex items-center gap-4 text-sm text-gray-500">
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-4 h-4" />
-                                    {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                  </span>
-                                  {session.duration && (
-                                    <span>{session.duration} min</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {session.meetingLink && (
-                                  <a
-                                    href={session.meetingLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                    Join
-                                  </a>
-                                )}
-                                <Link
-                                  to={`/teacher/course/${session.course?.id}`}
-                                  className="flex items-center gap-1 px-3 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm rounded-lg font-medium transition"
-                                >
-                                  View Course
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               ) : (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                  <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">No Upcoming Sessions</h3>
-                  <p className="text-gray-500 mb-4">You don't have any scheduled sessions.</p>
-                  <p className="text-sm text-gray-400">Go to a course to add sessions to your schedule.</p>
-                </div>
+                <>
+                  {/* Calendar Header */}
+                  <div className="p-4 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button onClick={goToPrevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                        <ChevronLeft className="w-5 h-5 text-gray-600" />
+                      </button>
+                      <h2 className="text-lg font-semibold text-gray-900 min-w-[180px] text-center">
+                        {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </h2>
+                      <button onClick={goToNextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                      </button>
+                    </div>
+                    <button onClick={goToToday} className="px-4 py-2 text-sm font-medium text-[#1e3a5f] hover:bg-[#1e3a5f]/10 rounded-lg transition">
+                      Today
+                    </button>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="p-4">
+                    {/* Day Headers */}
+                    <div className="grid grid-cols-7 mb-2">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">{day}</div>
+                      ))}
+                    </div>
+
+                    {/* Calendar Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {calendarDays.map((date, index) => {
+                        const daySessions = date ? getSessionsForDay(date) : []
+                        const hasNoLinkSession = daySessions.some(s => !s.meetingLink)
+                        
+                        return (
+                          <div
+                            key={index}
+                            className={`min-h-[100px] p-2 border rounded-lg ${
+                              !date ? 'bg-gray-50 border-transparent' :
+                              isToday(date) ? 'bg-blue-50 border-blue-300' : 'border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {date && (
+                              <>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className={`text-sm font-medium ${isToday(date) ? 'text-blue-600' : 'text-gray-700'}`}>
+                                    {date.getDate()}
+                                  </span>
+                                  {hasNoLinkSession && (
+                                    <div className="group relative">
+                                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                      <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block z-10">
+                                        <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                          No meeting link
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  {daySessions.slice(0, 3).map(session => (
+                                    <button
+                                      key={session.id}
+                                      onClick={() => setSelectedSession(session)}
+                                      className={`w-full text-left text-xs p-1 rounded truncate transition ${
+                                        !session.meetingLink 
+                                          ? 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200' 
+                                          : session.course?.type === 'LIVE'
+                                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                      }`}
+                                    >
+                                      {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                    </button>
+                                  ))}
+                                  {daySessions.length > 3 && (
+                                    <p className="text-xs text-gray-500 text-center">+{daySessions.length - 3} more</p>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -942,6 +1014,97 @@ export default function TeacherDashboard() {
               >
                 View Schedule
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Detail Modal */}
+      {selectedSession && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+            <div className="p-6 border-b">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    selectedSession.course?.type === 'LIVE' ? 'bg-red-100' : 'bg-blue-100'
+                  }`}>
+                    {selectedSession.course?.type === 'LIVE' ? (
+                      <Radio className="w-6 h-6 text-red-600" />
+                    ) : (
+                      <Video className="w-6 h-6 text-blue-600" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{selectedSession.course?.name}</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      selectedSession.course?.type === 'LIVE' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      {selectedSession.course?.type}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedSession(null)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-lg font-medium text-gray-900 mb-4">
+                {selectedSession.lesson?.name || 'Untitled Session'}
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                  <span>{new Date(selectedSession.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Clock className="w-5 h-5 text-gray-400" />
+                  <span>{new Date(selectedSession.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                  {selectedSession.duration && <span className="text-gray-400">• {selectedSession.duration} min</span>}
+                </div>
+              </div>
+
+              {selectedSession.meetingLink ? (
+                <a
+                  href={selectedSession.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition mb-3"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  Join Class
+                </a>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-3">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800">No meeting link</p>
+                      <p className="text-sm text-amber-600 mt-1">
+                        Add one in{' '}
+                        <Link
+                          to={`/teacher/course/${selectedSession.course?.id}`}
+                          onClick={() => setSelectedSession(null)}
+                          className="underline hover:text-amber-800"
+                        >
+                          Course Schedule →
+                        </Link>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Link
+                to={`/teacher/course/${selectedSession.course?.id}`}
+                onClick={() => setSelectedSession(null)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition"
+              >
+                View Course
+              </Link>
             </div>
           </div>
         </div>
