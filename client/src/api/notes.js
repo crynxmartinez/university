@@ -11,13 +11,31 @@ export const getMyNotes = async () => {
   return response.data
 }
 
-// Get note for a specific session
+// Get note for a specific session (LIVE courses)
 export const getNoteForSession = async (sessionId) => {
   const response = await axios.get(`${API_URL}/notes/session/${sessionId}`, getAuthHeader())
   return response.data
 }
 
-// Create or update a note
+// Get note for a specific lesson (RECORDED courses)
+export const getNoteForLesson = async (lessonId) => {
+  const response = await axios.get(`${API_URL}/notes/lesson/${lessonId}`, getAuthHeader())
+  return response.data
+}
+
+// Create or update a note for a session (LIVE courses)
+export const saveNoteForSession = async (sessionId, content) => {
+  const response = await axios.post(`${API_URL}/notes`, { sessionId, content }, getAuthHeader())
+  return response.data
+}
+
+// Create or update a note for a lesson (RECORDED courses)
+export const saveNoteForLesson = async (lessonId, content) => {
+  const response = await axios.post(`${API_URL}/notes`, { lessonId, content }, getAuthHeader())
+  return response.data
+}
+
+// Legacy - kept for backwards compatibility
 export const saveNote = async (sessionId, content) => {
   const response = await axios.post(`${API_URL}/notes`, { sessionId, content }, getAuthHeader())
   return response.data

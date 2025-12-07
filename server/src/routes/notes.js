@@ -47,7 +47,18 @@ router.get('/', authenticate, async (req, res) => {
           include: {
             lesson: true,
             course: {
-              select: { id: true, name: true }
+              select: { id: true, name: true, type: true }
+            }
+          }
+        },
+        lesson: {
+          include: {
+            module: {
+              include: {
+                course: {
+                  select: { id: true, name: true, type: true }
+                }
+              }
             }
           }
         }
@@ -62,7 +73,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 })
 
-// GET /api/notes/session/:sessionId - Get note for a specific session
+// GET /api/notes/session/:sessionId - Get note for a specific session (LIVE courses)
 router.get('/session/:sessionId', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'STUDENT' || !req.user.student) {
@@ -87,27 +98,70 @@ router.get('/session/:sessionId', authenticate, async (req, res) => {
   }
 })
 
-// POST /api/notes - Create or update a note for a session
+// GET /api/notes/lesson/:lessonId - Get note for a specific lesson (RECORDED courses)
+router.get('/lesson/:lessonId', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can access notes' })
+    }
+
+    const { lessonId } = req.params
+
+    const note = await prisma.studentNote.findUnique({
+      where: {
+        studentId_lessonId: {
+          studentId: req.user.student.id,
+          lessonId
+        }
+      }
+    })
+
+    res.json(note || null)
+  } catch (error) {
+    console.error('Get note error:', error)
+    res.status(500).json({ error: 'Failed to get note' })
+  }
+})
+
+// POST /api/notes - Create or update a note for a session or lesson
 router.post('/', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'STUDENT' || !req.user.student) {
       return res.status(403).json({ error: 'Only students can create notes' })
     }
 
-    const { sessionId, content } = req.body
+    const { sessionId, lessonId, content } = req.body
 
-    if (!sessionId || !content) {
-      return res.status(400).json({ error: 'Session ID and content are required' })
+    if ((!sessionId && !lessonId) || !content) {
+      return res.status(400).json({ error: 'Session ID or Lesson ID and content are required' })
     }
 
-    // Verify session exists and student is enrolled in the course
-    const session = await prisma.scheduledSession.findUnique({
-      where: { id: sessionId },
-      include: { course: true }
-    })
+    let courseId = null
 
-    if (!session) {
-      return res.status(404).json({ error: 'Session not found' })
+    // For session-based notes (LIVE courses)
+    if (sessionId) {
+      const session = await prisma.scheduledSession.findUnique({
+        where: { id: sessionId },
+        include: { course: true }
+      })
+
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' })
+      }
+      courseId = session.courseId
+    }
+
+    // For lesson-based notes (RECORDED courses)
+    if (lessonId) {
+      const lesson = await prisma.lesson.findUnique({
+        where: { id: lessonId },
+        include: { module: { include: { course: true } } }
+      })
+
+      if (!lesson) {
+        return res.status(404).json({ error: 'Lesson not found' })
+      }
+      courseId = lesson.module.course.id
     }
 
     // Check if student is enrolled in this course
@@ -115,7 +169,7 @@ router.post('/', authenticate, async (req, res) => {
       where: {
         studentId_courseId: {
           studentId: req.user.student.id,
-          courseId: session.courseId
+          courseId
         }
       }
     })
@@ -124,33 +178,59 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'You are not enrolled in this course' })
     }
 
-    // Upsert the note (create or update)
-    const note = await prisma.studentNote.upsert({
-      where: {
-        studentId_sessionId: {
+    let note
+
+    // Upsert based on session or lesson
+    if (sessionId) {
+      note = await prisma.studentNote.upsert({
+        where: {
+          studentId_sessionId: {
+            studentId: req.user.student.id,
+            sessionId
+          }
+        },
+        update: { content },
+        create: {
           studentId: req.user.student.id,
-          sessionId
-        }
-      },
-      update: {
-        content
-      },
-      create: {
-        studentId: req.user.student.id,
-        sessionId,
-        content
-      },
-      include: {
-        session: {
-          include: {
-            lesson: true,
-            course: {
-              select: { id: true, name: true }
+          sessionId,
+          content
+        },
+        include: {
+          session: {
+            include: {
+              lesson: true,
+              course: { select: { id: true, name: true, type: true } }
             }
           }
         }
-      }
-    })
+      })
+    } else {
+      note = await prisma.studentNote.upsert({
+        where: {
+          studentId_lessonId: {
+            studentId: req.user.student.id,
+            lessonId
+          }
+        },
+        update: { content },
+        create: {
+          studentId: req.user.student.id,
+          lessonId,
+          content
+        },
+        include: {
+          lesson: {
+            include: {
+              module: {
+                include: {
+                  course: { select: { id: true, name: true, type: true } }
+                }
+              }
+            }
+          }
+        }
+      })
+    }
 
     res.status(201).json(note)
   } catch (error) {

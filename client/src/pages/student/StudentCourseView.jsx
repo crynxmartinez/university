@@ -3,10 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
   ArrowLeft, ChevronDown, ChevronRight, Video, Radio, FileText, 
   ExternalLink, Calendar, Menu, BookOpen, Clock, Play, Download,
-  StickyNote, X, Save, Users
+  StickyNote, X, Save, Users, Loader2
 } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getCourseSessions } from '../../api/sessions'
+import { getNoteForLesson, getNoteForSession, saveNoteForLesson, saveNoteForSession } from '../../api/notes'
 import { useToast } from '../../components/Toast'
 
 export default function StudentCourseView() {
@@ -23,6 +24,12 @@ export default function StudentCourseView() {
   const [selectedSession, setSelectedSession] = useState(null)
   const [activeTab, setActiveTab] = useState('content') // content, materials, notes
   const [viewMode, setViewMode] = useState('lessons') // lessons or sessions (for LIVE courses)
+  
+  // Notes state
+  const [noteContent, setNoteContent] = useState('')
+  const [noteLoading, setNoteLoading] = useState(false)
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [currentNoteId, setCurrentNoteId] = useState(null)
 
   useEffect(() => {
     fetchCourse()
@@ -76,6 +83,63 @@ export default function StudentCourseView() {
       ...prev,
       [moduleId]: !prev[moduleId]
     }))
+  }
+
+  // Fetch note when lesson or session changes
+  useEffect(() => {
+    const fetchNote = async () => {
+      setNoteContent('')
+      setCurrentNoteId(null)
+      
+      if (!course) return
+      
+      setNoteLoading(true)
+      try {
+        let note = null
+        if (course.type === 'LIVE' && selectedSession) {
+          note = await getNoteForSession(selectedSession.id)
+        } else if (course.type === 'RECORDED' && selectedLesson) {
+          note = await getNoteForLesson(selectedLesson.id)
+        }
+        
+        if (note) {
+          setNoteContent(note.content)
+          setCurrentNoteId(note.id)
+        }
+      } catch (error) {
+        console.error('Failed to fetch note:', error)
+      } finally {
+        setNoteLoading(false)
+      }
+    }
+    
+    fetchNote()
+  }, [selectedLesson?.id, selectedSession?.id, course?.type])
+
+  const handleSaveNote = async () => {
+    if (!noteContent.trim()) {
+      toast.error('Please enter some notes')
+      return
+    }
+    
+    setNoteSaving(true)
+    try {
+      let savedNote
+      if (course.type === 'LIVE' && selectedSession) {
+        savedNote = await saveNoteForSession(selectedSession.id, noteContent)
+      } else if (course.type === 'RECORDED' && selectedLesson) {
+        savedNote = await saveNoteForLesson(selectedLesson.id, noteContent)
+      }
+      
+      if (savedNote) {
+        setCurrentNoteId(savedNote.id)
+        toast.success('Notes saved!')
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to save notes')
+    } finally {
+      setNoteSaving(false)
+    }
   }
 
   const getYouTubeEmbedUrl = (url) => {
@@ -648,12 +712,51 @@ export default function StudentCourseView() {
                   {/* Notes Tab */}
                   {activeTab === 'notes' && (
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900 mb-4">My Notes</h2>
-                      <div className="text-center py-12 bg-gray-50 rounded-lg">
-                        <StickyNote className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 mb-4">Notes feature coming soon!</p>
-                        <p className="text-sm text-gray-400">You'll be able to take notes while learning.</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-semibold text-gray-900">My Notes</h2>
+                        {currentNoteId && (
+                          <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                            Saved
+                          </span>
+                        )}
                       </div>
+                      
+                      {noteLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="w-8 h-8 text-[#1e3a5f] animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <textarea
+                              value={noteContent}
+                              onChange={(e) => setNoteContent(e.target.value)}
+                              placeholder={`Take notes for "${selectedSession?.lesson?.name || selectedLesson?.name || 'this lesson'}"...`}
+                              rows={12}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-500">
+                              {noteContent.length} characters
+                            </p>
+                            <button
+                              onClick={handleSaveNote}
+                              disabled={noteSaving || !noteContent.trim()}
+                              className="flex items-center gap-2 px-6 py-2.5 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
+                            >
+                              {noteSaving ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                              ) : (
+                                <><Save className="w-4 h-4" /> Save Notes</>
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Your notes are private and only visible to you.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

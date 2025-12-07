@@ -272,8 +272,9 @@ model Lesson {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  module   Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  sessions ScheduledSession[] // Sessions that use this lesson as template
+  module       Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  sessions     ScheduledSession[] // Sessions that use this lesson as template
+  studentNotes StudentNote[]      // Student notes for this lesson (RECORDED courses)
 }
 
 // Enrollment - student enrolled in a course
@@ -310,17 +311,20 @@ model Notification {
 
 // ============ STUDENT NOTES ============
 
-// StudentNote - personal notes by students for each scheduled session
+// StudentNote - personal notes by students for sessions (LIVE) or lessons (RECORDED)
 model StudentNote {
   id        String   @id @default(cuid())
   content   String   // The note text
   studentId String
-  sessionId String
+  sessionId String?  // For LIVE courses - links to scheduled session
+  lessonId  String?  // For RECORDED courses - links to lesson
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  session ScheduledSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ScheduledSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lesson  Lesson?           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, sessionId]) // One note per student per session
+  @@unique([studentId, lessonId])  // One note per student per lesson
 }
