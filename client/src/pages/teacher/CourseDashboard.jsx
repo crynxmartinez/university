@@ -2004,7 +2004,7 @@ export default function CourseDashboard() {
                 </button>
                 <button
                   onClick={handleSaveSession}
-                  disabled={sessionSaving || !sessionForm.lessonId || !sessionForm.startTime || !sessionForm.endTime}
+                  disabled={sessionSaving || !sessionForm.startTime || !sessionForm.endTime || (sessionForm.type === 'CLASS' && !sessionForm.lessonId) || (sessionForm.type === 'EXAM' && !sessionForm.examId)}
                   className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
                 >
                   {sessionSaving ? 'Saving...' : editingSession ? 'Update' : 'Create'}
