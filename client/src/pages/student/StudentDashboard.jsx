@@ -583,21 +583,21 @@ export default function StudentDashboard() {
                   ) : (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {allCourses.map((course) => (
-                        <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                        <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition flex flex-col">
                           <div className="flex items-start justify-between mb-2">
                             <h3 className="font-medium text-gray-900">{course.name}</h3>
-                            <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                            <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0 ${
                               course.type === 'RECORDED' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                             }`}>
                               {course.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-500 line-clamp-2 mb-3">{course.description}</p>
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">{course.description}</p>
                           <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
                             <span>{course.modules?.length || 0} modules</span>
-                            <span>By {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}</span>
+                            <span>By Sheikh {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}</span>
                           </div>
-                          <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition">
+                          <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition mt-auto">
                             Enroll Now
                           </button>
                         </div>
