@@ -88,13 +88,12 @@ app.get('/api/debug/schema', async (req, res) => {
 app.get('/api/debug/migrate', async (req, res) => {
   try {
     // Create ExamAttemptStatus enum if not exists
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        CREATE TYPE "ExamAttemptStatus" AS ENUM ('IN_PROGRESS', 'SUBMITTED', 'TIMED_OUT', 'FLAGGED');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `)
+    try {
+      await prisma.$executeRawUnsafe(`CREATE TYPE "ExamAttemptStatus" AS ENUM ('IN_PROGRESS', 'SUBMITTED', 'TIMED_OUT', 'FLAGGED')`)
+    } catch (e) {
+      // Enum might already exist, ignore error
+      console.log('Enum creation skipped (may already exist):', e.message)
+    }
 
     // Add missing columns to Exam table
     await prisma.$executeRawUnsafe(`
@@ -131,11 +130,15 @@ app.get('/api/debug/migrate', async (req, res) => {
     `)
 
     // Drop and recreate ExamAttempt table with proper enum type
-    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAnswer" CASCADE`)
-    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAttempt" CASCADE`)
+    try {
+      await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAnswer" CASCADE`)
+      await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAttempt" CASCADE`)
+    } catch (e) {
+      console.log('Drop tables skipped:', e.message)
+    }
     
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE "ExamAttempt" (
+      CREATE TABLE IF NOT EXISTS "ExamAttempt" (
         "id" TEXT NOT NULL,
         "examId" TEXT NOT NULL,
         "studentId" TEXT NOT NULL,
@@ -154,7 +157,7 @@ app.get('/api/debug/migrate', async (req, res) => {
 
     // Create ExamAnswer table
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE "ExamAnswer" (
+      CREATE TABLE IF NOT EXISTS "ExamAnswer" (
         "id" TEXT NOT NULL,
         "attemptId" TEXT NOT NULL,
         "questionId" TEXT NOT NULL,
@@ -203,6 +206,70 @@ app.get('/api/debug/migrate', async (req, res) => {
       error: error.message,
       code: error.code
     })
+  }
+})
+
+// Fix enum and recreate ExamAttempt with correct type
+app.get('/api/debug/fix-exam-tables', async (req, res) => {
+  try {
+    // Step 1: Create enum type
+    try {
+      await prisma.$executeRawUnsafe(`CREATE TYPE "ExamAttemptStatus" AS ENUM ('IN_PROGRESS', 'SUBMITTED', 'TIMED_OUT', 'FLAGGED')`)
+      console.log('Enum created successfully')
+    } catch (e) {
+      console.log('Enum exists or error:', e.message)
+    }
+
+    // Step 2: Drop existing tables with wrong schema
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAnswer" CASCADE`)
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "ExamAttempt" CASCADE`)
+    console.log('Dropped old tables')
+
+    // Step 3: Create ExamAttempt with enum type
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "ExamAttempt" (
+        "id" TEXT NOT NULL,
+        "examId" TEXT NOT NULL,
+        "studentId" TEXT NOT NULL,
+        "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "submittedAt" TIMESTAMP(3),
+        "tabSwitchCount" INTEGER NOT NULL DEFAULT 0,
+        "status" "ExamAttemptStatus" NOT NULL DEFAULT 'IN_PROGRESS',
+        "score" DOUBLE PRECISION,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ExamAttempt_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ExamAttempt_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAttempt_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `)
+    console.log('Created ExamAttempt table')
+
+    // Step 4: Create ExamAnswer
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "ExamAnswer" (
+        "id" TEXT NOT NULL,
+        "attemptId" TEXT NOT NULL,
+        "questionId" TEXT NOT NULL,
+        "choiceId" TEXT,
+        "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+        CONSTRAINT "ExamAnswer_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ExamAnswer_attemptId_fkey" FOREIGN KEY ("attemptId") REFERENCES "ExamAttempt"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAnswer_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "ExamQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAnswer_choiceId_fkey" FOREIGN KEY ("choiceId") REFERENCES "ExamChoice"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
+    `)
+    console.log('Created ExamAnswer table')
+
+    // Step 5: Create indexes
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ExamAttempt_examId_studentId_key" ON "ExamAttempt"("examId", "studentId")`)
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ExamAnswer_attemptId_questionId_key" ON "ExamAnswer"("attemptId", "questionId")`)
+    console.log('Created indexes')
+
+    res.json({ status: 'ok', message: 'Exam tables fixed successfully!' })
+  } catch (error) {
+    console.error('Fix exam tables error:', error)
+    res.status(500).json({ error: error.message })
   }
 })
 
