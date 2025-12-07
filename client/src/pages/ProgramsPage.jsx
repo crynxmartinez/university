@@ -154,7 +154,7 @@ export default function ProgramsPage() {
                       <p className="text-gray-600 mb-4">{course.description || 'No description available'}</p>
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <span>{course.type === 'RECORDED' ? 'Recorded' : 'Live'}</span>
-                        {course.teacher && <span>By: {course.teacher.user?.profile?.firstName || 'Instructor'}</span>}
+                        {course.teacher && <span>By Sheikh: {course.teacher.user?.profile?.firstName} {course.teacher.user?.profile?.lastName || ''}</span>}
                       </div>
                     </div>
                   </div>
