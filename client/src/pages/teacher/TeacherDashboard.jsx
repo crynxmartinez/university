@@ -830,21 +830,32 @@ export default function TeacherDashboard() {
                                   )}
                                 </div>
                                 <div className="space-y-1">
-                                  {daySessions.slice(0, 3).map(session => (
-                                    <button
-                                      key={session.id}
-                                      onClick={() => setSelectedSession(session)}
-                                      className={`w-full text-left text-xs p-1 rounded truncate transition ${
-                                        !session.meetingLink 
-                                          ? 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200' 
-                                          : session.course?.type === 'LIVE'
-                                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                      }`}
-                                    >
-                                      {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                    </button>
-                                  ))}
+                                  {daySessions.slice(0, 3).map(session => {
+                                    // Format startTime (e.g., "19:00") to 12-hour format
+                                    const formatTime = (time) => {
+                                      if (!time) return 'No time'
+                                      const [h, m] = time.split(':')
+                                      const hour = parseInt(h)
+                                      const ampm = hour >= 12 ? 'PM' : 'AM'
+                                      const hour12 = hour % 12 || 12
+                                      return `${hour12}:${m} ${ampm}`
+                                    }
+                                    return (
+                                      <button
+                                        key={session.id}
+                                        onClick={() => setSelectedSession(session)}
+                                        className={`w-full text-left text-xs p-1 rounded truncate transition ${
+                                          !session.meetingLink 
+                                            ? 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200' 
+                                            : session.course?.type === 'LIVE'
+                                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                              : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                        }`}
+                                      >
+                                        {formatTime(session.startTime)}
+                                      </button>
+                                    )
+                                  })}
                                   {daySessions.length > 3 && (
                                     <p className="text-xs text-gray-500 text-center">+{daySessions.length - 3} more</p>
                                   )}
@@ -997,7 +1008,13 @@ export default function TeacherDashboard() {
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{session.course?.name}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(session.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      {session.startTime ? (() => {
+                        const [h, m] = session.startTime.split(':')
+                        const hour = parseInt(h)
+                        const ampm = hour >= 12 ? 'PM' : 'AM'
+                        const hour12 = hour % 12 || 12
+                        return `${hour12}:${m} ${ampm}`
+                      })() : 'No time'}
                       {session.lesson?.name && ` • ${session.lesson.name}`}
                     </p>
                   </div>
@@ -1069,8 +1086,22 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="flex items-center gap-3 text-gray-600">
                   <Clock className="w-5 h-5 text-gray-400" />
-                  <span>{new Date(selectedSession.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-                  {selectedSession.duration && <span className="text-gray-400">• {selectedSession.duration} min</span>}
+                  <span>
+                    {selectedSession.startTime ? (() => {
+                      const [h, m] = selectedSession.startTime.split(':')
+                      const hour = parseInt(h)
+                      const ampm = hour >= 12 ? 'PM' : 'AM'
+                      const hour12 = hour % 12 || 12
+                      return `${hour12}:${m} ${ampm}`
+                    })() : 'No time'}
+                    {selectedSession.endTime && (() => {
+                      const [h, m] = selectedSession.endTime.split(':')
+                      const hour = parseInt(h)
+                      const ampm = hour >= 12 ? 'PM' : 'AM'
+                      const hour12 = hour % 12 || 12
+                      return ` - ${hour12}:${m} ${ampm}`
+                    })()}
+                  </span>
                 </div>
               </div>
 
