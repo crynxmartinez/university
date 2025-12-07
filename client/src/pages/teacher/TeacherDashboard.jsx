@@ -187,16 +187,23 @@ export default function TeacherDashboard() {
     return days
   }
 
+  const formatDateStr = (date) => {
+    // Format as YYYY-MM-DD in local timezone
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const getSessionsForDay = (date) => {
     if (!date || !schedule) return []
-    const dayStart = new Date(date)
-    dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(date)
-    dayEnd.setHours(23, 59, 59, 999)
+    const dateStr = formatDateStr(date)
     
     return schedule.filter(s => {
+      // Parse session date and format in local timezone
       const sessionDate = new Date(s.date)
-      return sessionDate >= dayStart && sessionDate <= dayEnd
+      const sessionDateStr = formatDateStr(sessionDate)
+      return sessionDateStr === dateStr
     })
   }
 
