@@ -121,6 +121,7 @@ model Student {
   enrollments Enrollment[]
   notes       StudentNote[]       // Personal notes for scheduled sessions
   attendance  SessionAttendance[] // Attendance records for sessions
+  examScores  ExamScore[]         // Exam scores for grading
 }
 
 // Teacher record
@@ -218,6 +219,7 @@ model Course {
   modules     Module[]
   enrollments Enrollment[]
   sessions    ScheduledSession[]
+  exams       Exam[]
 }
 
 // ScheduledSession - class/exam attached to calendar for LIVE courses
@@ -334,6 +336,39 @@ model Notification {
   createdAt    DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ EXAM MODELS ============
+
+// Exam - exam template (like Lesson, but for grading)
+model Exam {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String   // e.g., "Quiz 1", "Midterm", "Final Exam"
+  description String?
+  totalPoints Int      @default(100) // Maximum points for this exam
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  scores ExamScore[]
+}
+
+// ExamScore - student's score for an exam
+model ExamScore {
+  id        String   @id @default(cuid())
+  examId    String
+  studentId String
+  score     Float    // Points earned (e.g., 85 out of 100)
+  gradedAt  DateTime @default(now())
+  notes     String?  // Teacher notes for this score
+  updatedAt DateTime @updatedAt
+
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId]) // One score per student per exam
 }
 
 // ============ STUDENT NOTES ============
