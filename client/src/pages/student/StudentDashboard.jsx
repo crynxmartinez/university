@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, FileText, StickyNote, Edit3, Trash2 } from 'lucide-react'
-import { getMyCourses } from '../../api/enrollments'
+import { getMyCourses, selfEnrollInCourse } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
 import { getUpcomingSessions } from '../../api/sessions'
@@ -120,6 +120,28 @@ export default function StudentDashboard() {
 
   const isEnrolledInProgram = (programId) => {
     return myProgramEnrollments.some(e => e.program?.id === programId)
+  }
+
+  const isEnrolledInCourse = (courseId) => {
+    return myCourseEnrollments.some(c => c.id === courseId)
+  }
+
+  const handleEnrollCourse = async (courseId) => {
+    setEnrollingId(courseId)
+    try {
+      await selfEnrollInCourse(courseId)
+      // Refresh enrollments
+      const myCourses = await getMyCourses()
+      setMyCourseEnrollments(myCourses)
+      // Remove from browse list
+      setAllCourses(prev => prev.filter(c => c.id !== courseId))
+      alert('Successfully enrolled in course!')
+    } catch (error) {
+      console.error('Failed to enroll:', error)
+      alert(error.response?.data?.error || 'Failed to enroll')
+    } finally {
+      setEnrollingId(null)
+    }
   }
 
   const handleLogout = () => {
@@ -597,9 +619,26 @@ export default function StudentDashboard() {
                             <span>{course.modules?.length || 0} modules</span>
                             <span>By Sheikh {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}</span>
                           </div>
-                          <button className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition mt-auto">
-                            Enroll Now
-                          </button>
+                          {isEnrolledInCourse(course.id) ? (
+                            <button 
+                              disabled
+                              className="w-full bg-green-100 text-green-700 py-2 rounded-lg font-semibold mt-auto flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle className="w-4 h-4" /> Enrolled
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => handleEnrollCourse(course.id)}
+                              disabled={enrollingId === course.id}
+                              className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition mt-auto disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {enrollingId === course.id ? (
+                                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Enrolling...</>
+                              ) : (
+                                'Enroll Now'
+                              )}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>

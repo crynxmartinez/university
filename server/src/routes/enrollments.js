@@ -185,6 +185,67 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 })
 
+// POST /api/enrollments/self - Student self-enroll in a course
+router.post('/self', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can self-enroll' })
+    }
+
+    const { courseId } = req.body
+
+    if (!courseId) {
+      return res.status(400).json({ error: 'Course ID is required' })
+    }
+
+    // Check if course exists and is active
+    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+    if (!course.isActive) {
+      return res.status(400).json({ error: 'This course is not available for enrollment' })
+    }
+
+    // Check if already enrolled
+    const existing = await prisma.enrollment.findUnique({
+      where: {
+        studentId_courseId: { studentId: req.user.student.id, courseId }
+      }
+    })
+    if (existing) {
+      return res.status(400).json({ error: 'You are already enrolled in this course' })
+    }
+
+    const enrollment = await prisma.enrollment.create({
+      data: { 
+        studentId: req.user.student.id, 
+        courseId 
+      },
+      include: {
+        course: {
+          include: {
+            teacher: {
+              include: {
+                user: { include: { profile: true } }
+              }
+            },
+            modules: {
+              include: { lessons: true },
+              orderBy: { order: 'asc' }
+            }
+          }
+        }
+      }
+    })
+
+    res.status(201).json(enrollment.course)
+  } catch (error) {
+    console.error('Self-enroll error:', error)
+    res.status(500).json({ error: 'Failed to enroll in course' })
+  }
+})
+
 // GET /api/enrollments/students - Get all students (for teacher to enroll)
 router.get('/students', authenticate, async (req, res) => {
   try {

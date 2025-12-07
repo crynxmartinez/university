@@ -29,3 +29,8 @@ export const removeEnrollment = async (id) => {
   const response = await axios.delete(`${API_URL}/enrollments/${id}`, getAuthHeader())
   return response.data
 }
+
+export const selfEnrollInCourse = async (courseId) => {
+  const response = await axios.post(`${API_URL}/enrollments/self`, { courseId }, getAuthHeader())
+  return response.data
+}
