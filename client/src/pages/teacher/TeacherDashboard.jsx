@@ -1086,7 +1086,7 @@ export default function TeacherDashboard() {
                       <p className="text-sm text-amber-600 mt-1">
                         Add one in{' '}
                         <Link
-                          to={`/teacher/course/${selectedSession.course?.id}`}
+                          to={`/teacher/courses/${selectedSession.course?.id}/dashboard`}
                           onClick={() => setSelectedSession(null)}
                           className="underline hover:text-amber-800"
                         >
@@ -1099,7 +1099,7 @@ export default function TeacherDashboard() {
               )}
 
               <Link
-                to={`/teacher/course/${selectedSession.course?.id}`}
+                to={`/teacher/courses/${selectedSession.course?.id}/dashboard`}
                 onClick={() => setSelectedSession(null)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition"
               >
