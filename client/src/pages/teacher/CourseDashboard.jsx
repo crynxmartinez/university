@@ -4,7 +4,7 @@ import {
   ArrowLeft, BookOpen, Calendar, Users, Settings, Menu, 
   Plus, Video, Radio, ChevronDown, ChevronRight, Play,
   ToggleLeft, ToggleRight, Trash2, Edit3, Save, X,
-  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard, GripVertical, CheckSquare
+  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard, GripVertical, CheckSquare, AlertTriangle
 } from 'lucide-react'
 import { getCourse, updateCourse, toggleCourseActive, deleteCourse } from '../../api/courses'
 import { getCourseSessions, createSession, updateSession, deleteSession, addMaterial, deleteMaterial } from '../../api/sessions'
@@ -999,6 +999,7 @@ export default function CourseDashboard() {
                     const dateSessions = date ? getSessionsForDate(date) : []
                     const isToday = date && formatDate(date) === formatDate(new Date())
                     const isSelected = date && selectedDate && formatDate(date) === formatDate(selectedDate)
+                    const hasNoLinkSession = dateSessions.some(s => !s.meetingLink)
                     
                     return (
                       <div
@@ -1017,8 +1018,20 @@ export default function CourseDashboard() {
                       >
                         {date && (
                           <>
-                            <div className={`text-sm font-medium mb-1 ${isToday ? 'text-[#f7941d]' : 'text-gray-700'}`}>
-                              {date.getDate()}
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-sm font-medium ${isToday ? 'text-[#f7941d]' : 'text-gray-700'}`}>
+                                {date.getDate()}
+                              </span>
+                              {hasNoLinkSession && (
+                                <div className="group relative">
+                                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                  <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block z-10">
+                                    <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                      No meeting link
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             <div className="space-y-1">
                               {dateSessions.slice(0, 2).map(session => (
@@ -1028,7 +1041,11 @@ export default function CourseDashboard() {
                                     e.stopPropagation()
                                     handleEditSession(session)
                                   }}
-                                  className={`text-xs px-1 py-0.5 rounded truncate ${getSessionTypeColor(session.type)} text-white`}
+                                  className={`text-xs px-1 py-0.5 rounded truncate ${
+                                    !session.meetingLink 
+                                      ? 'bg-red-100 text-red-700 border border-red-300' 
+                                      : `${getSessionTypeColor(session.type)} text-white`
+                                  }`}
                                 >
                                   {session.startTime}
                                 </div>
@@ -1097,7 +1114,14 @@ export default function CourseDashboard() {
                     ) : (
                       <div className="space-y-3">
                         {getSessionsForDate(selectedDate).map(session => (
-                          <div key={session.id} className={`border rounded-lg p-3 ${getSessionTypeBgColor(session.type)}`}>
+                          <div key={session.id} className={`border rounded-lg p-3 ${!session.meetingLink ? 'border-red-300 bg-red-50' : getSessionTypeBgColor(session.type)}`}>
+                            {/* No meeting link warning */}
+                            {!session.meetingLink && (
+                              <div className="flex items-center gap-2 text-amber-600 text-xs mb-2 bg-amber-50 px-2 py-1 rounded">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>No meeting link</span>
+                              </div>
+                            )}
                             <div className="flex items-start justify-between mb-2">
                               <div>
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${getSessionTypeColor(session.type)} text-white`}>
