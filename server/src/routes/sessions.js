@@ -31,17 +31,18 @@ const authenticate = async (req, res, next) => {
   }
 }
 
-// ============ COURSE SESSION ROUTES ============
+// ============ SCHEDULED SESSION ROUTES ============
 
 // GET /api/sessions/course/:courseId - Get all sessions for a course
 router.get('/course/:courseId', authenticate, async (req, res) => {
   try {
     const { courseId } = req.params
 
-    const sessions = await prisma.courseSession.findMany({
+    const sessions = await prisma.scheduledSession.findMany({
       where: { courseId },
       include: {
-        materials: true
+        materials: true,
+        lesson: true  // Include the class template
       },
       orderBy: { date: 'asc' }
     })
@@ -58,10 +59,11 @@ router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
 
-    const session = await prisma.courseSession.findUnique({
+    const session = await prisma.scheduledSession.findUnique({
       where: { id },
       include: {
         materials: true,
+        lesson: true,
         course: true
       }
     })
@@ -77,17 +79,17 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 })
 
-// POST /api/sessions - Create a new session
+// POST /api/sessions - Create a new scheduled session (attach class template to calendar)
 router.post('/', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'TEACHER' || !req.user.teacher) {
       return res.status(403).json({ error: 'Only teachers can create sessions' })
     }
 
-    const { courseId, date, startTime, endTime, type, title, meetingLink, notes } = req.body
+    const { courseId, lessonId, date, startTime, endTime, type, meetingLink, notes } = req.body
 
-    if (!courseId || !date || !startTime) {
-      return res.status(400).json({ error: 'Course ID, date, and start time are required' })
+    if (!courseId || !lessonId || !date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Course ID, lesson ID, date, start time, and end time are required' })
     }
 
     // Verify teacher owns this course
@@ -96,19 +98,29 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to add sessions to this course' })
     }
 
-    const session = await prisma.courseSession.create({
+    // Verify lesson exists and belongs to this course
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: { module: true }
+    })
+    if (!lesson || lesson.module.courseId !== courseId) {
+      return res.status(400).json({ error: 'Invalid lesson for this course' })
+    }
+
+    const session = await prisma.scheduledSession.create({
       data: {
         courseId,
+        lessonId,
         date: new Date(date),
         startTime,
         endTime,
         type: type || 'CLASS',
-        title,
         meetingLink,
         notes
       },
       include: {
-        materials: true
+        materials: true,
+        lesson: true
       }
     })
 
@@ -119,7 +131,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 })
 
-// PUT /api/sessions/:id - Update a session
+// PUT /api/sessions/:id - Update a scheduled session
 router.put('/:id', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'TEACHER' || !req.user.teacher) {
@@ -127,10 +139,10 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const { id } = req.params
-    const { date, startTime, endTime, type, title, meetingLink, notes } = req.body
+    const { lessonId, date, startTime, endTime, type, meetingLink, notes } = req.body
 
     // Verify session exists and teacher owns the course
-    const existing = await prisma.courseSession.findUnique({
+    const existing = await prisma.scheduledSession.findUnique({
       where: { id },
       include: { course: true }
     })
@@ -143,19 +155,31 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to update this session' })
     }
 
-    const session = await prisma.courseSession.update({
+    // If lessonId is being changed, verify it belongs to this course
+    if (lessonId && lessonId !== existing.lessonId) {
+      const lesson = await prisma.lesson.findUnique({
+        where: { id: lessonId },
+        include: { module: true }
+      })
+      if (!lesson || lesson.module.courseId !== existing.courseId) {
+        return res.status(400).json({ error: 'Invalid lesson for this course' })
+      }
+    }
+
+    const session = await prisma.scheduledSession.update({
       where: { id },
       data: {
+        lessonId: lessonId || undefined,
         date: date ? new Date(date) : undefined,
         startTime,
         endTime,
         type,
-        title,
         meetingLink,
         notes
       },
       include: {
-        materials: true
+        materials: true,
+        lesson: true
       }
     })
 
@@ -166,7 +190,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 })
 
-// DELETE /api/sessions/:id - Delete a session
+// DELETE /api/sessions/:id - Delete a scheduled session
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'TEACHER' || !req.user.teacher) {
@@ -176,7 +200,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     const { id } = req.params
 
     // Verify session exists and teacher owns the course
-    const existing = await prisma.courseSession.findUnique({
+    const existing = await prisma.scheduledSession.findUnique({
       where: { id },
       include: { course: true }
     })
@@ -189,7 +213,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to delete this session' })
     }
 
-    await prisma.courseSession.delete({ where: { id } })
+    await prisma.scheduledSession.delete({ where: { id } })
 
     res.json({ message: 'Session deleted successfully' })
   } catch (error) {
@@ -200,7 +224,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 
 // ============ SESSION MATERIAL ROUTES ============
 
-// POST /api/sessions/:sessionId/materials - Add material to a session
+// POST /api/sessions/:sessionId/materials - Add date-specific material to a session
 router.post('/:sessionId/materials', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'TEACHER' || !req.user.teacher) {
@@ -215,7 +239,7 @@ router.post('/:sessionId/materials', authenticate, async (req, res) => {
     }
 
     // Verify session exists and teacher owns the course
-    const session = await prisma.courseSession.findUnique({
+    const session = await prisma.scheduledSession.findUnique({
       where: { id: sessionId },
       include: { course: true }
     })
@@ -297,13 +321,14 @@ router.get('/student/upcoming', authenticate, async (req, res) => {
     const courseIds = enrollments.map(e => e.courseId)
 
     // Get upcoming sessions for those courses
-    const sessions = await prisma.courseSession.findMany({
+    const sessions = await prisma.scheduledSession.findMany({
       where: {
         courseId: { in: courseIds },
         date: { gte: new Date() }
       },
       include: {
         materials: true,
+        lesson: true,  // Include class template with its materials
         course: {
           select: { id: true, name: true, type: true }
         }
