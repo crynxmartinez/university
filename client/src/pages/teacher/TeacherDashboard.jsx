@@ -4,6 +4,7 @@ import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings
 import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
+import { getCourseGrades } from '../../api/exams'
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -31,6 +32,11 @@ export default function TeacherDashboard() {
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedSession, setSelectedSession] = useState(null)
+
+  // Grades state
+  const [selectedGradeCourse, setSelectedGradeCourse] = useState(null)
+  const [gradesData, setGradesData] = useState(null)
+  const [loadingGrades, setLoadingGrades] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -98,6 +104,24 @@ export default function TeacherDashboard() {
       fetchSchedule()
     }
   }, [activeTab])
+
+  // Fetch grades when a course is selected
+  const fetchGrades = async (courseId) => {
+    setLoadingGrades(true)
+    try {
+      const data = await getCourseGrades(courseId)
+      setGradesData(data)
+    } catch (error) {
+      console.error('Failed to fetch grades:', error)
+    } finally {
+      setLoadingGrades(false)
+    }
+  }
+
+  const handleSelectGradeCourse = (course) => {
+    setSelectedGradeCourse(course)
+    fetchGrades(course.id)
+  }
 
   const fetchSchedule = async () => {
     setLoadingSchedule(true)
@@ -240,6 +264,7 @@ export default function TeacherDashboard() {
     { id: 'courses', label: 'My Courses', icon: BookOpen },
     { id: 'students', label: 'Students', icon: GraduationCap },
     { id: 'schedule', label: 'Schedule', icon: Calendar, badge: todayCount },
+    { id: 'grades', label: 'Grades', icon: TrendingUp },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
@@ -880,6 +905,184 @@ export default function TeacherDashboard() {
               <p className="text-sm text-gray-400 max-w-md mx-auto">
                 You'll be able to send and receive messages from your students here.
               </p>
+            </div>
+          )}
+
+          {/* Grades Tab */}
+          {activeTab === 'grades' && (
+            <div>
+              {!selectedGradeCourse ? (
+                // Course Selection View
+                <div>
+                  <p className="text-gray-600 mb-6">Select a course to view student grades</p>
+                  
+                  {loading ? (
+                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                      <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-gray-500">Loading courses...</p>
+                    </div>
+                  ) : courses.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                      <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Courses Yet</h3>
+                      <p className="text-gray-500">Create a course first to manage grades</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {courses.map(course => (
+                        <button
+                          key={course.id}
+                          onClick={() => handleSelectGradeCourse(course)}
+                          className="bg-white rounded-xl shadow-sm p-6 text-left hover:shadow-md transition group"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                              course.type === 'LIVE' ? 'bg-purple-100' : 'bg-blue-100'
+                            }`}>
+                              {course.type === 'LIVE' ? (
+                                <Radio className="w-6 h-6 text-purple-600" />
+                              ) : (
+                                <Video className="w-6 h-6 text-blue-600" />
+                              )}
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#1e3a5f] transition" />
+                          </div>
+                          <h3 className="font-semibold text-gray-900 mb-1">{course.name}</h3>
+                          <p className="text-sm text-gray-500">
+                            {course.enrollments?.length || 0} students enrolled
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Gradebook View
+                <div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <button
+                      onClick={() => {
+                        setSelectedGradeCourse(null)
+                        setGradesData(null)
+                      }}
+                      className="flex items-center gap-2 text-gray-600 hover:text-[#1e3a5f] transition"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                      Back to Courses
+                    </button>
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold text-gray-900">{selectedGradeCourse.name}</h2>
+                      <p className="text-sm text-gray-500">Gradebook</p>
+                    </div>
+                  </div>
+
+                  {loadingGrades ? (
+                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                      <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-gray-500">Loading grades...</p>
+                    </div>
+                  ) : !gradesData || gradesData.exams?.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                      <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Exams Yet</h3>
+                      <p className="text-gray-500 mb-4">Create exams in the course dashboard to start grading</p>
+                      <Link
+                        to={`/teacher/courses/${selectedGradeCourse.slug || selectedGradeCourse.id}/dashboard`}
+                        className="inline-flex items-center gap-2 text-[#1e3a5f] hover:underline"
+                      >
+                        Go to Course Dashboard
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  ) : gradesData.grades?.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                      <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Enrolled</h3>
+                      <p className="text-gray-500">Students need to enroll in this course first</p>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900 sticky left-0 bg-gray-50">Student</th>
+                              {gradesData.exams.map(exam => (
+                                <th key={exam.id} className="text-center px-4 py-4 text-sm font-semibold text-gray-900 min-w-[100px]">
+                                  <div>{exam.title}</div>
+                                  <div className="text-xs font-normal text-gray-500">{exam.totalPoints} pts</div>
+                                </th>
+                              ))}
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900 min-w-[120px]">Final Grade</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {gradesData.grades.map(student => (
+                              <tr key={student.studentId} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 sticky left-0 bg-white">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                      {student.studentName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-gray-900">{student.studentName}</p>
+                                      <p className="text-xs text-gray-500">{student.email}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                {student.examScores.map(examScore => (
+                                  <td key={examScore.examId} className="px-4 py-4 text-center">
+                                    {examScore.score !== null ? (
+                                      <span className="font-medium text-gray-900">{examScore.score}</span>
+                                    ) : (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </td>
+                                ))}
+                                <td className="px-6 py-4 text-center">
+                                  {student.percentage !== null ? (
+                                    <span className={`text-lg font-bold ${
+                                      student.percentage >= 75 ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {student.percentage}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {student.passed !== null ? (
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                      student.passed 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {student.passed ? 'Passed' : 'Failed'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Summary */}
+                      <div className="p-4 bg-gray-50 border-t flex items-center justify-between text-sm">
+                        <span className="text-gray-600">
+                          Passing Grade: <span className="font-semibold">{gradesData.passingGrade}%</span>
+                        </span>
+                        <span className="text-gray-600">
+                          {gradesData.grades.filter(g => g.passed === true).length} of {gradesData.grades.length} students passed
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
