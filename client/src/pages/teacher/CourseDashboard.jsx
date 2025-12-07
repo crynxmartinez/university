@@ -293,9 +293,10 @@ export default function CourseDashboard() {
   }
 
   const fetchEnrolledStudents = async () => {
+    if (!course?.id) return
     setLoadingStudents(true)
     try {
-      const data = await getEnrolledStudents(id)
+      const data = await getEnrolledStudents(course.id)
       setEnrolledStudents(data)
     } catch (error) {
       console.error('Failed to fetch enrolled students:', error)
