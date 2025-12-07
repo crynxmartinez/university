@@ -146,64 +146,47 @@ router.get('/:idOrSlug', authenticate, async (req, res) => {
   try {
     const { idOrSlug } = req.params
 
-    // Try to find by ID first, then by slug
-    let course = await prisma.course.findUnique({
-      where: { id: idOrSlug },
-      include: {
-        teacher: {
-          include: {
-            user: {
-              include: { profile: true }
-            }
+    const includeOptions = {
+      teacher: {
+        include: {
+          user: {
+            include: { profile: true }
+          }
+        }
+      },
+      modules: {
+        include: {
+          lessons: {
+            orderBy: { order: 'asc' }
           }
         },
-        modules: {
-          include: {
-            lessons: {
-              orderBy: { order: 'asc' }
-            }
-          },
-          orderBy: { order: 'asc' }
+        orderBy: { order: 'asc' }
+      },
+      sessions: {
+        include: {
+          materials: true
         },
-        sessions: {
-          include: {
-            materials: true
-          },
-          orderBy: { date: 'asc' }
-        },
-        enrollments: true
-      }
+        orderBy: { date: 'asc' }
+      },
+      enrollments: true
+    }
+
+    // Try to find by slug first (more common with new URLs), then by ID
+    let course = await prisma.course.findUnique({
+      where: { slug: idOrSlug },
+      include: includeOptions
     })
 
-    // If not found by ID, try by slug
+    // If not found by slug, try by ID
     if (!course) {
-      course = await prisma.course.findUnique({
-        where: { slug: idOrSlug },
-        include: {
-          teacher: {
-            include: {
-              user: {
-                include: { profile: true }
-              }
-            }
-          },
-          modules: {
-            include: {
-              lessons: {
-                orderBy: { order: 'asc' }
-              }
-            },
-            orderBy: { order: 'asc' }
-          },
-          sessions: {
-            include: {
-              materials: true
-            },
-            orderBy: { date: 'asc' }
-          },
-          enrollments: true
-        }
-      })
+      try {
+        course = await prisma.course.findUnique({
+          where: { id: idOrSlug },
+          include: includeOptions
+        })
+      } catch (e) {
+        // Invalid ID format, course stays null
+      }
     }
 
     if (!course) {
