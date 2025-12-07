@@ -84,6 +84,95 @@ app.get('/api/debug/schema', async (req, res) => {
   }
 })
 
+// One-time migration endpoint - run raw SQL to add missing columns
+app.get('/api/debug/migrate', async (req, res) => {
+  try {
+    // Add missing columns to Exam table
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Exam" 
+      ADD COLUMN IF NOT EXISTS "timeLimit" INTEGER,
+      ADD COLUMN IF NOT EXISTS "maxTabSwitch" INTEGER DEFAULT 3,
+      ADD COLUMN IF NOT EXISTS "isPublished" BOOLEAN DEFAULT false
+    `)
+
+    // Create ExamQuestion table if not exists
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ExamQuestion" (
+        "id" TEXT NOT NULL,
+        "examId" TEXT NOT NULL,
+        "question" TEXT NOT NULL,
+        "points" INTEGER NOT NULL DEFAULT 10,
+        "order" INTEGER NOT NULL DEFAULT 0,
+        CONSTRAINT "ExamQuestion_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ExamQuestion_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `)
+
+    // Create ExamChoice table if not exists
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ExamChoice" (
+        "id" TEXT NOT NULL,
+        "questionId" TEXT NOT NULL,
+        "text" TEXT NOT NULL,
+        "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+        "order" INTEGER NOT NULL DEFAULT 0,
+        CONSTRAINT "ExamChoice_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ExamChoice_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "ExamQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `)
+
+    // Create ExamAttempt table if not exists
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ExamAttempt" (
+        "id" TEXT NOT NULL,
+        "examId" TEXT NOT NULL,
+        "studentId" TEXT NOT NULL,
+        "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "submittedAt" TIMESTAMP(3),
+        "tabSwitchCount" INTEGER NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+        "score" DOUBLE PRECISION,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "ExamAttempt_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ExamAttempt_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAttempt_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `)
+
+    // Create ExamAnswer table if not exists
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ExamAnswer" (
+        "id" TEXT NOT NULL,
+        "attemptId" TEXT NOT NULL,
+        "questionId" TEXT NOT NULL,
+        "choiceId" TEXT,
+        "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+        CONSTRAINT "ExamAnswer_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ExamAnswer_attemptId_fkey" FOREIGN KEY ("attemptId") REFERENCES "ExamAttempt"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAnswer_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "ExamQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAnswer_choiceId_fkey" FOREIGN KEY ("choiceId") REFERENCES "ExamChoice"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
+    `)
+
+    // Add unique constraints
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "ExamAttempt_examId_studentId_key" ON "ExamAttempt"("examId", "studentId")
+    `)
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "ExamAnswer_attemptId_questionId_key" ON "ExamAnswer"("attemptId", "questionId")
+    `)
+
+    res.json({ status: 'ok', message: 'Migration completed successfully!' })
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      error: error.message,
+      code: error.code
+    })
+  }
+})
+
 // Start server (only in development)
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
