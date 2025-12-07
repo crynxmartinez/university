@@ -294,7 +294,12 @@ export default function TeacherDashboard() {
                 </Link>
               </div>
 
-              {courses.length === 0 ? (
+              {loading ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <div className="w-12 h-12 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading courses...</p>
+                </div>
+              ) : courses.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No courses yet</h3>
@@ -312,12 +317,12 @@ export default function TeacherDashboard() {
                   {courses.map((course) => (
                     <div
                       key={course.id}
-                      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition"
+                      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition flex flex-col"
                     >
                       {/* Course Header */}
                       <div className={`h-2 ${course.type === 'LIVE' ? 'bg-purple-500' : 'bg-[#1e3a5f]'}`}></div>
                       
-                      <div className="p-5">
+                      <div className="p-5 flex flex-col flex-1">
                         {/* Type & Status Badges */}
                         <div className="flex items-center gap-2 mb-3">
                           <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
@@ -341,7 +346,7 @@ export default function TeacherDashboard() {
                         <h3 className="font-semibold text-gray-900 text-lg mb-2">{course.name}</h3>
                         
                         {/* Description */}
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-4">
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
                           {course.description || 'No description'}
                         </p>
                         
@@ -354,7 +359,7 @@ export default function TeacherDashboard() {
                         </div>
 
                         {/* Action Button */}
-                        <div className="pt-4 border-t">
+                        <div className="pt-4 border-t mt-auto">
                           <Link
                             to={`/teacher/courses/${course.id}/dashboard`}
                             className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
