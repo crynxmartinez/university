@@ -5,9 +5,11 @@ import jwt from 'jsonwebtoken'
 const router = express.Router()
 
 // GET /api/courses/public - Get all public courses (no auth required)
+// Only returns ACTIVE courses
 router.get('/public', async (req, res) => {
   try {
     const courses = await prisma.course.findMany({
+      where: { isActive: true },
       include: {
         teacher: {
           include: {
