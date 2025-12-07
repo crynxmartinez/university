@@ -1035,12 +1035,28 @@ export default function StudentDashboard() {
                     const isToday = sessionDate.toDateString() === new Date().toDateString()
                     const isTomorrow = sessionDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
                     
+                    // Link visibility logic: 1 hour before start → 1 hour after end
+                    const now = new Date()
+                    const [startHour, startMin] = (session.startTime || '00:00').split(':').map(Number)
+                    const [endHour, endMin] = (session.endTime || '23:59').split(':').map(Number)
+                    
+                    const sessionStart = new Date(sessionDate)
+                    sessionStart.setHours(startHour, startMin, 0, 0)
+                    const sessionEnd = new Date(sessionDate)
+                    sessionEnd.setHours(endHour, endMin, 0, 0)
+                    
+                    const oneHourBefore = new Date(sessionStart.getTime() - 60 * 60 * 1000)
+                    const oneHourAfter = new Date(sessionEnd.getTime() + 60 * 60 * 1000)
+                    
+                    const isLinkVisible = now >= oneHourBefore && now <= oneHourAfter
+                    const isClassEnded = now > oneHourAfter
+                    
                     return (
                       <div 
                         key={session.id} 
                         className={`border rounded-lg p-4 ${
+                          isClassEnded ? 'border-gray-200 bg-gray-50' :
                           session.type === 'EXAM' ? 'border-red-200 bg-red-50' :
-                          session.type === 'REVIEW' ? 'border-yellow-200 bg-yellow-50' :
                           'border-blue-200 bg-blue-50'
                         }`}
                       >
@@ -1049,20 +1065,20 @@ export default function StudentDashboard() {
                             {/* Course Name & Session Type */}
                             <div className="flex items-center gap-2 mb-2">
                               <span className={`text-xs px-2 py-0.5 rounded-full text-white ${
+                                isClassEnded ? 'bg-gray-400' :
                                 session.type === 'EXAM' ? 'bg-red-500' :
-                                session.type === 'REVIEW' ? 'bg-yellow-500' :
                                 'bg-blue-500'
                               }`}>
-                                {session.type}
+                                {isClassEnded ? 'ENDED' : session.type}
                               </span>
-                              {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white">TODAY</span>}
-                              {isTomorrow && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500 text-white">TOMORROW</span>}
+                              {!isClassEnded && isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white">TODAY</span>}
+                              {!isClassEnded && isTomorrow && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500 text-white">TOMORROW</span>}
                             </div>
                             
                             <h3 className="font-semibold text-gray-900">{session.course?.name}</h3>
-                            {session.title && (
-                              <p className="text-sm text-gray-600 mt-1">{session.title}</p>
-                            )}
+                            <p className="text-sm text-gray-600 mt-1">
+                              {session.lesson?.name || 'Untitled'}
+                            </p>
                             
                             {/* Date & Time */}
                             <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
@@ -1081,10 +1097,18 @@ export default function StudentDashboard() {
                               <p className="text-sm text-gray-500 mt-2 italic">{session.notes}</p>
                             )}
                             
-                            {/* Materials */}
+                            {/* Lesson Materials (from template) */}
+                            {session.lesson?.materials && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Lesson Materials</p>
+                                <p className="text-xs text-gray-600">{session.lesson.materials}</p>
+                              </div>
+                            )}
+                            
+                            {/* Session Materials (date-specific) */}
                             {session.materials?.length > 0 && (
                               <div className="mt-3 pt-3 border-t border-gray-200">
-                                <p className="text-xs font-medium text-gray-500 mb-2">Materials ({session.materials.length})</p>
+                                <p className="text-xs font-medium text-gray-500 mb-2">Session Materials ({session.materials.length})</p>
                                 <div className="flex flex-wrap gap-2">
                                   {session.materials.map(material => (
                                     <a
@@ -1103,18 +1127,30 @@ export default function StudentDashboard() {
                             )}
                           </div>
                           
-                          {/* Join Button */}
-                          {session.meetingLink && (
-                            <a 
-                              href={session.meetingLink} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition ml-4"
-                            >
-                              <Video className="w-4 h-4" />
-                              Join
-                            </a>
-                          )}
+                          {/* Join Button - with visibility logic */}
+                          <div className="ml-4 flex-shrink-0">
+                            {isClassEnded ? (
+                              <span className="text-xs text-gray-500 bg-gray-200 px-3 py-2 rounded-lg">
+                                Class ended
+                              </span>
+                            ) : session.meetingLink ? (
+                              isLinkVisible ? (
+                                <a 
+                                  href={session.meetingLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+                                >
+                                  <Video className="w-4 h-4" />
+                                  Join
+                                </a>
+                              ) : (
+                                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg block text-center">
+                                  Link available<br/>1hr before class
+                                </span>
+                              )
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     )
