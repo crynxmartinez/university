@@ -228,6 +228,7 @@ export default function CourseDashboard() {
     notes: ''
   })
   const [sessionSaving, setSessionSaving] = useState(false)
+  const [deletingSession, setDeletingSession] = useState(false)
   
   // Material modal state
   const [showMaterialModal, setShowMaterialModal] = useState(false)
@@ -718,6 +719,7 @@ export default function CourseDashboard() {
 
   const handleDeleteSession = async () => {
     if (!deleteSessionConfirm) return
+    setDeletingSession(true)
     try {
       await deleteSession(deleteSessionConfirm)
       setSessions(prev => prev.filter(s => s.id !== deleteSessionConfirm))
@@ -726,6 +728,7 @@ export default function CourseDashboard() {
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete session')
     } finally {
+      setDeletingSession(false)
       setDeleteSessionConfirm(null)
     }
   }
@@ -1833,12 +1836,13 @@ export default function CourseDashboard() {
       {/* Delete Session Confirmation Modal */}
       <ConfirmModal
         isOpen={!!deleteSessionConfirm}
-        onClose={() => setDeleteSessionConfirm(null)}
+        onClose={() => !deletingSession && setDeleteSessionConfirm(null)}
         onConfirm={handleDeleteSession}
         title="Delete Session"
         message="Are you sure you want to delete this session? This action cannot be undone."
         confirmText="Delete"
         confirmStyle="danger"
+        loading={deletingSession}
       />
 
       {/* Delete Material Confirmation Modal */}
@@ -2177,30 +2181,28 @@ export default function CourseDashboard() {
                     {attendanceList.map((item) => (
                       <div
                         key={item.studentId}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition cursor-pointer ${
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${
                           item.status === 'PRESENT' 
                             ? 'bg-green-50 border-green-200' 
                             : 'bg-red-50 border-red-200'
                         }`}
                         onClick={() => toggleAttendance(item.studentId)}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                            item.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-400'
-                          }`}>
-                            {(item.studentName || 'U').charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{item.studentName || 'Unknown'}</p>
-                            <p className="text-xs text-gray-500">{item.email}</p>
-                            {item.joinedAt && (
-                              <p className="text-xs text-green-600 mt-0.5">
-                                Joined at {new Date(item.joinedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                              </p>
-                            )}
-                          </div>
+                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold ${
+                          item.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-400'
+                        }`}>
+                          {(item.studentName || 'U').charAt(0).toUpperCase()}
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{item.studentName || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500 truncate">{item.email}</p>
+                          {item.joinedAt && (
+                            <p className="text-xs text-green-600 mt-0.5">
+                              Joined at {new Date(item.joinedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                          )}
+                        </div>
+                        <div className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
                           item.status === 'PRESENT' 
                             ? 'bg-green-500 text-white' 
                             : 'bg-red-400 text-white'
