@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image, MapPin, Video, Calendar, Link as LinkIcon } from 'lucide-react'
+import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image, MapPin, Video, Calendar, Link as LinkIcon, MessageSquare } from 'lucide-react'
 import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
 import { getPrograms, createProgram, updateProgram, deleteProgram } from '../api/programs'
 import ReactQuill from 'react-quill'
@@ -252,6 +252,7 @@ export default function AdminDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Manage Users', icon: Users },
     { id: 'programs', label: 'Programs', icon: BookOpen },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
 
@@ -705,6 +706,17 @@ export default function AdminDashboard() {
                   </table>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'messages' && (
+            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+              <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Messages</h2>
+              <p className="text-gray-500 mb-4">Coming Soon</p>
+              <p className="text-sm text-gray-400 max-w-md mx-auto">
+                You'll be able to send announcements and messages to all users here.
+              </p>
             </div>
           )}
 

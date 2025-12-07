@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, FileText, StickyNote, Edit3, Trash2 } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, FileText, StickyNote, Edit3, Trash2, MessageSquare } from 'lucide-react'
 import { getMyCourses, selfEnrollInCourse } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
@@ -164,6 +164,7 @@ export default function StudentDashboard() {
     { id: 'enrollments', label: 'My Enrollments', icon: CheckCircle, hasDropdown: true },
     { id: 'notes', label: 'My Notes', icon: StickyNote },
     { id: 'grades', label: 'Grades', icon: Award },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
 
@@ -943,6 +944,17 @@ export default function StudentDashboard() {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">My Grades</h2>
               <p className="text-gray-500">Grades coming soon...</p>
+            </div>
+          )}
+
+          {activeTab === 'messages' && (
+            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+              <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Messages</h2>
+              <p className="text-gray-500 mb-4">Coming Soon</p>
+              <p className="text-sm text-gray-400 max-w-md mx-auto">
+                You'll be able to send and receive messages from your teachers and classmates here.
+              </p>
             </div>
           )}
 
