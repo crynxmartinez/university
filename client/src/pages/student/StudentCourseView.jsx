@@ -171,7 +171,8 @@ export default function StudentCourseView() {
 
   const formatSessionDate = (dateStr) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-PH', { 
+      timeZone: 'Asia/Manila',
       weekday: 'short', 
       month: 'short', 
       day: 'numeric' 

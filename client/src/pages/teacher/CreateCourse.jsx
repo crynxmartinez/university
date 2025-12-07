@@ -258,8 +258,8 @@ export default function CreateCourse() {
                   </select>
                   {startDate && (
                     <p className="text-xs text-gray-500 mt-1">
-                      End date: {new Date(calculateEndDate(startDate, durationMonths)).toLocaleDateString('en-US', { 
-                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+                      End date: {new Date(calculateEndDate(startDate, durationMonths)).toLocaleDateString('en-PH', { 
+                        timeZone: 'Asia/Manila', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
                       })}
                     </p>
                   )}

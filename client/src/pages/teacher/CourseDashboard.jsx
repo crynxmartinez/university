@@ -585,7 +585,7 @@ export default function CourseDashboard() {
               <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {currentMonth.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' })}
                   </h2>
                   <div className="flex items-center gap-2">
                     {copiedSession && (
@@ -702,7 +702,7 @@ export default function CourseDashboard() {
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   {selectedDate 
-                    ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                    ? selectedDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' })
                     : 'Select a date'}
                 </h3>
                 
@@ -1053,20 +1053,20 @@ export default function CourseDashboard() {
                       <div>
                         <p className="text-sm text-gray-500">Start Date</p>
                         <p className="font-medium text-gray-900">
-                          {course.startDate ? new Date(course.startDate).toLocaleDateString() : 'Not set'}
+                          {course.startDate ? new Date(course.startDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : 'Not set'}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">End Date</p>
                         <p className="font-medium text-gray-900">
-                          {course.endDate ? new Date(course.endDate).toLocaleDateString() : 'Not set'}
+                          {course.endDate ? new Date(course.endDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : 'Not set'}
                         </p>
                       </div>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Enrollment Deadline</p>
                       <p className="font-medium text-gray-900">
-                        {course.enrollmentEnd ? new Date(course.enrollmentEnd).toLocaleDateString() : 'No deadline'}
+                        {course.enrollmentEnd ? new Date(course.enrollmentEnd).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : 'No deadline'}
                       </p>
                     </div>
                   </div>
@@ -1101,7 +1101,7 @@ export default function CourseDashboard() {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
-                {selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {selectedDate?.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' })}
               </h3>
               <button onClick={() => setShowSessionModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />

@@ -541,7 +541,7 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(u.createdAt).toLocaleDateString()}
+                            {new Date(u.createdAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="relative">
@@ -679,7 +679,7 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(p.createdAt).toLocaleDateString()}
+                            {new Date(p.createdAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-2">

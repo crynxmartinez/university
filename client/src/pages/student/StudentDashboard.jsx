@@ -626,7 +626,7 @@ export default function StudentDashboard() {
                           <div className="flex flex-wrap gap-1 mb-2">
                             {course.isUpcoming && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
-                                Starts {new Date(course.startDate).toLocaleDateString()}
+                                Starts {new Date(course.startDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}
                               </span>
                             )}
                             {course.enrollmentEnd && (
@@ -634,7 +634,7 @@ export default function StudentDashboard() {
                                 course.enrollmentOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                               }`}>
                                 {course.enrollmentOpen 
-                                  ? `Enroll by ${new Date(course.enrollmentEnd).toLocaleDateString()}`
+                                  ? `Enroll by ${new Date(course.enrollmentEnd).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}`
                                   : 'Enrollment Closed'
                                 }
                               </span>
@@ -910,8 +910,8 @@ export default function StudentDashboard() {
                           <p className="text-sm text-[#1e3a5f] font-medium">{note.session?.course?.name}</p>
                           <h3 className="font-semibold text-gray-900">{note.session?.lesson?.name || 'Untitled Class'}</h3>
                           <p className="text-xs text-gray-500 mt-1">
-                            {note.session?.date && new Date(note.session.date).toLocaleDateString('en-US', { 
-                              weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
+                            {note.session?.date && new Date(note.session.date).toLocaleDateString('en-PH', { 
+                              timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
                             })}
                           </p>
                         </div>
@@ -927,8 +927,8 @@ export default function StudentDashboard() {
                         <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
                       </div>
                       <p className="text-xs text-gray-400 mt-3">
-                        Last updated: {new Date(note.updatedAt).toLocaleDateString('en-US', { 
-                          month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        Last updated: {new Date(note.updatedAt).toLocaleDateString('en-PH', { 
+                          timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
                       </p>
                     </div>
@@ -1272,7 +1272,7 @@ export default function StudentDashboard() {
                             <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
                               <div className="flex items-center gap-1">
                                 <Calendar className="w-4 h-4" />
-                                {sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                {sessionDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric' })}
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="w-4 h-4" />
