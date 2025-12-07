@@ -9,7 +9,7 @@ import {
   getExamQuestions, addQuestion, updateQuestion, deleteQuestion,
   updateExamSettings
 } from '../../api/exams'
-import ConfirmModal from '../../components/ConfirmModal'
+import { ConfirmModal } from '../../components/Toast'
 
 export default function ExamBuilder() {
   const { id: courseSlug, examId } = useParams()
