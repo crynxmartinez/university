@@ -42,7 +42,8 @@ router.get('/course/:courseId', authenticate, async (req, res) => {
       where: { courseId },
       include: {
         materials: true,
-        lesson: true  // Include the class template
+        lesson: true,  // Include the class template
+        exam: true     // Include the exam if EXAM type
       },
       orderBy: { date: 'asc' }
     })
@@ -64,6 +65,7 @@ router.get('/:id', authenticate, async (req, res) => {
       include: {
         materials: true,
         lesson: true,
+        exam: true,
         course: true
       }
     })
@@ -79,17 +81,26 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 })
 
-// POST /api/sessions - Create a new scheduled session (attach class template to calendar)
+// POST /api/sessions - Create a new scheduled session (attach class/exam to calendar)
 router.post('/', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'TEACHER' || !req.user.teacher) {
       return res.status(403).json({ error: 'Only teachers can create sessions' })
     }
 
-    const { courseId, lessonId, date, startTime, endTime, type, meetingLink, notes } = req.body
+    const { courseId, lessonId, examId, date, startTime, endTime, type, meetingLink, notes } = req.body
 
-    if (!courseId || !lessonId || !date || !startTime || !endTime) {
-      return res.status(400).json({ error: 'Course ID, lesson ID, date, start time, and end time are required' })
+    if (!courseId || !date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Course ID, date, start time, and end time are required' })
+    }
+
+    // Validate: CLASS type requires lessonId, EXAM type requires examId
+    const sessionType = type || 'CLASS'
+    if (sessionType === 'CLASS' && !lessonId) {
+      return res.status(400).json({ error: 'Lesson ID is required for CLASS sessions' })
+    }
+    if (sessionType === 'EXAM' && !examId) {
+      return res.status(400).json({ error: 'Exam ID is required for EXAM sessions' })
     }
 
     // Verify teacher owns this course
@@ -98,13 +109,26 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to add sessions to this course' })
     }
 
-    // Verify lesson exists and belongs to this course
-    const lesson = await prisma.lesson.findUnique({
-      where: { id: lessonId },
-      include: { module: true }
-    })
-    if (!lesson || lesson.module.courseId !== courseId) {
-      return res.status(400).json({ error: 'Invalid lesson for this course' })
+    // Verify lesson exists and belongs to this course (for CLASS type)
+    if (sessionType === 'CLASS' && lessonId) {
+      const lesson = await prisma.lesson.findUnique({
+        where: { id: lessonId },
+        include: { module: true }
+      })
+      if (!lesson || lesson.module.courseId !== courseId) {
+        return res.status(400).json({ error: 'Invalid lesson for this course' })
+      }
+    }
+
+    // Verify exam exists, belongs to this course, and is published (for EXAM type)
+    if (sessionType === 'EXAM' && examId) {
+      const exam = await prisma.exam.findUnique({ where: { id: examId } })
+      if (!exam || exam.courseId !== courseId) {
+        return res.status(400).json({ error: 'Invalid exam for this course' })
+      }
+      if (!exam.isPublished) {
+        return res.status(400).json({ error: 'Only published exams can be scheduled' })
+      }
     }
 
     // Parse date as YYYY-MM-DD and store as noon UTC to avoid date boundary issues
@@ -113,17 +137,19 @@ router.post('/', authenticate, async (req, res) => {
     const session = await prisma.scheduledSession.create({
       data: {
         courseId,
-        lessonId,
+        lessonId: sessionType === 'CLASS' ? lessonId : null,
+        examId: sessionType === 'EXAM' ? examId : null,
         date: sessionDate,
         startTime,
         endTime,
-        type: type || 'CLASS',
+        type: sessionType,
         meetingLink,
         notes
       },
       include: {
         materials: true,
-        lesson: true
+        lesson: true,
+        exam: true
       }
     })
 
@@ -142,7 +168,7 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const { id } = req.params
-    const { lessonId, date, startTime, endTime, type, meetingLink, notes } = req.body
+    const { lessonId, examId, date, startTime, endTime, type, meetingLink, notes } = req.body
 
     // Verify session exists and teacher owns the course
     const existing = await prisma.scheduledSession.findUnique({
@@ -158,8 +184,10 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to update this session' })
     }
 
+    const sessionType = type || existing.type
+
     // If lessonId is being changed, verify it belongs to this course
-    if (lessonId && lessonId !== existing.lessonId) {
+    if (sessionType === 'CLASS' && lessonId && lessonId !== existing.lessonId) {
       const lesson = await prisma.lesson.findUnique({
         where: { id: lessonId },
         include: { module: true }
@@ -169,23 +197,36 @@ router.put('/:id', authenticate, async (req, res) => {
       }
     }
 
+    // If examId is being changed, verify it belongs to this course and is published
+    if (sessionType === 'EXAM' && examId && examId !== existing.examId) {
+      const exam = await prisma.exam.findUnique({ where: { id: examId } })
+      if (!exam || exam.courseId !== existing.courseId) {
+        return res.status(400).json({ error: 'Invalid exam for this course' })
+      }
+      if (!exam.isPublished) {
+        return res.status(400).json({ error: 'Only published exams can be scheduled' })
+      }
+    }
+
     // Parse date as noon UTC to avoid timezone boundary issues
     const sessionDate = date ? new Date(`${date}T12:00:00.000Z`) : undefined
 
     const session = await prisma.scheduledSession.update({
       where: { id },
       data: {
-        lessonId: lessonId || undefined,
+        lessonId: sessionType === 'CLASS' ? (lessonId || existing.lessonId) : null,
+        examId: sessionType === 'EXAM' ? (examId || existing.examId) : null,
         date: sessionDate,
         startTime,
         endTime,
-        type,
+        type: sessionType,
         meetingLink,
         notes
       },
       include: {
         materials: true,
-        lesson: true
+        lesson: true,
+        exam: true
       }
     })
 

@@ -223,6 +223,7 @@ export default function CourseDashboard() {
   const [sessionForm, setSessionForm] = useState({
     type: 'CLASS',
     lessonId: '',
+    examId: '',
     startTime: '19:00',
     endTime: '21:00',
     meetingLink: '',
@@ -816,6 +817,7 @@ export default function CourseDashboard() {
       setSessionForm({
         type: 'CLASS',
         lessonId: '',
+        examId: '',
         startTime: '19:00',
         endTime: '21:00',
         meetingLink: '',
@@ -831,6 +833,7 @@ export default function CourseDashboard() {
     setSessionForm({
       type: session.type,
       lessonId: session.lessonId || '',
+      examId: session.examId || '',
       startTime: session.startTime,
       endTime: session.endTime || '',
       meetingLink: session.meetingLink || '',
@@ -1361,7 +1364,8 @@ export default function CourseDashboard() {
                             setEditingSession(null)
                             setSessionForm({
                               type: 'CLASS',
-                              title: '',
+                              lessonId: '',
+                              examId: '',
                               startTime: '19:00',
                               endTime: '21:00',
                               meetingLink: '',
@@ -1391,7 +1395,9 @@ export default function CourseDashboard() {
                                   {session.type}
                                 </span>
                                 <p className="font-medium text-gray-900 mt-1">
-                                  {session.lesson?.name || 'Untitled'}
+                                  {session.type === 'EXAM' 
+                                    ? session.exam?.title || 'Untitled Exam'
+                                    : session.lesson?.name || 'Untitled'}
                                 </p>
                               </div>
                               <div className="flex items-center gap-1">
@@ -1487,6 +1493,7 @@ export default function CourseDashboard() {
                             setSessionForm({
                               type: 'CLASS',
                               lessonId: '',
+                              examId: '',
                               startTime: '19:00',
                               endTime: '21:00',
                               meetingLink: '',
@@ -1856,7 +1863,7 @@ export default function CourseDashboard() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSessionForm(prev => ({ ...prev, type: 'CLASS', lessonId: '' }))}
+                    onClick={() => setSessionForm(prev => ({ ...prev, type: 'CLASS', lessonId: '', examId: '' }))}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
                       sessionForm.type === 'CLASS'
                         ? 'bg-blue-500 text-white'
@@ -1866,9 +1873,12 @@ export default function CourseDashboard() {
                     CLASS
                   </button>
                   <button
-                    disabled
-                    className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
-                    title="Coming soon"
+                    onClick={() => setSessionForm(prev => ({ ...prev, type: 'EXAM', lessonId: '', examId: '' }))}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                      sessionForm.type === 'EXAM'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     EXAM
                   </button>
@@ -1894,6 +1904,32 @@ export default function CourseDashboard() {
                       {getAllLessons().map(lesson => (
                         <option key={lesson.id} value={lesson.id}>
                           {lesson.moduleName} → {lesson.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {/* Exam Dropdown */}
+              {sessionForm.type === 'EXAM' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Exam *</label>
+                  {exams.filter(e => e.isPublished).length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      No published exams available. Create and publish exams in the "Exam" tab first.
+                    </div>
+                  ) : (
+                    <select
+                      value={sessionForm.examId}
+                      onChange={(e) => setSessionForm(prev => ({ ...prev, examId: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      required
+                    >
+                      <option value="">Select an exam...</option>
+                      {exams.filter(e => e.isPublished).map(exam => (
+                        <option key={exam.id} value={exam.id}>
+                          {exam.title} ({exam.totalPoints} pts)
                         </option>
                       ))}
                     </select>

@@ -163,6 +163,27 @@ app.get('/api/debug/migrate', async (req, res) => {
       CREATE UNIQUE INDEX IF NOT EXISTS "ExamAnswer_attemptId_questionId_key" ON "ExamAnswer"("attemptId", "questionId")
     `)
 
+    // Add examId column to ScheduledSession and make lessonId nullable
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "ScheduledSession" 
+      ADD COLUMN IF NOT EXISTS "examId" TEXT,
+      ALTER COLUMN "lessonId" DROP NOT NULL
+    `)
+
+    // Add foreign key for examId if not exists
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'ScheduledSession_examId_fkey'
+        ) THEN
+          ALTER TABLE "ScheduledSession" 
+          ADD CONSTRAINT "ScheduledSession_examId_fkey" 
+          FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$;
+    `)
+
     res.json({ status: 'ok', message: 'Migration completed successfully!' })
   } catch (error) {
     res.status(500).json({ 
