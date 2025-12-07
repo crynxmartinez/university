@@ -630,6 +630,16 @@ export default function CourseDashboard() {
     }
   }
 
+  // Format 24-hour time (e.g., "19:00") to 12-hour format (e.g., "7:00 PM")
+  const formatTime12h = (time) => {
+    if (!time) return 'No time'
+    const [h, m] = time.split(':')
+    const hour = parseInt(h)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const hour12 = hour % 12 || 12
+    return `${hour12}:${m} ${ampm}`
+  }
+
   // Get all lessons (class templates) from all modules
   const getAllLessons = () => {
     if (!course?.modules) return []
@@ -1055,7 +1065,7 @@ export default function CourseDashboard() {
                                       : `${getSessionTypeColor(session.type)} text-white`
                                   }`}
                                 >
-                                  {session.startTime}
+                                  {formatTime12h(session.startTime)}
                                 </div>
                               ))}
                               {dateSessions.length > 2 && (
@@ -1159,7 +1169,7 @@ export default function CourseDashboard() {
                             
                             <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                               <Clock className="w-4 h-4" />
-                              {session.startTime}{session.endTime && ` - ${session.endTime}`}
+                              {formatTime12h(session.startTime)}{session.endTime && ` - ${formatTime12h(session.endTime)}`}
                             </div>
                             
                             {session.meetingLink && (
