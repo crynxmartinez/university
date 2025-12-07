@@ -72,6 +72,42 @@ router.post('/', authenticate, async (req, res) => {
   }
 })
 
+// PUT /api/modules/reorder - Reorder modules within a course
+// NOTE: This must be BEFORE /:id routes to avoid "reorder" being treated as an ID
+router.put('/reorder', authenticate, async (req, res) => {
+  try {
+    const { courseId, moduleIds } = req.body
+
+    if (!courseId || !moduleIds || !Array.isArray(moduleIds)) {
+      return res.status(400).json({ error: 'Course ID and module IDs array are required' })
+    }
+
+    // Verify course ownership
+    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+    if (course.teacherId !== req.user.teacher?.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Update order for each module
+    const updates = moduleIds.map((moduleId, index) =>
+      prisma.module.update({
+        where: { id: moduleId },
+        data: { order: index + 1 }
+      })
+    )
+
+    await prisma.$transaction(updates)
+
+    res.json({ message: 'Modules reordered successfully' })
+  } catch (error) {
+    console.error('Reorder modules error:', error)
+    res.status(500).json({ error: 'Failed to reorder modules' })
+  }
+})
+
 // PUT /api/modules/:id - Update a module
 router.put('/:id', authenticate, async (req, res) => {
   try {
@@ -171,41 +207,6 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Delete module error:', error)
     res.status(500).json({ error: 'Failed to delete module' })
-  }
-})
-
-// PUT /api/modules/reorder - Reorder modules within a course
-router.put('/reorder', authenticate, async (req, res) => {
-  try {
-    const { courseId, moduleIds } = req.body
-
-    if (!courseId || !moduleIds || !Array.isArray(moduleIds)) {
-      return res.status(400).json({ error: 'Course ID and module IDs array are required' })
-    }
-
-    // Verify course ownership
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' })
-    }
-    if (course.teacherId !== req.user.teacher?.id) {
-      return res.status(403).json({ error: 'Not authorized' })
-    }
-
-    // Update order for each module
-    const updates = moduleIds.map((moduleId, index) =>
-      prisma.module.update({
-        where: { id: moduleId },
-        data: { order: index + 1 }
-      })
-    )
-
-    await prisma.$transaction(updates)
-
-    res.json({ message: 'Modules reordered successfully' })
-  } catch (error) {
-    console.error('Reorder modules error:', error)
-    res.status(500).json({ error: 'Failed to reorder modules' })
   }
 })
 
