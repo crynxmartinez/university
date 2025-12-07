@@ -296,4 +296,142 @@ router.get('/students', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/enrollments/teacher/analytics - Get all students analytics for teacher dashboard
+router.get('/teacher/analytics', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can access this' })
+    }
+
+    const teacherId = req.user.teacher.id
+
+    // Get all courses for this teacher
+    const courses = await prisma.course.findMany({
+      where: { teacherId },
+      select: { id: true, name: true, type: true }
+    })
+
+    const courseIds = courses.map(c => c.id)
+
+    // Get total past sessions for each course (for attendance calculation)
+    const now = new Date()
+    const sessionsPerCourse = await prisma.scheduledSession.groupBy({
+      by: ['courseId'],
+      where: {
+        courseId: { in: courseIds },
+        date: { lte: now }
+      },
+      _count: { id: true }
+    })
+
+    const sessionCountMap = {}
+    sessionsPerCourse.forEach(s => {
+      sessionCountMap[s.courseId] = s._count.id
+    })
+
+    // Get all enrollments with student info and attendance
+    const enrollments = await prisma.enrollment.findMany({
+      where: { courseId: { in: courseIds } },
+      include: {
+        course: { select: { id: true, name: true, type: true } },
+        student: {
+          include: {
+            user: { include: { profile: true } },
+            attendance: {
+              where: {
+                session: { courseId: { in: courseIds } },
+                status: 'PRESENT'
+              },
+              include: {
+                session: { select: { courseId: true } }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    // Aggregate by student
+    const studentMap = new Map()
+
+    enrollments.forEach(enrollment => {
+      const studentId = enrollment.student.id
+      const courseId = enrollment.courseId
+      const totalSessions = sessionCountMap[courseId] || 0
+      
+      // Count attendance for this specific course
+      const attendedInCourse = enrollment.student.attendance.filter(
+        a => a.session.courseId === courseId
+      ).length
+
+      if (!studentMap.has(studentId)) {
+        studentMap.set(studentId, {
+          id: studentId,
+          userId: enrollment.student.userId,
+          name: enrollment.student.user.profile?.fullName || enrollment.student.user.email?.split('@')[0] || 'Unknown',
+          email: enrollment.student.user.email,
+          courses: [],
+          totalEnrollments: 0,
+          totalAttended: 0,
+          totalSessions: 0
+        })
+      }
+
+      const student = studentMap.get(studentId)
+      student.courses.push({
+        id: courseId,
+        name: enrollment.course.name,
+        type: enrollment.course.type,
+        attended: attendedInCourse,
+        total: totalSessions,
+        percentage: totalSessions > 0 ? Math.round((attendedInCourse / totalSessions) * 100) : 0,
+        enrolledAt: enrollment.createdAt
+      })
+      student.totalEnrollments++
+      student.totalAttended += attendedInCourse
+      student.totalSessions += totalSessions
+    })
+
+    // Calculate overall attendance and status for each student
+    const students = Array.from(studentMap.values()).map(student => {
+      const overallPercentage = student.totalSessions > 0 
+        ? Math.round((student.totalAttended / student.totalSessions) * 100) 
+        : 0
+      
+      let status = 'good'
+      if (overallPercentage < 50) status = 'at_risk'
+      else if (overallPercentage < 80) status = 'warning'
+
+      return {
+        ...student,
+        overallAttendance: overallPercentage,
+        status
+      }
+    })
+
+    // Calculate summary stats
+    const totalStudents = students.length
+    const totalEnrollments = enrollments.length
+    const avgAttendance = students.length > 0 
+      ? Math.round(students.reduce((sum, s) => sum + s.overallAttendance, 0) / students.length)
+      : 0
+    const atRiskCount = students.filter(s => s.status === 'at_risk').length
+
+    res.json({
+      summary: {
+        totalStudents,
+        totalEnrollments,
+        avgAttendance,
+        atRiskCount,
+        totalCourses: courses.length
+      },
+      students,
+      courses
+    })
+  } catch (error) {
+    console.error('Get teacher analytics error:', error)
+    res.status(500).json({ error: 'Failed to get analytics' })
+  }
+})
+
 export default router

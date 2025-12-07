@@ -34,3 +34,8 @@ export const selfEnrollInCourse = async (courseId) => {
   const response = await axios.post(`${API_URL}/enrollments/self`, { courseId }, getAuthHeader())
   return response.data
 }
+
+export const getTeacherAnalytics = async () => {
+  const response = await axios.get(`${API_URL}/enrollments/teacher/analytics`, getAuthHeader())
+  return response.data
+}
