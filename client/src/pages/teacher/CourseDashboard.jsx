@@ -13,6 +13,7 @@ import { updateModule, deleteModule, getModuleDeleteInfo, reorderModules } from 
 import { updateLesson, deleteLesson, getLessonDeleteInfo, reorderLessons } from '../../api/lessons'
 import { getEnrolledStudents, removeEnrollment } from '../../api/enrollments'
 import { getSessionAttendance, updateSessionAttendance } from '../../api/attendance'
+import { getCourseExams, createExam, updateExam, deleteExam } from '../../api/exams'
 import { useToast, ConfirmModal } from '../../components/Toast'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -236,6 +237,16 @@ export default function CourseDashboard() {
   const [materialForm, setMaterialForm] = useState({ name: '', driveUrl: '' })
   const [materialSaving, setMaterialSaving] = useState(false)
 
+  // Exam state
+  const [exams, setExams] = useState([])
+  const [loadingExams, setLoadingExams] = useState(false)
+  const [showExamModal, setShowExamModal] = useState(false)
+  const [editingExam, setEditingExam] = useState(null)
+  const [examForm, setExamForm] = useState({ title: '', description: '', totalPoints: 100 })
+  const [examSaving, setExamSaving] = useState(false)
+  const [deleteExamConfirm, setDeleteExamConfirm] = useState(null)
+  const [deletingExam, setDeletingExam] = useState(false)
+
   useEffect(() => {
     fetchCourse()
   }, [id])
@@ -251,6 +262,25 @@ export default function CourseDashboard() {
       fetchEnrolledStudents()
     }
   }, [activeTab, course?.id])
+
+  useEffect(() => {
+    if (activeTab === 'exam' && course?.id) {
+      fetchExams()
+    }
+  }, [activeTab, course?.id])
+
+  const fetchExams = async () => {
+    if (!course?.id) return
+    setLoadingExams(true)
+    try {
+      const data = await getCourseExams(course.id)
+      setExams(data)
+    } catch (error) {
+      console.error('Failed to fetch exams:', error)
+    } finally {
+      setLoadingExams(false)
+    }
+  }
 
   const fetchEnrolledStudents = async () => {
     setLoadingStudents(true)
@@ -573,6 +603,62 @@ export default function CourseDashboard() {
       toast.error('Failed to save attendance')
     } finally {
       setSavingAttendance(false)
+    }
+  }
+
+  // Exam handlers
+  const handleOpenExamModal = (exam = null) => {
+    if (exam) {
+      setEditingExam(exam)
+      setExamForm({
+        title: exam.title,
+        description: exam.description || '',
+        totalPoints: exam.totalPoints
+      })
+    } else {
+      setEditingExam(null)
+      setExamForm({ title: '', description: '', totalPoints: 100 })
+    }
+    setShowExamModal(true)
+  }
+
+  const handleSaveExam = async () => {
+    if (!examForm.title.trim()) {
+      toast.error('Please enter an exam title')
+      return
+    }
+    setExamSaving(true)
+    try {
+      if (editingExam) {
+        const updated = await updateExam(editingExam.id, examForm)
+        setExams(prev => prev.map(e => e.id === updated.id ? updated : e))
+        toast.success('Exam updated')
+      } else {
+        const created = await createExam({ courseId: course.id, ...examForm })
+        setExams(prev => [...prev, created])
+        toast.success('Exam created')
+      }
+      setShowExamModal(false)
+      setEditingExam(null)
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to save exam')
+    } finally {
+      setExamSaving(false)
+    }
+  }
+
+  const handleDeleteExam = async () => {
+    if (!deleteExamConfirm) return
+    setDeletingExam(true)
+    try {
+      await deleteExam(deleteExamConfirm)
+      setExams(prev => prev.filter(e => e.id !== deleteExamConfirm))
+      toast.success('Exam deleted')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to delete exam')
+    } finally {
+      setDeletingExam(false)
+      setDeleteExamConfirm(null)
     }
   }
 
@@ -951,16 +1037,89 @@ export default function CourseDashboard() {
             </div>
           )}
 
-          {/* Exam Tab - Coming Soon */}
+          {/* Exam Tab */}
           {activeTab === 'exam' && (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-              <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Exam Templates</h3>
-              <p className="text-gray-500 mb-4">Coming Soon</p>
-              <p className="text-sm text-gray-400 max-w-md mx-auto">
-                You'll be able to create exam templates here and schedule them on the calendar. 
-                Exams will include questions, time limits, and automatic grading.
-              </p>
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-gray-600">Create exams to grade your students</p>
+                <button
+                  onClick={() => handleOpenExamModal()}
+                  className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Exam
+                </button>
+              </div>
+
+              {loadingExams ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading exams...</p>
+                </div>
+              ) : exams.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Exams Yet</h3>
+                  <p className="text-gray-500 mb-6">Create your first exam to start grading students</p>
+                  <button
+                    onClick={() => handleOpenExamModal()}
+                    className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create First Exam
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">#</th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">Exam Title</th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">Description</th>
+                        <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Total Points</th>
+                        <th className="text-right px-6 py-4 text-sm font-semibold text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {exams.map((exam, index) => (
+                        <tr key={exam.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
+                          <td className="px-6 py-4">
+                            <span className="font-medium text-gray-900">{exam.title}</span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {exam.description || <span className="text-gray-400 italic">No description</span>}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                              {exam.totalPoints} pts
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenExamModal(exam)}
+                                className="p-2 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition"
+                                title="Edit exam"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteExamConfirm(exam.id)}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                title="Delete exam"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -1855,6 +2014,84 @@ export default function CourseDashboard() {
         confirmText="Delete"
         confirmStyle="danger"
       />
+
+      {/* Delete Exam Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteExamConfirm}
+        onClose={() => !deletingExam && setDeleteExamConfirm(null)}
+        onConfirm={handleDeleteExam}
+        title="Delete Exam"
+        message="Are you sure you want to delete this exam? All student scores for this exam will also be deleted."
+        confirmText="Delete"
+        confirmStyle="danger"
+        loading={deletingExam}
+      />
+
+      {/* Exam Modal */}
+      {showExamModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingExam ? 'Edit Exam' : 'Create Exam'}
+              </h3>
+              <button onClick={() => setShowExamModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Title *</label>
+                <input
+                  type="text"
+                  value={examForm.title}
+                  onChange={(e) => setExamForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
+                  placeholder="e.g., Quiz 1, Midterm, Final Exam"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={examForm.description}
+                  onChange={(e) => setExamForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
+                  rows={3}
+                  placeholder="Optional description for this exam"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Points *</label>
+                <input
+                  type="number"
+                  value={examForm.totalPoints}
+                  onChange={(e) => setExamForm(prev => ({ ...prev, totalPoints: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
+                  min="1"
+                  placeholder="100"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowExamModal(false)}
+                disabled={examSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveExam}
+                disabled={examSaving}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {examSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {examSaving ? 'Saving...' : (editingExam ? 'Update Exam' : 'Create Exam')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Module Modal */}
       {editModuleModal && (
