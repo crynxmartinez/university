@@ -491,6 +491,24 @@ export default function StudentCourseView() {
     return `${formatSessionDate(schedule.date)} • ${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`
   }
 
+  // Get exam attempt from availableExams
+  const getExamAttempt = (examId) => {
+    const exam = availableExams.find(e => e.id === examId)
+    return exam?.attempt || null
+  }
+
+  // Check if exam is already completed
+  const isExamCompleted = (examId) => {
+    const attempt = getExamAttempt(examId)
+    return attempt?.status === 'SUBMITTED'
+  }
+
+  // Check if exam is in progress
+  const isExamInProgress = (examId) => {
+    const attempt = getExamAttempt(examId)
+    return attempt?.status === 'IN_PROGRESS'
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -621,12 +639,11 @@ export default function StudentCourseView() {
                           <button
                             key={session.id}
                             onClick={() => {
+                              setSelectedSession(session)
                               if (isExamSession(session)) {
-                                setViewMode('exams')
-                                setHighlightedExamId(session.examId)
-                                fetchExams()
+                                setSelectedLesson(null)
+                                fetchExams() // Fetch to get attempt status
                               } else {
-                                setSelectedSession(session)
                                 setSelectedLesson(session.lesson)
                               }
                             }}
@@ -684,12 +701,11 @@ export default function StudentCourseView() {
                           <button
                             key={session.id}
                             onClick={() => {
+                              setSelectedSession(session)
                               if (isExamSession(session)) {
-                                setViewMode('exams')
-                                setHighlightedExamId(session.examId)
-                                fetchExams()
+                                setSelectedLesson(null)
+                                fetchExams() // Fetch to get attempt status
                               } else {
-                                setSelectedSession(session)
                                 setSelectedLesson(session.lesson)
                               }
                             }}
@@ -753,12 +769,11 @@ export default function StudentCourseView() {
                           <button
                             key={session.id}
                             onClick={() => {
+                              setSelectedSession(session)
                               if (isExamSession(session)) {
-                                setViewMode('exams')
-                                setHighlightedExamId(session.examId)
-                                fetchExams()
+                                setSelectedLesson(null)
+                                fetchExams() // Fetch to get attempt status
                               } else {
-                                setSelectedSession(session)
                                 setSelectedLesson(session.lesson)
                               }
                             }}
@@ -1140,22 +1155,38 @@ export default function StudentCourseView() {
               )}
 
               {/* Session Banner for LIVE courses - EXAM type */}
-              {course.type === 'LIVE' && selectedSession && isExamSession(selectedSession) && (
+              {course.type === 'LIVE' && selectedSession && isExamSession(selectedSession) && (() => {
+                const examId = selectedSession.examId
+                const completed = isExamCompleted(examId)
+                const inProgress = isExamInProgress(examId)
+                const attempt = getExamAttempt(examId)
+                
+                return (
                 <div className={`rounded-xl p-6 mb-6 text-white ${
-                  isSessionOngoing(selectedSession) 
-                    ? 'bg-gradient-to-r from-green-600 to-green-400' 
-                    : isSessionPast(selectedSession)
-                      ? 'bg-gradient-to-r from-gray-600 to-gray-400'
-                      : 'bg-gradient-to-r from-red-600 to-red-400'
+                  completed
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-400'
+                    : isSessionOngoing(selectedSession) 
+                      ? 'bg-gradient-to-r from-green-600 to-green-400' 
+                      : isSessionPast(selectedSession)
+                        ? 'bg-gradient-to-r from-gray-600 to-gray-400'
+                        : 'bg-gradient-to-r from-red-600 to-red-400'
                 }`}>
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                        <FileText className="w-7 h-7" />
+                        {completed ? <CheckCircle className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg">
-                          {isSessionOngoing(selectedSession) ? 'Exam Open Now!' : isSessionPast(selectedSession) ? 'Exam Closed' : 'Upcoming Exam'}
+                          {completed 
+                            ? 'Exam Completed' 
+                            : inProgress 
+                              ? 'Exam In Progress'
+                              : isSessionOngoing(selectedSession) 
+                                ? 'Exam Open Now!' 
+                                : isSessionPast(selectedSession) 
+                                  ? 'Exam Closed' 
+                                  : 'Upcoming Exam'}
                         </h3>
                         <p className="text-white/80 text-sm">
                           {selectedSession.exam?.title || 'Exam'}
@@ -1165,7 +1196,30 @@ export default function StudentCourseView() {
                         </p>
                       </div>
                     </div>
-                    {isSessionOngoing(selectedSession) ? (
+                    {completed ? (
+                      <div className="text-right">
+                        <button
+                          onClick={() => navigate(`/student/courses/${id}/exam/${examId}`)}
+                          className="flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition shadow-lg"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                          View Results
+                        </button>
+                        {attempt?.score !== null && attempt?.score !== undefined && (
+                          <p className="text-white/80 text-sm mt-2">
+                            Score: {attempt.score}/{selectedSession.exam?.totalPoints || '?'}
+                          </p>
+                        )}
+                      </div>
+                    ) : inProgress ? (
+                      <button
+                        onClick={() => navigate(`/student/courses/${id}/exam/${examId}`)}
+                        className="flex items-center gap-2 bg-white text-yellow-600 px-6 py-3 rounded-lg font-medium hover:bg-yellow-50 transition shadow-lg"
+                      >
+                        <FileText className="w-5 h-5" />
+                        Resume Exam
+                      </button>
+                    ) : isSessionOngoing(selectedSession) ? (
                       <button
                         onClick={() => setExamConfirmModal({ 
                           exam: selectedSession.exam, 
@@ -1208,7 +1262,8 @@ export default function StudentCourseView() {
                     </div>
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
               {/* No session selected - show general info */}
               {course.type === 'LIVE' && !selectedSession && (
