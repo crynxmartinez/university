@@ -24,6 +24,8 @@ export default function CourseDashboard() {
   const [editDescription, setEditDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Schedule state
   const [sessions, setSessions] = useState([])
@@ -116,14 +118,14 @@ export default function CourseDashboard() {
   }
 
   const handleDeleteCourse = async () => {
-    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
-      return
-    }
+    setDeleting(true)
     try {
       await deleteCourse(id)
       navigate('/teacher')
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to delete course')
+      setDeleting(false)
+      setShowDeleteModal(false)
     }
   }
 
@@ -988,7 +990,7 @@ export default function CourseDashboard() {
                     <p className="text-sm text-gray-500">Permanently delete this course and all its content</p>
                   </div>
                   <button
-                    onClick={handleDeleteCourse}
+                    onClick={() => setShowDeleteModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1195,6 +1197,44 @@ export default function CourseDashboard() {
               >
                 {materialSaving ? 'Adding...' : 'Add Material'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Course</h3>
+              <p className="text-gray-500 text-center mb-6">
+                Are you sure you want to delete <span className="font-medium text-gray-900">"{course?.name}"</span>? 
+                This action cannot be undone and all content will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteCourse}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleting ? (
+                    <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete Course</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
