@@ -200,6 +200,8 @@ model Course {
   description     String?
   type            CourseType @default(RECORDED)
   isActive        Boolean    @default(false)
+  price           Float      @default(0)      // For future use - course pricing
+  priceType       PriceType  @default(ONE_TIME) // For future use - ONE_TIME, MONTHLY, YEARLY
   startDate       DateTime?  // When the course begins
   endDate         DateTime?  // When the course ends (auto-deactivate after this)
   enrollmentStart DateTime?  // When enrollment opens (default: immediately)
