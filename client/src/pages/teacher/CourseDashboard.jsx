@@ -1165,6 +1165,14 @@ export default function CourseDashboard() {
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
+                                onClick={() => navigate(`/teacher/courses/${id}/exam/${exam.id}`)}
+                                className="px-3 py-1.5 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg transition flex items-center gap-1"
+                                title="Edit questions"
+                              >
+                                <FileText className="w-4 h-4" />
+                                Questions
+                              </button>
+                              <button
                                 onClick={() => handleOpenScoreModal(exam)}
                                 className="px-3 py-1.5 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition flex items-center gap-1"
                                 title="Enter scores"

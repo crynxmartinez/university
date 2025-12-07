@@ -17,6 +17,7 @@ import CreateModule from './pages/teacher/CreateModule'
 import CreateLesson from './pages/teacher/CreateLesson'
 import EnrollStudents from './pages/teacher/EnrollStudents'
 import CourseDashboard from './pages/teacher/CourseDashboard'
+import ExamBuilder from './pages/teacher/ExamBuilder'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentCourseView from './pages/student/StudentCourseView'
 
@@ -52,6 +53,7 @@ function App() {
         <Route path="/teacher/courses/:id/modules/create" element={<CreateModule />} />
         <Route path="/teacher/courses/:id/modules/:moduleId/lessons/create" element={<CreateLesson />} />
         <Route path="/teacher/courses/:id/students" element={<EnrollStudents />} />
+        <Route path="/teacher/courses/:id/exam/:examId" element={<ExamBuilder />} />
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/student/courses/:id" element={<StudentCourseView />} />
       </Routes>
