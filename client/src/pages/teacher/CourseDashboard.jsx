@@ -1287,25 +1287,53 @@ export default function CourseDashboard() {
                       day: 'numeric'
                     })
 
+                    const stats = enrollment.attendanceStats || { attended: 0, total: 0, percentage: 0 }
+
                     return (
-                      <div key={enrollment.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between hover:shadow-md transition group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                            {fullName.charAt(0).toUpperCase()}
+                      <div key={enrollment.id} className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition group">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold text-lg">
+                              {fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{fullName}</h4>
+                              <p className="text-sm text-gray-500">{email}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">Enrolled: {enrolledDate}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">{fullName}</h4>
-                            <p className="text-sm text-gray-500">{email}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">Enrolled: {enrolledDate}</p>
-                          </div>
+                          <button
+                            onClick={() => setRemoveStudentConfirm({ id: enrollment.id, name: fullName })}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                            title="Remove student"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => setRemoveStudentConfirm({ id: enrollment.id, name: fullName })}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
-                          title="Remove student"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        
+                        {/* Attendance Progress */}
+                        {course?.type === 'LIVE' && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-gray-600">Attendance</span>
+                              <span className={`font-medium ${
+                                stats.percentage >= 80 ? 'text-green-600' : 
+                                stats.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {stats.percentage}% ({stats.attended}/{stats.total} sessions)
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all ${
+                                  stats.percentage >= 80 ? 'bg-green-500' : 
+                                  stats.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${stats.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}

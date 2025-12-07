@@ -85,6 +85,15 @@ router.get('/course/:courseId/students', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' })
     }
 
+    // Get total sessions for this course (only past sessions count for attendance)
+    const now = new Date()
+    const totalSessions = await prisma.scheduledSession.count({
+      where: { 
+        courseId,
+        date: { lte: now }
+      }
+    })
+
     const enrollments = await prisma.enrollment.findMany({
       where: { courseId },
       include: {
@@ -92,6 +101,12 @@ router.get('/course/:courseId/students', authenticate, async (req, res) => {
           include: {
             user: {
               include: { profile: true }
+            },
+            attendance: {
+              where: {
+                session: { courseId },
+                status: 'PRESENT'
+              }
             }
           }
         }
@@ -99,7 +114,19 @@ router.get('/course/:courseId/students', authenticate, async (req, res) => {
       orderBy: { createdAt: 'desc' }
     })
 
-    res.json(enrollments)
+    // Add attendance stats to each enrollment
+    const enrollmentsWithStats = enrollments.map(enrollment => ({
+      ...enrollment,
+      attendanceStats: {
+        attended: enrollment.student.attendance.length,
+        total: totalSessions,
+        percentage: totalSessions > 0 
+          ? Math.round((enrollment.student.attendance.length / totalSessions) * 100) 
+          : 0
+      }
+    }))
+
+    res.json(enrollmentsWithStats)
   } catch (error) {
     console.error('Get enrolled students error:', error)
     res.status(500).json({ error: 'Failed to get students' })
