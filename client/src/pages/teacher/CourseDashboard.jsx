@@ -35,7 +35,7 @@ export default function CourseDashboard() {
   // Session form state
   const [sessionForm, setSessionForm] = useState({
     type: 'CLASS',
-    title: '',
+    lessonId: '',
     startTime: '19:00',
     endTime: '21:00',
     meetingLink: '',
@@ -168,7 +168,6 @@ export default function CourseDashboard() {
     switch (type) {
       case 'CLASS': return 'bg-blue-500'
       case 'EXAM': return 'bg-red-500'
-      case 'REVIEW': return 'bg-yellow-500'
       default: return 'bg-gray-500'
     }
   }
@@ -177,9 +176,19 @@ export default function CourseDashboard() {
     switch (type) {
       case 'CLASS': return 'bg-blue-50 border-blue-200'
       case 'EXAM': return 'bg-red-50 border-red-200'
-      case 'REVIEW': return 'bg-yellow-50 border-yellow-200'
       default: return 'bg-gray-50 border-gray-200'
     }
+  }
+
+  // Get all lessons (class templates) from all modules
+  const getAllLessons = () => {
+    if (!course?.modules) return []
+    return course.modules.flatMap(module => 
+      (module.lessons || []).map(lesson => ({
+        ...lesson,
+        moduleName: module.name
+      }))
+    )
   }
 
   // Session handlers
@@ -192,7 +201,7 @@ export default function CourseDashboard() {
       setEditingSession(null)
       setSessionForm({
         type: 'CLASS',
-        title: '',
+        lessonId: '',
         startTime: '19:00',
         endTime: '21:00',
         meetingLink: '',
@@ -207,7 +216,7 @@ export default function CourseDashboard() {
     setSelectedDate(new Date(session.date))
     setSessionForm({
       type: session.type,
-      title: session.title || '',
+      lessonId: session.lessonId || '',
       startTime: session.startTime,
       endTime: session.endTime || '',
       meetingLink: session.meetingLink || '',
@@ -259,7 +268,7 @@ export default function CourseDashboard() {
   const handleCopySession = (session) => {
     setCopiedSession({
       type: session.type,
-      title: session.title,
+      lessonId: session.lessonId,
       startTime: session.startTime,
       endTime: session.endTime,
       meetingLink: session.meetingLink,
@@ -699,9 +708,9 @@ export default function CourseDashboard() {
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${getSessionTypeColor(session.type)} text-white`}>
                                   {session.type}
                                 </span>
-                                {session.title && (
-                                  <p className="font-medium text-gray-900 mt-1">{session.title}</p>
-                                )}
+                                <p className="font-medium text-gray-900 mt-1">
+                                  {session.lesson?.name || 'Untitled'}
+                                </p>
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
@@ -784,7 +793,7 @@ export default function CourseDashboard() {
                             setEditingSession(null)
                             setSessionForm({
                               type: 'CLASS',
-                              title: '',
+                              lessonId: '',
                               startTime: '19:00',
                               endTime: '21:00',
                               meetingLink: '',
@@ -996,35 +1005,51 @@ export default function CourseDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
                 <div className="flex gap-2">
-                  {['CLASS', 'EXAM', 'REVIEW'].map(type => (
-                    <button
-                      key={type}
-                      onClick={() => setSessionForm(prev => ({ ...prev, type }))}
-                      className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
-                        sessionForm.type === type
-                          ? type === 'CLASS' ? 'bg-blue-500 text-white' :
-                            type === 'EXAM' ? 'bg-red-500 text-white' :
-                            'bg-yellow-500 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setSessionForm(prev => ({ ...prev, type: 'CLASS', lessonId: '' }))}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                      sessionForm.type === 'CLASS'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    CLASS
+                  </button>
+                  <button
+                    disabled
+                    className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
+                    title="Coming soon"
+                  >
+                    EXAM
+                  </button>
                 </div>
               </div>
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
-                <input
-                  type="text"
-                  value={sessionForm.title}
-                  onChange={(e) => setSessionForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g., Chapter 5 Discussion"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                />
-              </div>
+              {/* Class Template Dropdown */}
+              {sessionForm.type === 'CLASS' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Class Template *</label>
+                  {getAllLessons().length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      No class templates available. Create classes in the "Class" tab first.
+                    </div>
+                  ) : (
+                    <select
+                      value={sessionForm.lessonId}
+                      onChange={(e) => setSessionForm(prev => ({ ...prev, lessonId: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      required
+                    >
+                      <option value="">Select a class template...</option>
+                      {getAllLessons().map(lesson => (
+                        <option key={lesson.id} value={lesson.id}>
+                          {lesson.moduleName} → {lesson.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Time */}
               <div className="grid grid-cols-2 gap-4">
@@ -1038,7 +1063,7 @@ export default function CourseDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
                   <input
                     type="time"
                     value={sessionForm.endTime}
@@ -1093,7 +1118,7 @@ export default function CourseDashboard() {
                 </button>
                 <button
                   onClick={handleSaveSession}
-                  disabled={sessionSaving}
+                  disabled={sessionSaving || !sessionForm.lessonId || !sessionForm.startTime || !sessionForm.endTime}
                   className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
                 >
                   {sessionSaving ? 'Saving...' : editingSession ? 'Update' : 'Create'}
