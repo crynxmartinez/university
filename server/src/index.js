@@ -9,6 +9,7 @@ import moduleRoutes from './routes/modules.js'
 import lessonRoutes from './routes/lessons.js'
 import enrollmentRoutes from './routes/enrollments.js'
 import sessionRoutes from './routes/sessions.js'
+import noteRoutes from './routes/notes.js'
 
 dotenv.config()
 
@@ -38,6 +39,7 @@ app.use('/api/modules', moduleRoutes)
 app.use('/api/lessons', lessonRoutes)
 app.use('/api/enrollments', enrollmentRoutes)
 app.use('/api/sessions', sessionRoutes)
+app.use('/api/notes', noteRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
