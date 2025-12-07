@@ -11,7 +11,7 @@ import enrollmentRoutes from './routes/enrollments.js'
 import sessionRoutes from './routes/sessions.js'
 import noteRoutes from './routes/notes.js'
 import attendanceRoutes from './routes/attendance.js'
-// import examRoutes from './routes/exams.js' // Temporarily disabled
+import examRoutes from './routes/exams.js'
 
 dotenv.config()
 
@@ -43,7 +43,7 @@ app.use('/api/enrollments', enrollmentRoutes)
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/notes', noteRoutes)
 app.use('/api/attendance', attendanceRoutes)
-// app.use('/api/exams', examRoutes) // Temporarily disabled
+app.use('/api/exams', examRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
