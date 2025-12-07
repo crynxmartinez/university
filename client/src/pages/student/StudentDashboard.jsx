@@ -63,12 +63,9 @@ export default function StudentDashboard() {
       const myCourses = await getMyCourses()
       setMyCourseEnrollments(myCourses)
       
-      // Fetch all available courses
+      // Fetch all available courses (public/active only)
       try {
-        const token = localStorage.getItem('token')
-        const coursesRes = await axios.get(`${API_URL}/courses`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        const coursesRes = await axios.get(`${API_URL}/courses/public`)
         setAllCourses(coursesRes.data)
       } catch (e) {
         console.error('Failed to fetch courses:', e)
