@@ -39,6 +39,13 @@ enum SessionType {
   EXAM
 }
 
+enum ExamAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  TIMED_OUT
+  FLAGGED
+}
+
 enum PriceType {
   ONE_TIME
   MONTHLY
@@ -117,11 +124,12 @@ model Student {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enrollments Enrollment[]
-  notes       StudentNote[]       // Personal notes for scheduled sessions
-  attendance  SessionAttendance[] // Attendance records for sessions
-  examScores  ExamScore[]         // Exam scores for grading
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments  Enrollment[]
+  notes        StudentNote[]       // Personal notes for scheduled sessions
+  attendance   SessionAttendance[] // Attendance records for sessions
+  examScores   ExamScore[]         // Exam scores for grading
+  examAttempts ExamAttempt[]       // Exam attempts
 }
 
 // Teacher record
@@ -342,20 +350,25 @@ model Notification {
 
 // Exam - exam template (like Lesson, but for grading)
 model Exam {
-  id          String   @id @default(cuid())
-  courseId    String
-  title       String   // e.g., "Quiz 1", "Midterm", "Final Exam"
-  description String?
-  totalPoints Int      @default(100) // Maximum points for this exam
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  courseId      String
+  title         String   // e.g., "Quiz 1", "Midterm", "Final Exam"
+  description   String?
+  totalPoints   Int      @default(100) // Maximum points (auto-calculated from questions)
+  order         Int      @default(0)
+  timeLimit     Int?     // Time limit in minutes (null = no limit)
+  maxTabSwitch  Int      @default(3)  // Max allowed tab switches before flagged
+  isPublished   Boolean  @default(false) // Only published exams visible to students
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  course Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  scores ExamScore[]
+  course    Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  scores    ExamScore[]
+  questions ExamQuestion[]
+  attempts  ExamAttempt[]
 }
 
-// ExamScore - student's score for an exam
+// ExamScore - student's final score for an exam (auto-calculated from attempt)
 model ExamScore {
   id        String   @id @default(cuid())
   examId    String
@@ -369,6 +382,66 @@ model ExamScore {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([examId, studentId]) // One score per student per exam
+}
+
+// ExamQuestion - individual question in an exam
+model ExamQuestion {
+  id       String @id @default(cuid())
+  examId   String
+  question String // The question text
+  points   Int    @default(10) // Points for this question
+  order    Int    @default(0)
+
+  exam    Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  choices ExamChoice[]
+  answers ExamAnswer[]
+}
+
+// ExamChoice - answer choice for a question (multiple choice)
+model ExamChoice {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String  // Choice text (e.g., "A) Shahada")
+  isCorrect  Boolean @default(false) // Is this the correct answer?
+  order      Int     @default(0)
+
+  question ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  ExamAnswer[]
+}
+
+// ExamAttempt - student's attempt at taking an exam
+model ExamAttempt {
+  id             String            @id @default(cuid())
+  examId         String
+  studentId      String
+  startedAt      DateTime          @default(now())
+  submittedAt    DateTime?
+  tabSwitchCount Int               @default(0) // Track tab/window switches
+  status         ExamAttemptStatus @default(IN_PROGRESS)
+  score          Float?            // Final score (calculated on submit)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  exam    Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers ExamAnswer[]
+
+  @@unique([examId, studentId]) // One attempt per student per exam
+}
+
+// ExamAnswer - student's answer to a question
+model ExamAnswer {
+  id         String  @id @default(cuid())
+  attemptId  String
+  questionId String
+  choiceId   String? // Selected choice (null if not answered)
+  isCorrect  Boolean @default(false) // Was the answer correct?
+
+  attempt  ExamAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question ExamQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  choice   ExamChoice?   @relation(fields: [choiceId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId]) // One answer per question per attempt
 }
 
 // ============ STUDENT NOTES ============
