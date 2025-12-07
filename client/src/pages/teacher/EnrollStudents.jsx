@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, UserPlus, X, Search, Check } from 'lucide-react'
 import { getCourse } from '../../api/courses'
 import { getAllStudents, getEnrolledStudents, enrollStudent, removeEnrollment } from '../../api/enrollments'
+import { useToast, ConfirmModal } from '../../components/Toast'
 
 export default function EnrollStudents() {
   const { id: courseId } = useParams()
@@ -12,7 +13,9 @@ export default function EnrollStudents() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(null)
+  const [removeConfirm, setRemoveConfirm] = useState(null)
   const navigate = useNavigate()
+  const toast = useToast()
 
   useEffect(() => {
     fetchData()
@@ -41,21 +44,26 @@ export default function EnrollStudents() {
     try {
       const enrollment = await enrollStudent(studentId, courseId)
       setEnrolledStudents(prev => [...prev, enrollment])
+      toast.success('Student enrolled successfully')
     } catch (error) {
       console.error('Failed to enroll student:', error)
-      alert(error.response?.data?.error || 'Failed to enroll student')
+      toast.error(error.response?.data?.error || 'Failed to enroll student')
     } finally {
       setEnrolling(null)
     }
   }
 
-  const handleRemove = async (enrollmentId) => {
-    if (!confirm('Remove this student from the course?')) return
+  const handleRemove = async () => {
+    if (!removeConfirm) return
     try {
-      await removeEnrollment(enrollmentId)
-      setEnrolledStudents(prev => prev.filter(e => e.id !== enrollmentId))
+      await removeEnrollment(removeConfirm)
+      setEnrolledStudents(prev => prev.filter(e => e.id !== removeConfirm))
+      toast.success('Student removed from course')
     } catch (error) {
       console.error('Failed to remove student:', error)
+      toast.error('Failed to remove student')
+    } finally {
+      setRemoveConfirm(null)
     }
   }
 
@@ -121,7 +129,7 @@ export default function EnrollStudents() {
                       <p className="text-sm text-gray-500">{enrollment.student.studentId}</p>
                     </div>
                     <button
-                      onClick={() => handleRemove(enrollment.id)}
+                      onClick={() => setRemoveConfirm(enrollment.id)}
                       className="text-red-500 hover:text-red-700 p-1"
                       title="Remove student"
                     >
@@ -187,6 +195,17 @@ export default function EnrollStudents() {
           </div>
         </div>
       </main>
+
+      {/* Remove Student Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!removeConfirm}
+        onClose={() => setRemoveConfirm(null)}
+        onConfirm={handleRemove}
+        title="Remove Student"
+        message="Are you sure you want to remove this student from the course?"
+        confirmText="Remove"
+        confirmStyle="danger"
+      />
     </div>
   )
 }

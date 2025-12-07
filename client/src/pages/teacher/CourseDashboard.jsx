@@ -8,10 +8,12 @@ import {
 } from 'lucide-react'
 import { getCourse, updateCourse, toggleCourseActive, deleteCourse } from '../../api/courses'
 import { getCourseSessions, createSession, updateSession, deleteSession, addMaterial, deleteMaterial } from '../../api/sessions'
+import { useToast, ConfirmModal } from '../../components/Toast'
 
 export default function CourseDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const toast = useToast()
   const [course, setCourse] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('class')
@@ -26,6 +28,8 @@ export default function CourseDashboard() {
   const [toggling, setToggling] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteSessionConfirm, setDeleteSessionConfirm] = useState(null)
+  const [deleteMaterialConfirm, setDeleteMaterialConfirm] = useState(null)
 
   // Schedule state
   const [sessions, setSessions] = useState([])
@@ -94,8 +98,9 @@ export default function CourseDashboard() {
     try {
       const updated = await toggleCourseActive(id)
       setCourse(updated)
+      toast.success(updated.isActive ? 'Course activated' : 'Course deactivated')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to toggle course status')
+      toast.error(error.response?.data?.error || 'Failed to toggle course status')
     } finally {
       setToggling(false)
     }
@@ -110,8 +115,9 @@ export default function CourseDashboard() {
       })
       setCourse(updated)
       setEditing(false)
+      toast.success('Course updated successfully')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to save changes')
+      toast.error(error.response?.data?.error || 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -121,9 +127,10 @@ export default function CourseDashboard() {
     setDeleting(true)
     try {
       await deleteCourse(id)
+      toast.success('Course deleted')
       navigate('/teacher')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to delete course')
+      toast.error(error.response?.data?.error || 'Failed to delete course')
       setDeleting(false)
       setShowDeleteModal(false)
     }
@@ -253,21 +260,25 @@ export default function CourseDashboard() {
       }
       setShowSessionModal(false)
       setEditingSession(null)
+      toast.success(editingSession ? 'Session updated' : 'Session created')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to save session')
+      toast.error(error.response?.data?.error || 'Failed to save session')
     } finally {
       setSessionSaving(false)
     }
   }
 
-  const handleDeleteSession = async (sessionId) => {
-    if (!confirm('Are you sure you want to delete this session?')) return
+  const handleDeleteSession = async () => {
+    if (!deleteSessionConfirm) return
     try {
-      await deleteSession(sessionId)
-      setSessions(prev => prev.filter(s => s.id !== sessionId))
+      await deleteSession(deleteSessionConfirm)
+      setSessions(prev => prev.filter(s => s.id !== deleteSessionConfirm))
       setShowSessionModal(false)
+      toast.success('Session deleted')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to delete session')
+      toast.error(error.response?.data?.error || 'Failed to delete session')
+    } finally {
+      setDeleteSessionConfirm(null)
     }
   }
 
@@ -280,6 +291,7 @@ export default function CourseDashboard() {
       meetingLink: session.meetingLink,
       notes: session.notes
     })
+    toast.success('Session copied')
   }
 
   const handlePasteSession = (date) => {
@@ -299,7 +311,7 @@ export default function CourseDashboard() {
 
   const handleSaveMaterial = async () => {
     if (!materialForm.name || !materialForm.driveUrl) {
-      alert('Please fill in all fields')
+      toast.warning('Please fill in all fields')
       return
     }
     setMaterialSaving(true)
@@ -312,25 +324,29 @@ export default function CourseDashboard() {
         return s
       }))
       setShowMaterialModal(false)
+      toast.success('Material added')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to add material')
+      toast.error(error.response?.data?.error || 'Failed to add material')
     } finally {
       setMaterialSaving(false)
     }
   }
 
-  const handleDeleteMaterial = async (sessionId, materialId) => {
-    if (!confirm('Delete this material?')) return
+  const handleDeleteMaterial = async () => {
+    if (!deleteMaterialConfirm) return
     try {
-      await deleteMaterial(materialId)
+      await deleteMaterial(deleteMaterialConfirm.materialId)
       setSessions(prev => prev.map(s => {
-        if (s.id === sessionId) {
-          return { ...s, materials: s.materials.filter(m => m.id !== materialId) }
+        if (s.id === deleteMaterialConfirm.sessionId) {
+          return { ...s, materials: s.materials.filter(m => m.id !== deleteMaterialConfirm.materialId) }
         }
         return s
       }))
+      toast.success('Material deleted')
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to delete material')
+      toast.error(error.response?.data?.error || 'Failed to delete material')
+    } finally {
+      setDeleteMaterialConfirm(null)
     }
   }
 
@@ -779,7 +795,7 @@ export default function CourseDashboard() {
                                         {material.name}
                                       </a>
                                       <button
-                                        onClick={() => handleDeleteMaterial(session.id, material.id)}
+                                        onClick={() => setDeleteMaterialConfirm({ sessionId: session.id, materialId: material.id })}
                                         className="text-red-500 hover:text-red-700"
                                       >
                                         <X className="w-3 h-3" />
@@ -1118,7 +1134,7 @@ export default function CourseDashboard() {
               <div>
                 {editingSession && (
                   <button
-                    onClick={() => handleDeleteSession(editingSession.id)}
+                    onClick={() => setDeleteSessionConfirm(editingSession.id)}
                     className="text-red-600 hover:text-red-700 font-medium"
                   >
                     Delete Session
@@ -1239,6 +1255,28 @@ export default function CourseDashboard() {
           </div>
         </div>
       )}
+
+      {/* Delete Session Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteSessionConfirm}
+        onClose={() => setDeleteSessionConfirm(null)}
+        onConfirm={handleDeleteSession}
+        title="Delete Session"
+        message="Are you sure you want to delete this session? This action cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+      />
+
+      {/* Delete Material Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteMaterialConfirm}
+        onClose={() => setDeleteMaterialConfirm(null)}
+        onConfirm={handleDeleteMaterial}
+        title="Delete Material"
+        message="Are you sure you want to delete this material?"
+        confirmText="Delete"
+        confirmStyle="danger"
+      />
     </div>
   )
 }

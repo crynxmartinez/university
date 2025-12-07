@@ -2,6 +2,7 @@ import { Mail, MapPin, Phone, Send } from 'lucide-react'
 import { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { useToast } from '../components/Toast'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -10,11 +11,12 @@ export default function ContactPage() {
     subject: '',
     message: ''
   })
+  const toast = useToast()
 
   const handleSubmit = (e) => {
     e.preventDefault()
     // Handle form submission
-    alert('Thank you for your message! We will get back to you soon.')
+    toast.success('Thank you for your message! We will get back to you soon.')
     setFormData({ name: '', email: '', subject: '', message: '' })
   }
 

@@ -6,6 +6,7 @@ import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
 import { getUpcomingSessions } from '../../api/sessions'
 import { getMyNotes, saveNote, deleteNote } from '../../api/notes'
+import { useToast, ConfirmModal } from '../../components/Toast'
 import axios from 'axios'
 import API_URL from '../../api/config'
 
@@ -30,7 +31,9 @@ export default function StudentDashboard() {
   const [selectedSession, setSelectedSession] = useState(null) // For viewing session materials
   const [myNotes, setMyNotes] = useState([]) // Student's personal notes
   const [notesSearchTerm, setNotesSearchTerm] = useState('')
+  const [deleteNoteConfirm, setDeleteNoteConfirm] = useState(null)
   const navigate = useNavigate()
+  const toast = useToast()
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -93,13 +96,16 @@ export default function StudentDashboard() {
     }
   }
 
-  const handleDeleteNote = async (noteId) => {
-    if (!confirm('Delete this note?')) return
+  const handleDeleteNote = async () => {
+    if (!deleteNoteConfirm) return
     try {
-      await deleteNote(noteId)
-      setMyNotes(prev => prev.filter(n => n.id !== noteId))
+      await deleteNote(deleteNoteConfirm)
+      setMyNotes(prev => prev.filter(n => n.id !== deleteNoteConfirm))
+      toast.success('Note deleted')
     } catch (error) {
-      alert('Failed to delete note')
+      toast.error('Failed to delete note')
+    } finally {
+      setDeleteNoteConfirm(null)
     }
   }
 
@@ -110,9 +116,10 @@ export default function StudentDashboard() {
       // Refresh enrollments
       const myPrograms = await getMyProgramEnrollments()
       setMyProgramEnrollments(myPrograms)
+      toast.success('Successfully enrolled in program!')
     } catch (error) {
       console.error('Failed to enroll:', error)
-      alert(error.response?.data?.error || 'Failed to enroll')
+      toast.error(error.response?.data?.error || 'Failed to enroll')
     } finally {
       setEnrollingId(null)
     }
@@ -135,10 +142,10 @@ export default function StudentDashboard() {
       setMyCourseEnrollments(myCourses)
       // Remove from browse list
       setAllCourses(prev => prev.filter(c => c.id !== courseId))
-      alert('Successfully enrolled in course!')
+      toast.success('Successfully enrolled in course!')
     } catch (error) {
       console.error('Failed to enroll:', error)
-      alert(error.response?.data?.error || 'Failed to enroll')
+      toast.error(error.response?.data?.error || 'Failed to enroll')
     } finally {
       setEnrollingId(null)
     }
@@ -836,7 +843,7 @@ export default function StudentDashboard() {
                           </p>
                         </div>
                         <button
-                          onClick={() => handleDeleteNote(note.id)}
+                          onClick={() => setDeleteNoteConfirm(note.id)}
                           className="text-gray-400 hover:text-red-500 transition"
                           title="Delete note"
                         >
@@ -1279,6 +1286,17 @@ export default function StudentDashboard() {
           </div>
         </div>
       )}
+
+      {/* Delete Note Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteNoteConfirm}
+        onClose={() => setDeleteNoteConfirm(null)}
+        onConfirm={handleDeleteNote}
+        title="Delete Note"
+        message="Are you sure you want to delete this note? This action cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+      />
     </div>
   )
 }
