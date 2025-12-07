@@ -621,6 +621,26 @@ export default function StudentDashboard() {
                               {course.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
                             </span>
                           </div>
+                          
+                          {/* Course Status Badges */}
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {course.isUpcoming && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                                Starts {new Date(course.startDate).toLocaleDateString()}
+                              </span>
+                            )}
+                            {course.enrollmentEnd && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                course.enrollmentOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {course.enrollmentOpen 
+                                  ? `Enroll by ${new Date(course.enrollmentEnd).toLocaleDateString()}`
+                                  : 'Enrollment Closed'
+                                }
+                              </span>
+                            )}
+                          </div>
+                          
                           <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">{course.description}</p>
                           <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
                             <span>{course.modules?.length || 0} modules</span>
@@ -632,6 +652,13 @@ export default function StudentDashboard() {
                               className="w-full bg-green-100 text-green-700 py-2 rounded-lg font-semibold mt-auto flex items-center justify-center gap-2"
                             >
                               <CheckCircle className="w-4 h-4" /> Enrolled
+                            </button>
+                          ) : !course.enrollmentOpen ? (
+                            <button 
+                              disabled
+                              className="w-full bg-gray-100 text-gray-500 py-2 rounded-lg font-semibold mt-auto cursor-not-allowed"
+                            >
+                              Enrollment Closed
                             </button>
                           ) : (
                             <button 

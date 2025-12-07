@@ -195,17 +195,19 @@ model ProgramEnrollment {
 
 // Course - created by teacher
 model Course {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  type        CourseType @default(RECORDED)
-  isActive    Boolean    @default(false)
-  startDate   DateTime?
-  endDate     DateTime?
-  teacherId   String
-  programId   String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  name            String
+  description     String?
+  type            CourseType @default(RECORDED)
+  isActive        Boolean    @default(false)
+  startDate       DateTime?  // When the course begins
+  endDate         DateTime?  // When the course ends (auto-deactivate after this)
+  enrollmentStart DateTime?  // When enrollment opens (default: immediately)
+  enrollmentEnd   DateTime?  // When enrollment closes
+  teacherId       String
+  programId       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   program     Program?        @relation(fields: [programId], references: [id], onDelete: SetNull)

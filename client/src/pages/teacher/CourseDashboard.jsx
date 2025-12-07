@@ -24,6 +24,9 @@ export default function CourseDashboard() {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editEnrollmentEnd, setEditEnrollmentEnd] = useState('')
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -81,6 +84,9 @@ export default function CourseDashboard() {
       setCourse(data)
       setEditName(data.name)
       setEditDescription(data.description || '')
+      setEditStartDate(data.startDate ? data.startDate.split('T')[0] : '')
+      setEditEndDate(data.endDate ? data.endDate.split('T')[0] : '')
+      setEditEnrollmentEnd(data.enrollmentEnd ? data.enrollmentEnd.split('T')[0] : '')
       // Expand all modules by default
       const expanded = {}
       data.modules?.forEach(m => { expanded[m.id] = true })
@@ -111,7 +117,10 @@ export default function CourseDashboard() {
     try {
       const updated = await updateCourse(id, {
         name: editName,
-        description: editDescription
+        description: editDescription,
+        startDate: editStartDate || null,
+        endDate: editEndDate || null,
+        enrollmentEnd: editEnrollmentEnd || null
       })
       setCourse(updated)
       setEditing(false)
@@ -957,12 +966,59 @@ export default function CourseDashboard() {
                         <span className="text-xs text-gray-400 ml-2">(cannot be changed)</span>
                       </p>
                     </div>
-                    <div className="flex gap-3">
+                    
+                    {/* Course Duration */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Course Duration</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                          <input
+                            type="date"
+                            value={editStartDate}
+                            onChange={(e) => setEditStartDate(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                          <input
+                            type="date"
+                            value={editEndDate}
+                            onChange={(e) => setEditEndDate(e.target.value)}
+                            min={editStartDate}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Course will auto-deactivate after end date</p>
+                    </div>
+
+                    {/* Enrollment Period */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Enrollment Period</h4>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment Deadline</label>
+                        <input
+                          type="date"
+                          value={editEnrollmentEnd}
+                          onChange={(e) => setEditEnrollmentEnd(e.target.value)}
+                          max={editEndDate}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Students can't enroll after this date</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
                       <button
                         onClick={() => {
                           setEditing(false)
                           setEditName(course.name)
                           setEditDescription(course.description || '')
+                          setEditStartDate(course.startDate ? course.startDate.split('T')[0] : '')
+                          setEditEndDate(course.endDate ? course.endDate.split('T')[0] : '')
+                          setEditEnrollmentEnd(course.enrollmentEnd ? course.enrollmentEnd.split('T')[0] : '')
                         }}
                         className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
                       >
@@ -992,6 +1048,26 @@ export default function CourseDashboard() {
                     <div>
                       <p className="text-sm text-gray-500">Type</p>
                       <p className="font-medium text-gray-900">{course.type === 'LIVE' ? 'Live Class' : 'Recorded Video'}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                      <div>
+                        <p className="text-sm text-gray-500">Start Date</p>
+                        <p className="font-medium text-gray-900">
+                          {course.startDate ? new Date(course.startDate).toLocaleDateString() : 'Not set'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">End Date</p>
+                        <p className="font-medium text-gray-900">
+                          {course.endDate ? new Date(course.endDate).toLocaleDateString() : 'Not set'}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Enrollment Deadline</p>
+                      <p className="font-medium text-gray-900">
+                        {course.enrollmentEnd ? new Date(course.enrollmentEnd).toLocaleDateString() : 'No deadline'}
+                      </p>
                     </div>
                   </div>
                 )}

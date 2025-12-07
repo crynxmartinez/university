@@ -4,12 +4,44 @@ import jwt from 'jsonwebtoken'
 
 const router = express.Router()
 
+// Helper function to auto-deactivate expired courses
+const deactivateExpiredCourses = async () => {
+  try {
+    const now = new Date()
+    await prisma.course.updateMany({
+      where: {
+        isActive: true,
+        endDate: {
+          lt: now
+        }
+      },
+      data: {
+        isActive: false
+      }
+    })
+  } catch (error) {
+    console.error('Failed to deactivate expired courses:', error)
+  }
+}
+
 // GET /api/courses/public - Get all public courses (no auth required)
-// Only returns ACTIVE courses
+// Only returns ACTIVE courses that haven't ended
 router.get('/public', async (req, res) => {
   try {
+    // Auto-deactivate any expired courses first
+    await deactivateExpiredCourses()
+    
+    const now = new Date()
+    
     const courses = await prisma.course.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true,
+        // Exclude courses that have ended
+        OR: [
+          { endDate: null },
+          { endDate: { gte: now } }
+        ]
+      },
       include: {
         teacher: {
           include: {
@@ -27,7 +59,21 @@ router.get('/public', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     })
 
-    res.json(courses)
+    // Add enrollment status info to each course
+    const coursesWithStatus = courses.map(course => {
+      const enrollmentOpen = !course.enrollmentEnd || new Date(course.enrollmentEnd) >= now
+      const courseStarted = course.startDate ? new Date(course.startDate) <= now : true
+      const isUpcoming = course.startDate ? new Date(course.startDate) > now : false
+      
+      return {
+        ...course,
+        enrollmentOpen,
+        courseStarted,
+        isUpcoming
+      }
+    })
+
+    res.json(coursesWithStatus)
   } catch (error) {
     console.error('Get public courses error:', error)
     res.status(500).json({ error: 'Failed to get courses' })
@@ -147,7 +193,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only teachers can create courses' })
     }
 
-    const { name, description, type } = req.body
+    const { name, description, type, startDate, endDate, enrollmentEnd } = req.body
 
     if (!name) {
       return res.status(400).json({ error: 'Course name is required' })
@@ -159,6 +205,9 @@ router.post('/', authenticate, async (req, res) => {
         description: description || '',
         type: type || 'RECORDED',
         isActive: false,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : null,
         teacherId: req.user.teacher.id
       },
       include: {
@@ -178,7 +227,7 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, type, isActive, startDate, endDate } = req.body
+    const { name, description, type, isActive, startDate, endDate, enrollmentEnd } = req.body
 
     // Check ownership
     const existing = await prisma.course.findUnique({ where: { id } })
@@ -196,8 +245,9 @@ router.put('/:id', authenticate, async (req, res) => {
         description, 
         type,
         isActive: isActive !== undefined ? isActive : existing.isActive,
-        startDate: startDate ? new Date(startDate) : existing.startDate,
-        endDate: endDate ? new Date(endDate) : existing.endDate
+        startDate: startDate !== undefined ? (startDate ? new Date(startDate) : null) : existing.startDate,
+        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : existing.endDate,
+        enrollmentEnd: enrollmentEnd !== undefined ? (enrollmentEnd ? new Date(enrollmentEnd) : null) : existing.enrollmentEnd
       },
       include: { modules: true, sessions: true }
     })

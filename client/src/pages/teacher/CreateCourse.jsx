@@ -1,15 +1,28 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Video, Radio, Info } from 'lucide-react'
+import { ArrowLeft, Video, Radio, Info, Calendar, Clock } from 'lucide-react'
 import { createCourse } from '../../api/courses'
 
 export default function CreateCourse() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('RECORDED')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [enrollmentEnd, setEnrollmentEnd] = useState('')
+  const [durationType, setDurationType] = useState('dates') // 'dates' or 'months'
+  const [durationMonths, setDurationMonths] = useState(3)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  // Calculate end date from months
+  const calculateEndDate = (start, months) => {
+    if (!start) return ''
+    const date = new Date(start)
+    date.setMonth(date.getMonth() + months)
+    return date.toISOString().split('T')[0]
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -17,7 +30,20 @@ export default function CreateCourse() {
     setLoading(true)
 
     try {
-      const course = await createCourse({ name, description, type })
+      // Calculate actual end date
+      let actualEndDate = endDate
+      if (durationType === 'months' && startDate) {
+        actualEndDate = calculateEndDate(startDate, durationMonths)
+      }
+
+      const course = await createCourse({ 
+        name, 
+        description, 
+        type,
+        startDate: startDate || null,
+        endDate: actualEndDate || null,
+        enrollmentEnd: enrollmentEnd || null
+      })
       // Redirect to Course Dashboard after creation
       navigate(`/teacher/courses/${course.id}/dashboard`)
     } catch (err) {
@@ -26,6 +52,9 @@ export default function CreateCourse() {
       setLoading(false)
     }
   }
+
+  // Get today's date for min attribute
+  const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -142,6 +171,126 @@ export default function CreateCourse() {
                 </div>
               </div>
             )}
+
+            {/* Course Duration Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-gray-500" />
+                Course Duration
+              </h3>
+              
+              {/* Start Date */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={today}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">When the course begins (optional)</p>
+              </div>
+
+              {/* Duration Type Toggle */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Date Method
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDurationType('dates')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                      durationType === 'dates'
+                        ? 'bg-[#1e3a5f] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Pick End Date
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationType('months')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                      durationType === 'months'
+                        ? 'bg-[#1e3a5f] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Set Duration
+                  </button>
+                </div>
+              </div>
+
+              {/* End Date or Duration */}
+              {durationType === 'dates' ? (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || today}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Course will auto-deactivate after this date</p>
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Duration (months)
+                  </label>
+                  <select
+                    value={durationMonths}
+                    onChange={(e) => setDurationMonths(parseInt(e.target.value))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  >
+                    <option value={1}>1 month</option>
+                    <option value={2}>2 months</option>
+                    <option value={3}>3 months</option>
+                    <option value={6}>6 months</option>
+                    <option value={12}>12 months (1 year)</option>
+                  </select>
+                  {startDate && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      End date: {new Date(calculateEndDate(startDate, durationMonths)).toLocaleDateString('en-US', { 
+                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+                      })}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Enrollment Period Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-gray-500" />
+                Enrollment Period
+              </h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Enrollment Deadline
+                </label>
+                <input
+                  type="date"
+                  value={enrollmentEnd}
+                  onChange={(e) => setEnrollmentEnd(e.target.value)}
+                  min={today}
+                  max={endDate || (durationType === 'months' && startDate ? calculateEndDate(startDate, durationMonths) : undefined)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  After this date, students won't be able to enroll (optional)
+                </p>
+              </div>
+            </div>
 
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
