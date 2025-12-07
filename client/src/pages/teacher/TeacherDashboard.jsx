@@ -454,7 +454,7 @@ export default function TeacherDashboard() {
                     {courses.slice(0, 3).map((course) => (
                       <Link
                         key={course.id}
-                        to={`/teacher/courses/${course.id}/dashboard`}
+                        to={`/teacher/courses/${course.slug || course.id}/dashboard`}
                         className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
                       >
                         <div className="flex items-start justify-between mb-2">
@@ -568,7 +568,7 @@ export default function TeacherDashboard() {
                         {/* Action Button */}
                         <div className="pt-4 border-t mt-auto">
                           <Link
-                            to={`/teacher/courses/${course.id}/dashboard`}
+                            to={`/teacher/courses/${course.slug || course.id}/dashboard`}
                             className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
                           >
                             <ExternalLink className="w-4 h-4" />
@@ -1093,7 +1093,7 @@ export default function TeacherDashboard() {
                       <p className="text-sm text-amber-600 mt-1">
                         Add one in{' '}
                         <Link
-                          to={`/teacher/courses/${selectedSession.course?.id}/dashboard`}
+                          to={`/teacher/courses/${selectedSession.course?.slug || selectedSession.course?.id}/dashboard`}
                           onClick={() => setSelectedSession(null)}
                           className="underline hover:text-amber-800"
                         >
@@ -1106,7 +1106,7 @@ export default function TeacherDashboard() {
               )}
 
               <Link
-                to={`/teacher/courses/${selectedSession.course?.id}/dashboard`}
+                to={`/teacher/courses/${selectedSession.course?.slug || selectedSession.course?.id}/dashboard`}
                 onClick={() => setSelectedSession(null)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition"
               >

@@ -197,6 +197,7 @@ model ProgramEnrollment {
 // Course - created by teacher
 model Course {
   id              String     @id @default(cuid())
+  slug            String     @unique  // URL-friendly identifier (e.g., "basic-fiqh-101")
   name            String
   description     String?
   type            CourseType @default(RECORDED)

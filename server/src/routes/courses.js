@@ -1,6 +1,7 @@
 import express from 'express'
 import prisma from '../lib/prisma.js'
 import jwt from 'jsonwebtoken'
+import { generateUniqueSlug } from '../lib/slugify.js'
 
 const router = express.Router()
 
@@ -140,13 +141,14 @@ router.get('/', authenticate, async (req, res) => {
   }
 })
 
-// GET /api/courses/:id - Get a single course
-router.get('/:id', authenticate, async (req, res) => {
+// GET /api/courses/:idOrSlug - Get a single course by ID or slug
+router.get('/:idOrSlug', authenticate, async (req, res) => {
   try {
-    const { id } = req.params
+    const { idOrSlug } = req.params
 
-    const course = await prisma.course.findUnique({
-      where: { id },
+    // Try to find by ID first, then by slug
+    let course = await prisma.course.findUnique({
+      where: { id: idOrSlug },
       include: {
         teacher: {
           include: {
@@ -172,6 +174,37 @@ router.get('/:id', authenticate, async (req, res) => {
         enrollments: true
       }
     })
+
+    // If not found by ID, try by slug
+    if (!course) {
+      course = await prisma.course.findUnique({
+        where: { slug: idOrSlug },
+        include: {
+          teacher: {
+            include: {
+              user: {
+                include: { profile: true }
+              }
+            }
+          },
+          modules: {
+            include: {
+              lessons: {
+                orderBy: { order: 'asc' }
+              }
+            },
+            orderBy: { order: 'asc' }
+          },
+          sessions: {
+            include: {
+              materials: true
+            },
+            orderBy: { date: 'asc' }
+          },
+          enrollments: true
+        }
+      })
+    }
 
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
@@ -202,9 +235,13 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Course name is required' })
     }
 
+    // Generate unique slug from course name
+    const slug = await generateUniqueSlug(name)
+
     const course = await prisma.course.create({
       data: {
         name,
+        slug,
         description: description || '',
         type: type || 'RECORDED',
         isActive: false,
@@ -241,10 +278,17 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to update this course' })
     }
 
+    // Regenerate slug if name changed
+    let slug = existing.slug
+    if (name && name !== existing.name) {
+      slug = await generateUniqueSlug(name, id)
+    }
+
     const course = await prisma.course.update({
       where: { id },
       data: { 
         name, 
+        slug,
         description, 
         type,
         isActive: isActive !== undefined ? isActive : existing.isActive,

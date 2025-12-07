@@ -53,7 +53,8 @@ export default function StudentCourseView() {
   const fetchCourse = async () => {
     try {
       const courses = await getMyCourses()
-      const found = courses.find(c => c.id === id)
+      // Find by ID or slug
+      const found = courses.find(c => c.id === id || c.slug === id)
       if (!found) {
         navigate('/student')
         return
@@ -63,7 +64,7 @@ export default function StudentCourseView() {
       // For LIVE courses, fetch sessions
       if (found.type === 'LIVE') {
         try {
-          const courseSessions = await getCourseSessions(id)
+          const courseSessions = await getCourseSessions(found.id)
           setSessions(courseSessions)
           // Find next upcoming session
           const now = new Date()

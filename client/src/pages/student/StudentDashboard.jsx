@@ -460,7 +460,7 @@ export default function StudentDashboard() {
                     {courses.slice(0, 3).map((course) => (
                       <Link
                         key={course.id}
-                        to={`/student/courses/${course.id}`}
+                        to={`/student/courses/${course.slug || course.id}`}
                         className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
                       >
                         <div className="flex items-start justify-between mb-2">
@@ -821,7 +821,7 @@ export default function StudentDashboard() {
                         return (
                           <Link
                             key={course.id}
-                            to={`/student/courses/${course.id}`}
+                            to={`/student/courses/${course.slug || course.id}`}
                             className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition group"
                           >
                             {/* Card Header with Gradient */}

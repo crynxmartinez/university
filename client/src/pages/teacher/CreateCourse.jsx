@@ -45,7 +45,7 @@ export default function CreateCourse() {
         enrollmentEnd: enrollmentEnd || null
       })
       // Redirect to Course Dashboard after creation
-      navigate(`/teacher/courses/${course.id}/dashboard`)
+      navigate(`/teacher/courses/${course.slug || course.id}/dashboard`)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create course')
     } finally {

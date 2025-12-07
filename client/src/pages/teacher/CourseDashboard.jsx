@@ -124,7 +124,7 @@ function SortableModule({ module, index, courseId, expanded, onToggle, onEdit, o
             <div className="p-4 text-center">
               <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
               <Link
-                to={`/teacher/courses/${courseId}/modules/${module.id}/lessons/create`}
+                to={`/teacher/courses/${course?.slug || courseId}/modules/${module.id}/lessons/create`}
                 className="text-[#f7941d] hover:underline text-sm font-medium"
               >
                 + Add Class
@@ -145,7 +145,7 @@ function SortableModule({ module, index, courseId, expanded, onToggle, onEdit, o
                   ))}
                   <div className="p-4">
                     <Link
-                      to={`/teacher/courses/${courseId}/modules/${module.id}/lessons/create`}
+                      to={`/teacher/courses/${course?.slug || courseId}/modules/${module.id}/lessons/create`}
                       className="text-[#f7941d] hover:underline text-sm font-medium"
                     >
                       + Add Class
@@ -881,7 +881,7 @@ export default function CourseDashboard() {
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-600">Create class templates that can be scheduled on the calendar</p>
                 <Link
-                  to={`/teacher/courses/${id}/modules/create`}
+                  to={`/teacher/courses/${course?.slug || id}/modules/create`}
                   className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
                 >
                   <Plus className="w-4 h-4" />
@@ -895,7 +895,7 @@ export default function CourseDashboard() {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No class templates yet</h3>
                   <p className="text-gray-500 mb-4">Create modules and lessons to use as class templates</p>
                   <Link
-                    to={`/teacher/courses/${id}/modules/create`}
+                    to={`/teacher/courses/${course?.slug || id}/modules/create`}
                     className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
                   >
                     <Plus className="w-5 h-5" />
@@ -1266,7 +1266,7 @@ export default function CourseDashboard() {
                   />
                 </div>
                 <Link
-                  to={`/teacher/courses/${id}/students`}
+                  to={`/teacher/courses/${course?.slug || id}/students`}
                   className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
                 >
                   <Plus className="w-4 h-4" />
@@ -1285,7 +1285,7 @@ export default function CourseDashboard() {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No students enrolled</h3>
                   <p className="text-gray-500 mb-4">Enroll students to give them access to this course</p>
                   <Link
-                    to={`/teacher/courses/${id}/students`}
+                    to={`/teacher/courses/${course?.slug || id}/students`}
                     className="inline-flex items-center gap-2 text-[#f7941d] hover:underline font-medium"
                   >
                     <Plus className="w-4 h-4" />
