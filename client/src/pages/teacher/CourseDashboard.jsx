@@ -23,6 +23,7 @@ export default function CourseDashboard() {
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [toggling, setToggling] = useState(false)
 
   // Schedule state
   const [sessions, setSessions] = useState([])
@@ -87,11 +88,14 @@ export default function CourseDashboard() {
   }
 
   const handleToggleActive = async () => {
+    setToggling(true)
     try {
       const updated = await toggleCourseActive(id)
       setCourse(updated)
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to toggle course status')
+    } finally {
+      setToggling(false)
     }
   }
 
@@ -875,13 +879,16 @@ export default function CourseDashboard() {
                   </div>
                   <button
                     onClick={handleToggleActive}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+                    disabled={toggling}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 ${
                       course.isActive
                         ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         : 'bg-green-600 text-white hover:bg-green-700'
                     }`}
                   >
-                    {course.isActive ? (
+                    {toggling ? (
+                      <><div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> {course.isActive ? 'Deactivating...' : 'Activating...'}</>
+                    ) : course.isActive ? (
                       <><ToggleRight className="w-5 h-5" /> Deactivate</>
                     ) : (
                       <><ToggleLeft className="w-5 h-5" /> Activate</>
