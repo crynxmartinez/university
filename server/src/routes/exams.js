@@ -417,4 +417,782 @@ router.get('/student-grade/:courseId', authenticate, async (req, res) => {
   }
 })
 
+// ============ EXAM SETTINGS ROUTES ============
+
+// PUT /api/exams/:id/settings - Update exam settings (time limit, publish, etc.)
+router.put('/:id/settings', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can update exam settings' })
+    }
+
+    const { id } = req.params
+    const { timeLimit, maxTabSwitch, isPublished } = req.body
+
+    // Verify exam exists and teacher owns the course
+    const existing = await prisma.exam.findUnique({
+      where: { id },
+      include: { course: true }
+    })
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    if (existing.course.teacherId !== req.user.teacher.id) {
+      return res.status(403).json({ error: 'Not authorized to update this exam' })
+    }
+
+    const exam = await prisma.exam.update({
+      where: { id },
+      data: {
+        timeLimit: timeLimit !== undefined ? timeLimit : existing.timeLimit,
+        maxTabSwitch: maxTabSwitch !== undefined ? maxTabSwitch : existing.maxTabSwitch,
+        isPublished: isPublished !== undefined ? isPublished : existing.isPublished
+      }
+    })
+
+    res.json(exam)
+  } catch (error) {
+    console.error('Update exam settings error:', error)
+    res.status(500).json({ error: 'Failed to update exam settings' })
+  }
+})
+
+// ============ EXAM QUESTION ROUTES ============
+
+// GET /api/exams/:examId/questions - Get all questions for an exam
+router.get('/:examId/questions', authenticate, async (req, res) => {
+  try {
+    const { examId } = req.params
+
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        course: true,
+        questions: {
+          orderBy: { order: 'asc' },
+          include: {
+            choices: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        }
+      }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    // If student, hide correct answers
+    if (req.user.role === 'STUDENT') {
+      exam.questions = exam.questions.map(q => ({
+        ...q,
+        choices: q.choices.map(c => ({
+          ...c,
+          isCorrect: undefined // Hide correct answer from students
+        }))
+      }))
+    }
+
+    res.json(exam)
+  } catch (error) {
+    console.error('Get questions error:', error)
+    res.status(500).json({ error: 'Failed to get questions' })
+  }
+})
+
+// POST /api/exams/:examId/questions - Add a question to an exam
+router.post('/:examId/questions', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can add questions' })
+    }
+
+    const { examId } = req.params
+    const { question, points, choices } = req.body
+
+    // Verify exam exists and teacher owns the course
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: { course: true }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    if (exam.course.teacherId !== req.user.teacher.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Get next order
+    const lastQuestion = await prisma.examQuestion.findFirst({
+      where: { examId },
+      orderBy: { order: 'desc' }
+    })
+    const nextOrder = (lastQuestion?.order ?? -1) + 1
+
+    // Create question with choices
+    const newQuestion = await prisma.examQuestion.create({
+      data: {
+        examId,
+        question,
+        points: points || 10,
+        order: nextOrder,
+        choices: {
+          create: (choices || []).map((c, idx) => ({
+            text: c.text,
+            isCorrect: c.isCorrect || false,
+            order: idx
+          }))
+        }
+      },
+      include: {
+        choices: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    })
+
+    // Update exam total points
+    await updateExamTotalPoints(examId)
+
+    res.status(201).json(newQuestion)
+  } catch (error) {
+    console.error('Add question error:', error)
+    res.status(500).json({ error: 'Failed to add question' })
+  }
+})
+
+// PUT /api/exams/questions/:questionId - Update a question
+router.put('/questions/:questionId', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can update questions' })
+    }
+
+    const { questionId } = req.params
+    const { question, points, choices } = req.body
+
+    // Verify question exists and teacher owns the course
+    const existing = await prisma.examQuestion.findUnique({
+      where: { id: questionId },
+      include: { exam: { include: { course: true } } }
+    })
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Question not found' })
+    }
+
+    if (existing.exam.course.teacherId !== req.user.teacher.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Update question
+    const updatedQuestion = await prisma.examQuestion.update({
+      where: { id: questionId },
+      data: {
+        question: question !== undefined ? question : existing.question,
+        points: points !== undefined ? points : existing.points
+      }
+    })
+
+    // If choices provided, delete old and create new
+    if (choices) {
+      await prisma.examChoice.deleteMany({ where: { questionId } })
+      await prisma.examChoice.createMany({
+        data: choices.map((c, idx) => ({
+          questionId,
+          text: c.text,
+          isCorrect: c.isCorrect || false,
+          order: idx
+        }))
+      })
+    }
+
+    // Get updated question with choices
+    const result = await prisma.examQuestion.findUnique({
+      where: { id: questionId },
+      include: {
+        choices: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    })
+
+    // Update exam total points
+    await updateExamTotalPoints(existing.examId)
+
+    res.json(result)
+  } catch (error) {
+    console.error('Update question error:', error)
+    res.status(500).json({ error: 'Failed to update question' })
+  }
+})
+
+// DELETE /api/exams/questions/:questionId - Delete a question
+router.delete('/questions/:questionId', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can delete questions' })
+    }
+
+    const { questionId } = req.params
+
+    // Verify question exists and teacher owns the course
+    const existing = await prisma.examQuestion.findUnique({
+      where: { id: questionId },
+      include: { exam: { include: { course: true } } }
+    })
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Question not found' })
+    }
+
+    if (existing.exam.course.teacherId !== req.user.teacher.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    await prisma.examQuestion.delete({ where: { id: questionId } })
+
+    // Update exam total points
+    await updateExamTotalPoints(existing.examId)
+
+    res.json({ message: 'Question deleted' })
+  } catch (error) {
+    console.error('Delete question error:', error)
+    res.status(500).json({ error: 'Failed to delete question' })
+  }
+})
+
+// PUT /api/exams/:examId/questions/reorder - Reorder questions
+router.put('/:examId/questions/reorder', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'TEACHER' || !req.user.teacher) {
+      return res.status(403).json({ error: 'Only teachers can reorder questions' })
+    }
+
+    const { examId } = req.params
+    const { questionIds } = req.body
+
+    // Verify exam exists and teacher owns the course
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: { course: true }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    if (exam.course.teacherId !== req.user.teacher.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Update order for each question
+    await Promise.all(
+      questionIds.map((id, index) =>
+        prisma.examQuestion.update({
+          where: { id },
+          data: { order: index }
+        })
+      )
+    )
+
+    res.json({ message: 'Questions reordered' })
+  } catch (error) {
+    console.error('Reorder questions error:', error)
+    res.status(500).json({ error: 'Failed to reorder questions' })
+  }
+})
+
+// Helper function to update exam total points
+async function updateExamTotalPoints(examId) {
+  const questions = await prisma.examQuestion.findMany({
+    where: { examId }
+  })
+  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0)
+  await prisma.exam.update({
+    where: { id: examId },
+    data: { totalPoints: totalPoints || 100 }
+  })
+}
+
+// ============ STUDENT EXAM TAKING ROUTES ============
+
+// GET /api/exams/student/available/:courseId - Get available exams for student
+router.get('/student/available/:courseId', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can access this' })
+    }
+
+    const { courseId } = req.params
+    const studentId = req.user.student.id
+
+    // Check if student is enrolled
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { courseId, studentId }
+    })
+
+    if (!enrollment) {
+      return res.status(403).json({ error: 'Not enrolled in this course' })
+    }
+
+    // Get published exams with attempt status
+    const exams = await prisma.exam.findMany({
+      where: { 
+        courseId,
+        isPublished: true
+      },
+      include: {
+        questions: {
+          select: { id: true }
+        },
+        attempts: {
+          where: { studentId }
+        }
+      },
+      orderBy: { order: 'asc' }
+    })
+
+    const result = exams.map(exam => ({
+      id: exam.id,
+      title: exam.title,
+      description: exam.description,
+      totalPoints: exam.totalPoints,
+      timeLimit: exam.timeLimit,
+      questionCount: exam.questions.length,
+      attempt: exam.attempts[0] ? {
+        status: exam.attempts[0].status,
+        score: exam.attempts[0].score,
+        submittedAt: exam.attempts[0].submittedAt
+      } : null
+    }))
+
+    res.json(result)
+  } catch (error) {
+    console.error('Get available exams error:', error)
+    res.status(500).json({ error: 'Failed to get available exams' })
+  }
+})
+
+// POST /api/exams/:examId/start - Start an exam attempt
+router.post('/:examId/start', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can take exams' })
+    }
+
+    const { examId } = req.params
+    const studentId = req.user.student.id
+
+    // Get exam with questions
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        course: true,
+        questions: {
+          orderBy: { order: 'asc' },
+          include: {
+            choices: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        }
+      }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    if (!exam.isPublished) {
+      return res.status(403).json({ error: 'Exam is not available' })
+    }
+
+    // Check if student is enrolled
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { courseId: exam.courseId, studentId }
+    })
+
+    if (!enrollment) {
+      return res.status(403).json({ error: 'Not enrolled in this course' })
+    }
+
+    // Check for existing attempt
+    const existingAttempt = await prisma.examAttempt.findUnique({
+      where: {
+        examId_studentId: { examId, studentId }
+      }
+    })
+
+    if (existingAttempt) {
+      if (existingAttempt.status !== 'IN_PROGRESS') {
+        return res.status(400).json({ error: 'You have already completed this exam' })
+      }
+      // Return existing in-progress attempt
+      return res.json({
+        attempt: existingAttempt,
+        exam: {
+          ...exam,
+          questions: exam.questions.map(q => ({
+            ...q,
+            choices: q.choices.map(c => ({
+              id: c.id,
+              text: c.text,
+              order: c.order
+              // Hide isCorrect
+            }))
+          }))
+        }
+      })
+    }
+
+    // Create new attempt
+    const attempt = await prisma.examAttempt.create({
+      data: {
+        examId,
+        studentId,
+        startedAt: new Date()
+      }
+    })
+
+    // Return exam with questions (hide correct answers)
+    res.json({
+      attempt,
+      exam: {
+        ...exam,
+        questions: exam.questions.map(q => ({
+          ...q,
+          choices: q.choices.map(c => ({
+            id: c.id,
+            text: c.text,
+            order: c.order
+            // Hide isCorrect
+          }))
+        }))
+      }
+    })
+  } catch (error) {
+    console.error('Start exam error:', error)
+    res.status(500).json({ error: 'Failed to start exam' })
+  }
+})
+
+// PUT /api/exams/attempt/:attemptId/answer - Save an answer
+router.put('/attempt/:attemptId/answer', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can answer questions' })
+    }
+
+    const { attemptId } = req.params
+    const { questionId, choiceId } = req.body
+    const studentId = req.user.student.id
+
+    // Verify attempt belongs to student and is in progress
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id: attemptId }
+    })
+
+    if (!attempt || attempt.studentId !== studentId) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    if (attempt.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Exam already submitted' })
+    }
+
+    // Check if time expired
+    if (attempt.startedAt) {
+      const exam = await prisma.exam.findUnique({ where: { id: attempt.examId } })
+      if (exam.timeLimit) {
+        const elapsed = (Date.now() - new Date(attempt.startedAt).getTime()) / 1000 / 60
+        if (elapsed > exam.timeLimit) {
+          return res.status(400).json({ error: 'Time expired' })
+        }
+      }
+    }
+
+    // Upsert answer
+    const answer = await prisma.examAnswer.upsert({
+      where: {
+        attemptId_questionId: { attemptId, questionId }
+      },
+      update: { choiceId },
+      create: {
+        attemptId,
+        questionId,
+        choiceId
+      }
+    })
+
+    res.json(answer)
+  } catch (error) {
+    console.error('Save answer error:', error)
+    res.status(500).json({ error: 'Failed to save answer' })
+  }
+})
+
+// PUT /api/exams/attempt/:attemptId/tab-switch - Record a tab switch
+router.put('/attempt/:attemptId/tab-switch', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can access this' })
+    }
+
+    const { attemptId } = req.params
+    const studentId = req.user.student.id
+
+    // Verify attempt belongs to student
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id: attemptId },
+      include: { exam: true }
+    })
+
+    if (!attempt || attempt.studentId !== studentId) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    if (attempt.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Exam already submitted' })
+    }
+
+    // Increment tab switch count
+    const newCount = attempt.tabSwitchCount + 1
+
+    // Check if exceeded max
+    if (newCount >= attempt.exam.maxTabSwitch) {
+      // Auto-submit with FLAGGED status
+      const result = await submitExam(attemptId, 'FLAGGED')
+      return res.json({ 
+        flagged: true, 
+        message: 'Exam auto-submitted due to too many tab switches',
+        result 
+      })
+    }
+
+    // Update count
+    await prisma.examAttempt.update({
+      where: { id: attemptId },
+      data: { tabSwitchCount: newCount }
+    })
+
+    res.json({ 
+      tabSwitchCount: newCount, 
+      remaining: attempt.exam.maxTabSwitch - newCount 
+    })
+  } catch (error) {
+    console.error('Tab switch error:', error)
+    res.status(500).json({ error: 'Failed to record tab switch' })
+  }
+})
+
+// POST /api/exams/attempt/:attemptId/submit - Submit an exam
+router.post('/attempt/:attemptId/submit', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can submit exams' })
+    }
+
+    const { attemptId } = req.params
+    const studentId = req.user.student.id
+
+    // Verify attempt belongs to student
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id: attemptId }
+    })
+
+    if (!attempt || attempt.studentId !== studentId) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    if (attempt.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Exam already submitted' })
+    }
+
+    const result = await submitExam(attemptId, 'SUBMITTED')
+    res.json(result)
+  } catch (error) {
+    console.error('Submit exam error:', error)
+    res.status(500).json({ error: 'Failed to submit exam' })
+  }
+})
+
+// Helper function to submit exam and calculate score
+async function submitExam(attemptId, status) {
+  // Get attempt with answers
+  const attempt = await prisma.examAttempt.findUnique({
+    where: { id: attemptId },
+    include: {
+      exam: {
+        include: {
+          questions: {
+            include: {
+              choices: true
+            }
+          }
+        }
+      },
+      answers: true
+    }
+  })
+
+  // Calculate score
+  let totalEarned = 0
+  const totalPossible = attempt.exam.questions.reduce((sum, q) => sum + q.points, 0)
+
+  // Grade each answer
+  for (const question of attempt.exam.questions) {
+    const answer = attempt.answers.find(a => a.questionId === question.id)
+    const correctChoice = question.choices.find(c => c.isCorrect)
+    
+    const isCorrect = answer?.choiceId === correctChoice?.id
+    
+    if (isCorrect) {
+      totalEarned += question.points
+    }
+
+    // Update answer with isCorrect
+    if (answer) {
+      await prisma.examAnswer.update({
+        where: { id: answer.id },
+        data: { isCorrect }
+      })
+    }
+  }
+
+  // Update attempt
+  const updatedAttempt = await prisma.examAttempt.update({
+    where: { id: attemptId },
+    data: {
+      status,
+      submittedAt: new Date(),
+      score: totalEarned
+    }
+  })
+
+  // Create/update ExamScore for gradebook
+  await prisma.examScore.upsert({
+    where: {
+      examId_studentId: {
+        examId: attempt.examId,
+        studentId: attempt.studentId
+      }
+    },
+    update: {
+      score: totalEarned,
+      gradedAt: new Date()
+    },
+    create: {
+      examId: attempt.examId,
+      studentId: attempt.studentId,
+      score: totalEarned
+    }
+  })
+
+  // Calculate percentage
+  const percentage = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0
+
+  return {
+    attemptId,
+    status,
+    score: totalEarned,
+    totalPossible,
+    percentage: Math.round(percentage * 10) / 10,
+    passed: percentage >= 75
+  }
+}
+
+// GET /api/exams/attempt/:attemptId/result - Get exam result
+router.get('/attempt/:attemptId/result', authenticate, async (req, res) => {
+  try {
+    const { attemptId } = req.params
+
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        exam: {
+          include: {
+            questions: {
+              orderBy: { order: 'asc' },
+              include: {
+                choices: {
+                  orderBy: { order: 'asc' }
+                }
+              }
+            }
+          }
+        },
+        answers: true,
+        student: {
+          include: {
+            user: {
+              include: { profile: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!attempt) {
+      return res.status(404).json({ error: 'Attempt not found' })
+    }
+
+    // Check authorization
+    if (req.user.role === 'STUDENT' && attempt.studentId !== req.user.student?.id) {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    if (attempt.status === 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Exam not yet submitted' })
+    }
+
+    // Build result with correct answers shown
+    const questions = attempt.exam.questions.map(q => {
+      const answer = attempt.answers.find(a => a.questionId === q.id)
+      const correctChoice = q.choices.find(c => c.isCorrect)
+      
+      return {
+        id: q.id,
+        question: q.question,
+        points: q.points,
+        choices: q.choices.map(c => ({
+          id: c.id,
+          text: c.text,
+          isCorrect: c.isCorrect,
+          isSelected: answer?.choiceId === c.id
+        })),
+        selectedChoiceId: answer?.choiceId,
+        correctChoiceId: correctChoice?.id,
+        isCorrect: answer?.isCorrect || false,
+        earnedPoints: answer?.isCorrect ? q.points : 0
+      }
+    })
+
+    const totalPossible = attempt.exam.totalPoints
+
+    res.json({
+      attemptId: attempt.id,
+      examTitle: attempt.exam.title,
+      status: attempt.status,
+      score: attempt.score,
+      totalPossible,
+      percentage: totalPossible > 0 ? Math.round((attempt.score / totalPossible) * 1000) / 10 : 0,
+      passed: totalPossible > 0 ? (attempt.score / totalPossible) * 100 >= 75 : false,
+      startedAt: attempt.startedAt,
+      submittedAt: attempt.submittedAt,
+      tabSwitchCount: attempt.tabSwitchCount,
+      questions,
+      studentName: attempt.student.user.profile?.fullName || attempt.student.user.email
+    })
+  } catch (error) {
+    console.error('Get result error:', error)
+    res.status(500).json({ error: 'Failed to get result' })
+  }
+})
+
 export default router
