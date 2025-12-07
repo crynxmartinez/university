@@ -981,8 +981,8 @@ router.post('/:examId/start', authenticate, async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Start exam error:', error)
-    res.status(500).json({ error: 'Failed to start exam' })
+    console.error('Start exam error:', error.message, error.code)
+    res.status(500).json({ error: 'Failed to start exam', details: error.message })
   }
 })
 
