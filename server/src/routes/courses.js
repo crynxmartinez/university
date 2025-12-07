@@ -17,6 +17,11 @@ router.get('/public', async (req, res) => {
               include: { profile: true }
             }
           }
+        },
+        modules: {
+          include: {
+            lessons: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
