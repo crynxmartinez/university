@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Video, Radio } from 'lucide-react'
+import { ArrowLeft, Video, Radio, Plus, X } from 'lucide-react'
 import { createLesson } from '../../api/lessons'
 import { getCourse } from '../../api/courses'
 
@@ -9,11 +9,25 @@ export default function CreateLesson() {
   const [course, setCourse] = useState(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [materials, setMaterials] = useState('')
+  const [materialUrls, setMaterialUrls] = useState(['']) // Array of URLs
   const [videoUrl, setVideoUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  const addMaterialUrl = () => {
+    setMaterialUrls([...materialUrls, ''])
+  }
+
+  const removeMaterialUrl = (index) => {
+    setMaterialUrls(materialUrls.filter((_, i) => i !== index))
+  }
+
+  const updateMaterialUrl = (index, value) => {
+    const updated = [...materialUrls]
+    updated[index] = value
+    setMaterialUrls(updated)
+  }
 
   useEffect(() => {
     fetchCourse()
@@ -32,6 +46,9 @@ export default function CreateLesson() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    // Join non-empty URLs with newlines
+    const materials = materialUrls.filter(url => url.trim()).join('\n')
 
     try {
       await createLesson({
@@ -115,16 +132,42 @@ export default function CreateLesson() {
 
             {/* Materials */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Materials (URLs)
               </label>
-              <textarea
-                value={materials}
-                onChange={(e) => setMaterials(e.target.value)}
-                placeholder="Add links to PDF, documents, or other materials (one per line)"
-                rows={2}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
-              />
+              <div className="space-y-2">
+                {materialUrls.map((url, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => updateMaterialUrl(index, e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                    />
+                    {materialUrls.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMaterialUrl(index)}
+                        className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addMaterialUrl}
+                className="mt-2 flex items-center gap-1 text-sm text-[#1e3a5f] hover:text-[#2d5a87] font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Add Material
+              </button>
+              <p className="text-xs text-gray-500 mt-1">
+                Add links to PDFs, documents, or Google Drive files
+              </p>
             </div>
 
             {/* Video URL - for RECORDED courses */}
