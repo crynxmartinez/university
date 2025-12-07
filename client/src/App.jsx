@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
@@ -12,7 +12,6 @@ import AdminDashboard from './pages/AdminDashboard'
 import RegistrarDashboard from './pages/RegistrarDashboard'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import CreateCourse from './pages/teacher/CreateCourse'
-import CourseDetail from './pages/teacher/CourseDetail'
 import CreateModule from './pages/teacher/CreateModule'
 import CreateLesson from './pages/teacher/CreateLesson'
 import EnrollStudents from './pages/teacher/EnrollStudents'
@@ -47,8 +46,8 @@ function App() {
       <Route path="/registrar" element={<RegistrarDashboard />} />
       <Route path="/teacher" element={<TeacherDashboard />} />
       <Route path="/teacher/courses/create" element={<CreateCourse />} />
-      <Route path="/teacher/courses/:id" element={<CourseDetail />} />
       <Route path="/teacher/courses/:id/dashboard" element={<CourseDashboard />} />
+      <Route path="/teacher/courses/:id" element={<CourseDashboard />} />
       <Route path="/teacher/courses/:id/modules/create" element={<CreateModule />} />
       <Route path="/teacher/courses/:id/modules/:moduleId/lessons/create" element={<CreateLesson />} />
       <Route path="/teacher/courses/:id/students" element={<EnrollStudents />} />

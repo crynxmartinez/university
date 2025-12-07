@@ -73,7 +73,7 @@ export default function EnrollStudents() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]"></div>
       </div>
     )
   }
@@ -81,10 +81,10 @@ export default function EnrollStudents() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-emerald-800 text-white shadow-lg">
+      <header className="bg-[#1e3a5f] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Link to={`/teacher/courses/${courseId}`} className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
+            <Link to={`/teacher/courses/${courseId}/dashboard`} className="flex items-center gap-2 text-blue-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Course
             </Link>
@@ -147,7 +147,7 @@ export default function EnrollStudents() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by name or ID..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
               />
             </div>
 
@@ -160,7 +160,7 @@ export default function EnrollStudents() {
                 {availableStudents.map((student) => (
                   <div
                     key={student.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-emerald-300 transition"
+                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-[#1e3a5f] transition"
                   >
                     <div>
                       <p className="font-medium text-gray-900">
@@ -171,7 +171,7 @@ export default function EnrollStudents() {
                     <button
                       onClick={() => handleEnroll(student.id)}
                       disabled={enrolling === student.id}
-                      className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm transition disabled:opacity-50"
+                      className="flex items-center gap-1 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-3 py-1.5 rounded-lg text-sm transition disabled:opacity-50"
                     >
                       {enrolling === student.id ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

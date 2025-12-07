@@ -17,7 +17,7 @@ export default function CreateModule() {
 
     try {
       await createModule({ name, courseId })
-      navigate(`/teacher/courses/${courseId}`)
+      navigate(`/teacher/courses/${courseId}/dashboard`)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create module')
     } finally {
@@ -28,10 +28,10 @@ export default function CreateModule() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-emerald-800 text-white shadow-lg">
+      <header className="bg-[#1e3a5f] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Link to={`/teacher/courses/${courseId}`} className="flex items-center gap-2 text-emerald-200 hover:text-white transition">
+            <Link to={`/teacher/courses/${courseId}/dashboard`} className="flex items-center gap-2 text-blue-200 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
               Back to Course
             </Link>
@@ -54,7 +54,7 @@ export default function CreateModule() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Introduction to the Course"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                 required
               />
             </div>
@@ -67,7 +67,7 @@ export default function CreateModule() {
 
             <div className="flex gap-4">
               <Link
-                to={`/teacher/courses/${courseId}`}
+                to={`/teacher/courses/${courseId}/dashboard`}
                 className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition text-center"
               >
                 Cancel
@@ -75,7 +75,7 @@ export default function CreateModule() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                className="flex-1 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Add Module'}
               </button>
