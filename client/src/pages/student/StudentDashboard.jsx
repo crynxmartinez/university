@@ -615,32 +615,6 @@ export default function StudentDashboard() {
           {/* My Enrollments Tab */}
           {activeTab === 'enrollments' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              {/* Toggle Tabs */}
-              <div className="flex gap-2 mb-6">
-                <button
-                  onClick={() => setEnrollmentsTab('programs')}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    enrollmentsTab === 'programs' 
-                      ? 'bg-[#1e3a5f] text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <Folder className="w-4 h-4 inline mr-2" />
-                  Programs ({myProgramEnrollments.length})
-                </button>
-                <button
-                  onClick={() => setEnrollmentsTab('courses')}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    enrollmentsTab === 'courses' 
-                      ? 'bg-[#1e3a5f] text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4 inline mr-2" />
-                  Courses ({myCourseEnrollments.length})
-                </button>
-              </div>
-
               {/* My Enrolled Programs */}
               {enrollmentsTab === 'programs' && (
                 <>
