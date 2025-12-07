@@ -58,10 +58,10 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 })
 
-// POST /api/lessons - Create a new lesson
+// POST /api/lessons - Create a new lesson (class template)
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { name, description, materials, videoUrl, zoomLink, scheduledAt, moduleId } = req.body
+    const { name, description, materials, videoUrl, moduleId } = req.body
 
     if (!name || !moduleId) {
       return res.status(400).json({ error: 'Lesson name and module ID are required' })
@@ -92,8 +92,6 @@ router.post('/', authenticate, async (req, res) => {
         description: description || '',
         materials: materials || '',
         videoUrl: videoUrl || null,
-        zoomLink: zoomLink || null,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         moduleId,
         order
       }
@@ -106,11 +104,11 @@ router.post('/', authenticate, async (req, res) => {
   }
 })
 
-// PUT /api/lessons/:id - Update a lesson
+// PUT /api/lessons/:id - Update a lesson (class template)
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, materials, videoUrl, zoomLink, scheduledAt } = req.body
+    const { name, description, materials, videoUrl } = req.body
 
     // Verify ownership
     const existing = await prisma.lesson.findUnique({
@@ -134,9 +132,7 @@ router.put('/:id', authenticate, async (req, res) => {
         name,
         description,
         materials,
-        videoUrl: videoUrl || null,
-        zoomLink: zoomLink || null,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null
+        videoUrl: videoUrl || null
       }
     })
 
