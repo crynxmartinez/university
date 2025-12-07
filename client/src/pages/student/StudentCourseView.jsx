@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
   ArrowLeft, ChevronDown, ChevronRight, Video, Radio, FileText, 
   ExternalLink, Calendar, Menu, BookOpen, Clock, Play, Download,
-  StickyNote, X, Save, Users, Loader2, TrendingUp, CheckCircle, XCircle
+  StickyNote, X, Save, Users, Loader2, TrendingUp, CheckCircle, XCircle,
+  AlertTriangle
 } from 'lucide-react'
 import { getMyCourses } from '../../api/enrollments'
 import { getCourseSessions } from '../../api/sessions'
@@ -43,6 +44,29 @@ export default function StudentCourseView() {
   // Exams state
   const [availableExams, setAvailableExams] = useState([])
   const [loadingExams, setLoadingExams] = useState(false)
+
+  // Collapsible sections state
+  const [ongoingExpanded, setOngoingExpanded] = useState(true)
+  const [upcomingExpanded, setUpcomingExpanded] = useState(true)
+  const [pastExpanded, setPastExpanded] = useState(false)
+
+  // Selected exam for highlighting
+  const [highlightedExamId, setHighlightedExamId] = useState(null)
+
+  // Pre-exam confirmation modal
+  const [examConfirmModal, setExamConfirmModal] = useState(null) // { exam, schedule }
+
+  // Auto-refresh timer state
+  const [, setRefreshTick] = useState(0)
+
+  // Auto-refresh every 60 seconds to update session status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTick(prev => prev + 1)
+    }, 60000) // 60 seconds
+    
+    return () => clearInterval(interval)
+  }, [])
 
   const handleMaterialClick = (url, name) => {
     setDownloadConfirm({ url, name: name || 'this material' })
@@ -270,14 +294,201 @@ export default function StudentCourseView() {
     return now > sessionDate
   }
 
-  const getUpcomingSessions = () => {
+  // Check if session is currently ongoing (within start and end time)
+  const isSessionOngoing = (session) => {
     const now = new Date()
-    return sessions.filter(s => new Date(s.date) >= new Date(now.toDateString()))
+    const sessionDate = new Date(session.date)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const sessDate = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate())
+    
+    if (sessDate.getTime() !== today.getTime()) return false
+    
+    const [startH, startM] = (session.startTime || '00:00').split(':').map(Number)
+    const [endH, endM] = (session.endTime || '23:59').split(':').map(Number)
+    
+    const sessionStart = new Date(sessionDate)
+    sessionStart.setHours(startH, startM, 0, 0)
+    const sessionEnd = new Date(sessionDate)
+    sessionEnd.setHours(endH, endM, 0, 0)
+    
+    return now >= sessionStart && now <= sessionEnd
   }
 
+  // Check if session is starting soon (within 30 minutes)
+  const isSessionStartingSoon = (session) => {
+    const now = new Date()
+    const sessionDate = new Date(session.date)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const sessDate = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate())
+    
+    if (sessDate.getTime() !== today.getTime()) return false
+    
+    const [startH, startM] = (session.startTime || '00:00').split(':').map(Number)
+    const sessionStart = new Date(sessionDate)
+    sessionStart.setHours(startH, startM, 0, 0)
+    
+    const thirtyMinBefore = new Date(sessionStart.getTime() - 30 * 60 * 1000)
+    return now >= thirtyMinBefore && now < sessionStart
+  }
+
+  // Check if session is an exam
+  const isExamSession = (session) => {
+    return session.type === 'EXAM' && session.examId
+  }
+
+  // Get session name (lesson name for CLASS, exam title for EXAM)
+  const getSessionName = (session) => {
+    if (isExamSession(session)) {
+      return session.exam?.title || 'Exam'
+    }
+    return session.lesson?.name || 'Session'
+  }
+
+  // Calculate time until session starts
+  const getTimeUntilStart = (session) => {
+    const now = new Date()
+    const sessionDate = new Date(session.date)
+    const [startH, startM] = (session.startTime || '00:00').split(':').map(Number)
+    sessionDate.setHours(startH, startM, 0, 0)
+    
+    const diff = sessionDate.getTime() - now.getTime()
+    if (diff <= 0) return null
+    
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+    
+    if (days > 0) return `${days}d ${hours % 24}h`
+    if (hours > 0) return `${hours}h ${minutes % 60}m`
+    return `${minutes}m`
+  }
+
+  // Calculate time until session ends
+  const getTimeUntilEnd = (session) => {
+    const now = new Date()
+    const sessionDate = new Date(session.date)
+    const [endH, endM] = (session.endTime || '23:59').split(':').map(Number)
+    sessionDate.setHours(endH, endM, 0, 0)
+    
+    const diff = sessionDate.getTime() - now.getTime()
+    if (diff <= 0) return null
+    
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(minutes / 60)
+    
+    if (hours > 0) return `${hours}h ${minutes % 60}m`
+    return `${minutes}m`
+  }
+
+  // Get ONGOING sessions (currently live)
+  const getOngoingSessions = () => {
+    return sessions.filter(s => isSessionOngoing(s))
+  }
+
+  // Get UPCOMING sessions (future, not yet started)
+  const getUpcomingSessions = () => {
+    const now = new Date()
+    return sessions.filter(s => {
+      const sessionDate = new Date(s.date)
+      const [startH, startM] = (s.startTime || '00:00').split(':').map(Number)
+      sessionDate.setHours(startH, startM, 0, 0)
+      return sessionDate > now
+    }).sort((a, b) => {
+      const dateA = new Date(a.date)
+      const dateB = new Date(b.date)
+      const [aH, aM] = (a.startTime || '00:00').split(':').map(Number)
+      const [bH, bM] = (b.startTime || '00:00').split(':').map(Number)
+      dateA.setHours(aH, aM)
+      dateB.setHours(bH, bM)
+      return dateA - dateB
+    })
+  }
+
+  // Get PAST sessions (already ended)
   const getPastSessions = () => {
     const now = new Date()
-    return sessions.filter(s => new Date(s.date) < new Date(now.toDateString())).reverse()
+    return sessions.filter(s => {
+      const sessionDate = new Date(s.date)
+      const [endH, endM] = (s.endTime || '23:59').split(':').map(Number)
+      sessionDate.setHours(endH, endM, 0, 0)
+      return sessionDate < now
+    }).sort((a, b) => {
+      const dateA = new Date(a.date)
+      const dateB = new Date(b.date)
+      return dateB - dateA // Most recent first
+    })
+  }
+
+  // Get scheduled session for an exam
+  const getExamSchedule = (examId) => {
+    return sessions.find(s => s.type === 'EXAM' && s.examId === examId)
+  }
+
+  // Get exam status based on schedule and attempt
+  const getExamStatus = (exam) => {
+    const schedule = getExamSchedule(exam.id)
+    
+    // If already completed
+    if (exam.attempt?.status === 'SUBMITTED') {
+      return { status: 'completed', label: 'Completed', color: 'bg-green-500/20 text-green-300' }
+    }
+    
+    // If in progress
+    if (exam.attempt?.status === 'IN_PROGRESS') {
+      return { status: 'in_progress', label: 'In Progress', color: 'bg-yellow-500/20 text-yellow-300' }
+    }
+    
+    // If flagged
+    if (exam.attempt?.status === 'FLAGGED' || exam.attempt?.status === 'TIMED_OUT') {
+      return { status: 'flagged', label: 'Flagged', color: 'bg-red-500/20 text-red-300' }
+    }
+    
+    // If not scheduled
+    if (!schedule) {
+      return { status: 'not_scheduled', label: 'Not Scheduled', color: 'bg-gray-500/20 text-gray-300' }
+    }
+    
+    const now = new Date()
+    const sessionDate = new Date(schedule.date)
+    const [startH, startM] = (schedule.startTime || '00:00').split(':').map(Number)
+    const [endH, endM] = (schedule.endTime || '23:59').split(':').map(Number)
+    
+    const sessionStart = new Date(sessionDate)
+    sessionStart.setHours(startH, startM, 0, 0)
+    const sessionEnd = new Date(sessionDate)
+    sessionEnd.setHours(endH, endM, 0, 0)
+    
+    // If exam time has passed
+    if (now > sessionEnd) {
+      return { status: 'closed', label: 'Closed', color: 'bg-red-500/20 text-red-300' }
+    }
+    
+    // If exam is currently open
+    if (now >= sessionStart && now <= sessionEnd) {
+      return { status: 'open', label: 'Open Now', color: 'bg-green-500/20 text-green-300' }
+    }
+    
+    // If opening soon (within 30 minutes)
+    const thirtyMinBefore = new Date(sessionStart.getTime() - 30 * 60 * 1000)
+    if (now >= thirtyMinBefore) {
+      return { status: 'opening_soon', label: 'Opening Soon', color: 'bg-yellow-500/20 text-yellow-300' }
+    }
+    
+    // Scheduled but not yet open
+    return { status: 'scheduled', label: 'Scheduled', color: 'bg-blue-500/20 text-blue-300' }
+  }
+
+  // Check if exam can be taken now
+  const canTakeExam = (exam) => {
+    const status = getExamStatus(exam)
+    return status.status === 'open' || status.status === 'in_progress'
+  }
+
+  // Format schedule date/time for display
+  const formatExamSchedule = (examId) => {
+    const schedule = getExamSchedule(examId)
+    if (!schedule) return null
+    return `${formatSessionDate(schedule.date)} • ${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`
   }
 
   if (loading) {
@@ -390,71 +601,196 @@ export default function StudentCourseView() {
           <div className="flex-1 overflow-y-auto p-4">
             {/* Sessions View (LIVE courses) */}
             {course.type === 'LIVE' && viewMode === 'sessions' && (
-              <div className="space-y-4">
-                {/* Upcoming Sessions */}
-                {getUpcomingSessions().length > 0 && (
+              <div className="space-y-3">
+                {/* ONGOING Sessions */}
+                {getOngoingSessions().length > 0 && (
                   <div>
-                    <p className="text-xs text-blue-300 uppercase tracking-wide mb-2">Upcoming</p>
-                    <div className="space-y-2">
-                      {getUpcomingSessions().map((session) => (
-                        <button
-                          key={session.id}
-                          onClick={() => {
-                            setSelectedSession(session)
-                            setSelectedLesson(session.lesson)
-                          }}
-                          className={`w-full p-3 rounded-lg text-left transition ${
-                            selectedSession?.id === session.id
-                              ? 'bg-[#f7941d] text-white'
-                              : 'bg-[#2d5a87] text-white hover:bg-[#3d6a97]'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium">{session.lesson?.name || 'Session'}</span>
-                            {isSessionLive(session) && (
-                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+                    <button
+                      onClick={() => setOngoingExpanded(!ongoingExpanded)}
+                      className="w-full flex items-center justify-between text-xs text-red-300 uppercase tracking-wide mb-2 hover:text-red-200"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                        Ongoing ({getOngoingSessions().length})
+                      </span>
+                      {ongoingExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                    {ongoingExpanded && (
+                      <div className="space-y-2">
+                        {getOngoingSessions().map((session) => (
+                          <button
+                            key={session.id}
+                            onClick={() => {
+                              if (isExamSession(session)) {
+                                setViewMode('exams')
+                                setHighlightedExamId(session.examId)
+                                fetchExams()
+                              } else {
+                                setSelectedSession(session)
+                                setSelectedLesson(session.lesson)
+                              }
+                            }}
+                            className={`w-full p-3 rounded-lg text-left transition border-2 ${
+                              selectedSession?.id === session.id
+                                ? 'bg-[#f7941d] text-white border-[#f7941d]'
+                                : 'bg-red-500/20 text-white hover:bg-red-500/30 border-red-500'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                {isExamSession(session) && (
+                                  <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-medium">
+                                    EXAM
+                                  </span>
+                                )}
+                                {!isExamSession(session) && (
+                                  <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded font-medium">
+                                    CLASS
+                                  </span>
+                                )}
+                                <span className="text-sm font-medium truncate">{getSessionName(session)}</span>
+                              </div>
+                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse flex-shrink-0">
                                 LIVE
                               </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs opacity-80">
-                            <Calendar className="w-3 h-3" />
-                            <span>{formatSessionDate(session.date)}</span>
-                            <Clock className="w-3 h-3 ml-1" />
-                            <span>{formatTime(session.startTime)}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                            </div>
+                            <div className="flex items-center justify-between text-xs opacity-80">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-3 h-3" />
+                                <span>{formatTime(session.startTime)} - {formatTime(session.endTime)}</span>
+                              </div>
+                              <span className="text-red-200">Ends in {getTimeUntilEnd(session)}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Past Sessions */}
+                {/* UPCOMING Sessions */}
+                {getUpcomingSessions().length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setUpcomingExpanded(!upcomingExpanded)}
+                      className="w-full flex items-center justify-between text-xs text-blue-300 uppercase tracking-wide mb-2 hover:text-blue-200"
+                    >
+                      <span>Upcoming ({getUpcomingSessions().length})</span>
+                      {upcomingExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                    {upcomingExpanded && (
+                      <div className="space-y-2">
+                        {getUpcomingSessions().map((session) => (
+                          <button
+                            key={session.id}
+                            onClick={() => {
+                              if (isExamSession(session)) {
+                                setViewMode('exams')
+                                setHighlightedExamId(session.examId)
+                                fetchExams()
+                              } else {
+                                setSelectedSession(session)
+                                setSelectedLesson(session.lesson)
+                              }
+                            }}
+                            className={`w-full p-3 rounded-lg text-left transition ${
+                              selectedSession?.id === session.id
+                                ? 'bg-[#f7941d] text-white'
+                                : 'bg-[#2d5a87] text-white hover:bg-[#3d6a97]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                {isExamSession(session) && (
+                                  <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-medium">
+                                    EXAM
+                                  </span>
+                                )}
+                                {!isExamSession(session) && (
+                                  <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded font-medium">
+                                    CLASS
+                                  </span>
+                                )}
+                                <span className="text-sm font-medium truncate">{getSessionName(session)}</span>
+                              </div>
+                              {isSessionStartingSoon(session) && (
+                                <span className="text-xs bg-yellow-500 text-yellow-900 px-2 py-0.5 rounded-full flex-shrink-0">
+                                  Soon
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-xs opacity-80">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3 h-3" />
+                                <span>{formatSessionDate(session.date)}</span>
+                                <Clock className="w-3 h-3 ml-1" />
+                                <span>{formatTime(session.startTime)}</span>
+                              </div>
+                              {getTimeUntilStart(session) && (
+                                <span className="text-blue-200">in {getTimeUntilStart(session)}</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* PAST Sessions */}
                 {getPastSessions().length > 0 && (
                   <div>
-                    <p className="text-xs text-blue-300 uppercase tracking-wide mb-2">Past Sessions</p>
-                    <div className="space-y-2">
-                      {getPastSessions().map((session) => (
-                        <button
-                          key={session.id}
-                          onClick={() => {
-                            setSelectedSession(session)
-                            setSelectedLesson(session.lesson)
-                          }}
-                          className={`w-full p-3 rounded-lg text-left transition opacity-60 ${
-                            selectedSession?.id === session.id
-                              ? 'bg-[#f7941d] text-white opacity-100'
-                              : 'bg-[#2d5a87]/50 text-blue-200 hover:opacity-80'
-                          }`}
-                        >
-                          <div className="text-sm font-medium mb-1">{session.lesson?.name || 'Session'}</div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <Calendar className="w-3 h-3" />
-                            <span>{formatSessionDate(session.date)}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    <button
+                      onClick={() => setPastExpanded(!pastExpanded)}
+                      className="w-full flex items-center justify-between text-xs text-gray-400 uppercase tracking-wide mb-2 hover:text-gray-300"
+                    >
+                      <span>Past ({getPastSessions().length})</span>
+                      {pastExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                    {pastExpanded && (
+                      <div className="space-y-2">
+                        {getPastSessions().map((session) => (
+                          <button
+                            key={session.id}
+                            onClick={() => {
+                              if (isExamSession(session)) {
+                                setViewMode('exams')
+                                setHighlightedExamId(session.examId)
+                                fetchExams()
+                              } else {
+                                setSelectedSession(session)
+                                setSelectedLesson(session.lesson)
+                              }
+                            }}
+                            className={`w-full p-3 rounded-lg text-left transition opacity-60 ${
+                              selectedSession?.id === session.id
+                                ? 'bg-[#f7941d] text-white opacity-100'
+                                : 'bg-[#2d5a87]/50 text-blue-200 hover:opacity-80'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              {isExamSession(session) && (
+                                <span className="text-xs bg-red-600/50 text-red-200 px-1.5 py-0.5 rounded font-medium">
+                                  EXAM
+                                </span>
+                              )}
+                              {!isExamSession(session) && (
+                                <span className="text-xs bg-blue-600/50 text-blue-200 px-1.5 py-0.5 rounded font-medium">
+                                  CLASS
+                                </span>
+                              )}
+                              <span className="text-sm font-medium truncate">{getSessionName(session)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <Calendar className="w-3 h-3" />
+                              <span>{formatSessionDate(session.date)}</span>
+                              <Clock className="w-3 h-3 ml-1" />
+                              <span>{formatTime(session.startTime)}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -538,58 +874,123 @@ export default function StudentCourseView() {
                 ) : availableExams.length === 0 ? (
                   <p className="text-blue-200 text-sm text-center py-8">No exams available yet.</p>
                 ) : (
-                  availableExams.map((exam) => (
-                    <button
-                      key={exam.id}
-                      onClick={() => navigate(`/student/courses/${id}/exam/${exam.id}`)}
-                      className="w-full p-4 bg-[#2d5a87] hover:bg-[#3d6a97] rounded-lg text-left transition"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-medium text-white">{exam.title}</h3>
-                        {exam.attempt ? (
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            exam.attempt.status === 'SUBMITTED' 
-                              ? 'bg-green-500/20 text-green-300'
-                              : exam.attempt.status === 'IN_PROGRESS'
-                              ? 'bg-yellow-500/20 text-yellow-300'
-                              : 'bg-red-500/20 text-red-300'
-                          }`}>
-                            {exam.attempt.status === 'SUBMITTED' ? 'Completed' : 
-                             exam.attempt.status === 'IN_PROGRESS' ? 'In Progress' : 'Flagged'}
-                          </span>
-                        ) : (
-                          <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">
-                            Not Started
-                          </span>
-                        )}
-                      </div>
-                      {exam.description && (
-                        <p className="text-sm text-blue-200 mb-2 line-clamp-2">{exam.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-blue-300">
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          {exam.questionCount} questions
-                        </span>
-                        <span>{exam.totalPoints} pts</span>
-                        {exam.timeLimit && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {exam.timeLimit} min
-                          </span>
-                        )}
-                      </div>
-                      {exam.attempt?.status === 'SUBMITTED' && exam.attempt.score !== null && (
-                        <div className="mt-2 pt-2 border-t border-[#3d6a97]">
-                          <span className={`text-sm font-medium ${
-                            (exam.attempt.score / exam.totalPoints) >= 0.75 ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            Score: {exam.attempt.score}/{exam.totalPoints} ({Math.round((exam.attempt.score / exam.totalPoints) * 100)}%)
+                  availableExams.map((exam) => {
+                    const examStatus = getExamStatus(exam)
+                    const schedule = formatExamSchedule(exam.id)
+                    const isHighlighted = highlightedExamId === exam.id
+                    
+                    return (
+                      <div
+                        key={exam.id}
+                        className={`p-4 rounded-lg text-left transition ${
+                          isHighlighted 
+                            ? 'bg-[#f7941d] ring-2 ring-[#f7941d] ring-offset-2 ring-offset-[#1e3a5f]' 
+                            : examStatus.status === 'open'
+                              ? 'bg-green-600/20 border border-green-500'
+                              : 'bg-[#2d5a87]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-medium text-white">{exam.title}</h3>
+                          <span className={`text-xs px-2 py-1 rounded-full ${examStatus.color}`}>
+                            {examStatus.label}
                           </span>
                         </div>
-                      )}
-                    </button>
-                  ))
+                        
+                        {exam.description && (
+                          <p className="text-sm text-blue-200 mb-2 line-clamp-2">{exam.description}</p>
+                        )}
+                        
+                        {/* Schedule Info */}
+                        {schedule && (
+                          <div className="flex items-center gap-2 text-xs text-blue-300 mb-2 bg-[#1e3a5f]/50 px-2 py-1 rounded">
+                            <Calendar className="w-3 h-3" />
+                            <span>{schedule}</span>
+                          </div>
+                        )}
+                        
+                        {/* Exam Details */}
+                        <div className="flex items-center gap-4 text-xs text-blue-300 mb-3">
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-3 h-3" />
+                            {exam.questionCount} questions
+                          </span>
+                          <span>{exam.totalPoints} pts</span>
+                          {exam.timeLimit && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {exam.timeLimit} min
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Score Display */}
+                        {exam.attempt?.status === 'SUBMITTED' && exam.attempt.score !== null && (
+                          <div className="mb-3 p-2 bg-[#1e3a5f]/50 rounded">
+                            <span className={`text-sm font-medium ${
+                              (exam.attempt.score / exam.totalPoints) >= 0.75 ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              Score: {exam.attempt.score}/{exam.totalPoints} ({Math.round((exam.attempt.score / exam.totalPoints) * 100)}%)
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Action Button */}
+                        <div className="pt-2 border-t border-[#3d6a97]">
+                          {examStatus.status === 'completed' ? (
+                            <button
+                              onClick={() => navigate(`/student/courses/${id}/exam/${exam.id}`)}
+                              className="w-full py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg text-sm font-medium transition"
+                            >
+                              View Results
+                            </button>
+                          ) : examStatus.status === 'in_progress' ? (
+                            <button
+                              onClick={() => navigate(`/student/courses/${id}/exam/${exam.id}`)}
+                              className="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 rounded-lg text-sm font-medium transition"
+                            >
+                              Resume Exam
+                            </button>
+                          ) : examStatus.status === 'open' ? (
+                            <button
+                              onClick={() => setExamConfirmModal({ exam, schedule })}
+                              className="w-full py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"
+                            >
+                              Take Exam Now
+                            </button>
+                          ) : examStatus.status === 'opening_soon' ? (
+                            <button
+                              disabled
+                              className="w-full py-2 bg-yellow-500/30 text-yellow-300 rounded-lg text-sm font-medium cursor-not-allowed"
+                            >
+                              Opening Soon...
+                            </button>
+                          ) : examStatus.status === 'scheduled' ? (
+                            <button
+                              disabled
+                              className="w-full py-2 bg-blue-500/30 text-blue-300 rounded-lg text-sm font-medium cursor-not-allowed"
+                            >
+                              Opens {schedule?.split('•')[0]?.trim()}
+                            </button>
+                          ) : examStatus.status === 'closed' ? (
+                            <button
+                              disabled
+                              className="w-full py-2 bg-red-500/30 text-red-300 rounded-lg text-sm font-medium cursor-not-allowed"
+                            >
+                              Exam Closed
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="w-full py-2 bg-gray-500/30 text-gray-300 rounded-lg text-sm font-medium cursor-not-allowed"
+                            >
+                              Not Scheduled Yet
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
                 )}
               </div>
             )}
@@ -610,7 +1011,7 @@ export default function StudentCourseView() {
             </button>
             {selectedSession ? (
               <div>
-                <h1 className="font-semibold text-gray-900">{selectedSession.lesson?.name || 'Session'}</h1>
+                <h1 className="font-semibold text-gray-900">{getSessionName(selectedSession)}</h1>
                 <p className="text-sm text-gray-500">
                   {formatSessionDate(selectedSession.date)} • {formatTime(selectedSession.startTime)} - {formatTime(selectedSession.endTime)}
                 </p>
@@ -625,9 +1026,14 @@ export default function StudentCourseView() {
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            {selectedSession && isSessionLive(selectedSession) && (
+            {selectedSession && isSessionOngoing(selectedSession) && (
               <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-100 text-red-700 animate-pulse">
                 <Radio className="w-3 h-3 inline mr-1" /> LIVE NOW
+              </span>
+            )}
+            {selectedSession && isExamSession(selectedSession) && (
+              <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-red-100 text-red-700">
+                <FileText className="w-3 h-3 inline mr-1" /> Exam
               </span>
             )}
             <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
@@ -676,8 +1082,8 @@ export default function StudentCourseView() {
                 </div>
               )}
 
-              {/* Live Session Banner for LIVE courses */}
-              {course.type === 'LIVE' && selectedSession && (
+              {/* Session Banner for LIVE courses - CLASS type */}
+              {course.type === 'LIVE' && selectedSession && !isExamSession(selectedSession) && (
                 <div className={`rounded-xl p-6 mb-6 text-white ${
                   isSessionLive(selectedSession) 
                     ? 'bg-gradient-to-r from-red-600 to-red-400' 
@@ -729,6 +1135,77 @@ export default function StudentCourseView() {
                         <p className="text-white/80 text-sm">Link available 1 hour before class</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Session Banner for LIVE courses - EXAM type */}
+              {course.type === 'LIVE' && selectedSession && isExamSession(selectedSession) && (
+                <div className={`rounded-xl p-6 mb-6 text-white ${
+                  isSessionOngoing(selectedSession) 
+                    ? 'bg-gradient-to-r from-green-600 to-green-400' 
+                    : isSessionPast(selectedSession)
+                      ? 'bg-gradient-to-r from-gray-600 to-gray-400'
+                      : 'bg-gradient-to-r from-red-600 to-red-400'
+                }`}>
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                        <FileText className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {isSessionOngoing(selectedSession) ? 'Exam Open Now!' : isSessionPast(selectedSession) ? 'Exam Closed' : 'Upcoming Exam'}
+                        </h3>
+                        <p className="text-white/80 text-sm">
+                          {selectedSession.exam?.title || 'Exam'}
+                        </p>
+                        <p className="text-white/60 text-xs mt-1">
+                          {formatSessionDate(selectedSession.date)} • {formatTime(selectedSession.startTime)} - {formatTime(selectedSession.endTime)}
+                        </p>
+                      </div>
+                    </div>
+                    {isSessionOngoing(selectedSession) ? (
+                      <button
+                        onClick={() => setExamConfirmModal({ 
+                          exam: selectedSession.exam, 
+                          schedule: formatExamSchedule(selectedSession.examId) 
+                        })}
+                        className="flex items-center gap-2 bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition shadow-lg"
+                      >
+                        <FileText className="w-5 h-5" />
+                        Take Exam Now
+                      </button>
+                    ) : isSessionPast(selectedSession) ? (
+                      <span className="text-white/60 text-sm">This exam has ended</span>
+                    ) : (
+                      <div className="text-right">
+                        <p className="text-white/80 text-sm">Exam opens at scheduled time</p>
+                        {getTimeUntilStart(selectedSession) && (
+                          <p className="text-white/60 text-xs mt-1">Starts in {getTimeUntilStart(selectedSession)}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Exam Details */}
+                  <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-white/60 text-xs">Questions</p>
+                      <p className="text-white font-medium">{selectedSession.exam?.questions?.length || selectedSession.exam?.questionCount || '?'}</p>
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Total Points</p>
+                      <p className="text-white font-medium">{selectedSession.exam?.totalPoints || '?'}</p>
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Time Limit</p>
+                      <p className="text-white font-medium">{selectedSession.exam?.timeLimit ? `${selectedSession.exam.timeLimit} min` : 'No limit'}</p>
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Tab Switches</p>
+                      <p className="text-white font-medium">{selectedSession.exam?.maxTabSwitch || 3} allowed</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1000,6 +1477,71 @@ export default function StudentCourseView() {
               >
                 <ExternalLink className="w-4 h-4" />
                 Open Material
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-Exam Confirmation Modal */}
+      {examConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Start Exam?</h3>
+                <p className="text-sm text-gray-500">{examConfirmModal.exam?.title}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">Time Limit</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {examConfirmModal.exam?.timeLimit ? `${examConfirmModal.exam.timeLimit} minutes` : 'No limit'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">Questions</span>
+                <span className="text-sm font-medium text-gray-900">{examConfirmModal.exam?.questionCount || '?'}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">Tab Switch Limit</span>
+                <span className="text-sm font-medium text-gray-900">{examConfirmModal.exam?.maxTabSwitch || 3}</span>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <h4 className="font-medium text-yellow-800 mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Important
+              </h4>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• Timer cannot be paused once started</li>
+                <li>• Switching tabs will be tracked</li>
+                <li>• Exam auto-submits when time runs out</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setExamConfirmModal(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  navigate(`/student/courses/${id}/exam/${examConfirmModal.exam.id}`)
+                  setExamConfirmModal(null)
+                }}
+                className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Start Exam
               </button>
             </div>
           </div>
