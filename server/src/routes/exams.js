@@ -58,8 +58,8 @@ router.get('/course/:courseId', authenticate, async (req, res) => {
 
     res.json(exams)
   } catch (error) {
-    console.error('Get exams error:', error)
-    res.status(500).json({ error: 'Failed to get exams' })
+    console.error('Get exams error:', error.message, error.stack)
+    res.status(500).json({ error: 'Failed to get exams', details: error.message })
   }
 })
 
@@ -97,8 +97,8 @@ router.post('/', authenticate, async (req, res) => {
 
     res.status(201).json(exam)
   } catch (error) {
-    console.error('Create exam error:', error)
-    res.status(500).json({ error: 'Failed to create exam' })
+    console.error('Create exam error:', error.message, error.stack)
+    res.status(500).json({ error: 'Failed to create exam', details: error.message })
   }
 })
 
