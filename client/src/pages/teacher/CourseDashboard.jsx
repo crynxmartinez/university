@@ -10,6 +10,7 @@ import { getCourse, updateCourse, toggleCourseActive, deleteCourse } from '../..
 import { getCourseSessions, createSession, updateSession, deleteSession, addMaterial, deleteMaterial } from '../../api/sessions'
 import { updateModule, deleteModule, getModuleDeleteInfo, reorderModules } from '../../api/modules'
 import { updateLesson, deleteLesson, getLessonDeleteInfo, reorderLessons } from '../../api/lessons'
+import { getEnrolledStudents, removeEnrollment } from '../../api/enrollments'
 import { useToast, ConfirmModal } from '../../components/Toast'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -193,6 +194,13 @@ export default function CourseDashboard() {
   const [savingLesson, setSavingLesson] = useState(false)
   const [deletingLesson, setDeletingLesson] = useState(false)
 
+  // Enrolled students state
+  const [enrolledStudents, setEnrolledStudents] = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+  const [studentSearchTerm, setStudentSearchTerm] = useState('')
+  const [removeStudentConfirm, setRemoveStudentConfirm] = useState(null)
+  const [removingStudent, setRemovingStudent] = useState(false)
+
   // Schedule state
   const [sessions, setSessions] = useState([])
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -227,6 +235,46 @@ export default function CourseDashboard() {
       fetchSessions()
     }
   }, [course?.id])
+
+  useEffect(() => {
+    if (activeTab === 'students' && course?.id) {
+      fetchEnrolledStudents()
+    }
+  }, [activeTab, course?.id])
+
+  const fetchEnrolledStudents = async () => {
+    setLoadingStudents(true)
+    try {
+      const data = await getEnrolledStudents(id)
+      setEnrolledStudents(data)
+    } catch (error) {
+      console.error('Failed to fetch enrolled students:', error)
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
+  const handleRemoveStudent = async () => {
+    if (!removeStudentConfirm) return
+    setRemovingStudent(true)
+    try {
+      await removeEnrollment(removeStudentConfirm.id)
+      setEnrolledStudents(prev => prev.filter(e => e.id !== removeStudentConfirm.id))
+      setRemoveStudentConfirm(null)
+      toast.success('Student removed from course')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to remove student')
+    } finally {
+      setRemovingStudent(false)
+    }
+  }
+
+  const filteredStudents = enrolledStudents.filter(enrollment => {
+    const name = enrollment.student?.user?.profile?.fullName || enrollment.student?.user?.email || ''
+    const email = enrollment.student?.user?.email || ''
+    const search = studentSearchTerm.toLowerCase()
+    return name.toLowerCase().includes(search) || email.toLowerCase().includes(search)
+  })
 
   const fetchSessions = async () => {
     try {
@@ -1112,7 +1160,18 @@ export default function CourseDashboard() {
           {activeTab === 'students' && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-600">Manage enrolled students</p>
+                <div className="flex items-center gap-4">
+                  <span className="bg-[#1e3a5f] text-white px-3 py-1 rounded-full text-sm font-medium">
+                    {enrolledStudents.length} Student{enrolledStudents.length !== 1 ? 's' : ''}
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search students..."
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none w-64"
+                  />
+                </div>
                 <Link
                   to={`/teacher/courses/${id}/students`}
                   className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
@@ -1122,27 +1181,68 @@ export default function CourseDashboard() {
                 </Link>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                {course.enrollments?.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No students enrolled</h3>
-                    <p className="text-gray-500 mb-4">Enroll students to give them access to this course</p>
-                    <Link
-                      to={`/teacher/courses/${id}/students`}
-                      className="inline-flex items-center gap-2 text-[#f7941d] hover:underline font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Enroll Students
-                    </Link>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-gray-600">{course.enrollments.length} student(s) enrolled</p>
-                    {/* TODO: List students */}
-                  </div>
-                )}
-              </div>
+              {loadingStudents ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading students...</p>
+                </div>
+              ) : enrolledStudents.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No students enrolled</h3>
+                  <p className="text-gray-500 mb-4">Enroll students to give them access to this course</p>
+                  <Link
+                    to={`/teacher/courses/${id}/students`}
+                    className="inline-flex items-center gap-2 text-[#f7941d] hover:underline font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Enroll Students
+                  </Link>
+                </div>
+              ) : filteredStudents.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No students found</h3>
+                  <p className="text-gray-500">Try a different search term</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredStudents.map((enrollment) => {
+                    const student = enrollment.student
+                    const user = student?.user
+                    const profile = user?.profile
+                    const fullName = profile?.fullName || user?.email?.split('@')[0] || 'Unknown'
+                    const email = user?.email || ''
+                    const enrolledDate = new Date(enrollment.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+
+                    return (
+                      <div key={enrollment.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between hover:shadow-md transition group">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold text-lg">
+                            {fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{fullName}</h4>
+                            <p className="text-sm text-gray-500">{email}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Enrolled: {enrolledDate}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setRemoveStudentConfirm({ id: enrollment.id, name: fullName })}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                          title="Remove student"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -1838,6 +1938,43 @@ export default function CourseDashboard() {
                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
                   ) : (
                     <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Student Confirmation Modal */}
+      {removeStudentConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Remove Student</h3>
+              <p className="text-gray-500 text-center mb-6">
+                Are you sure you want to remove <span className="font-medium text-gray-900">"{removeStudentConfirm.name}"</span> from this course?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRemoveStudentConfirm(null)}
+                  disabled={removingStudent}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRemoveStudent}
+                  disabled={removingStudent}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {removingStudent ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Removing...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Remove</>
                   )}
                 </button>
               </div>
