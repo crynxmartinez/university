@@ -133,7 +133,7 @@ app.get('/api/debug/migrate', async (req, res) => {
         "status" TEXT NOT NULL DEFAULT 'IN_PROGRESS',
         "score" DOUBLE PRECISION,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "ExamAttempt_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "ExamAttempt_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT "ExamAttempt_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -191,6 +191,39 @@ app.get('/api/debug/migrate', async (req, res) => {
       error: error.message,
       code: error.code
     })
+  }
+})
+
+// Debug endpoint to check tables
+app.get('/api/debug/check-tables', async (req, res) => {
+  try {
+    const tables = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `
+    
+    // Check if exam exists
+    const exam = await prisma.exam.findFirst({
+      include: {
+        questions: {
+          include: { choices: true }
+        }
+      }
+    })
+    
+    res.json({ 
+      tables: tables.map(t => t.table_name),
+      sampleExam: exam ? {
+        id: exam.id,
+        title: exam.title,
+        questionCount: exam.questions?.length || 0,
+        isPublished: exam.isPublished
+      } : null
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
 })
 
