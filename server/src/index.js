@@ -1,5 +1,6 @@
 import express from 'express'
 import dotenv from 'dotenv'
+import prisma from './lib/prisma.js'
 import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import programRoutes from './routes/programs.js'
@@ -48,6 +49,39 @@ app.use('/api/exams', examRoutes)
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Assalaam University API' })
+})
+
+// Debug endpoint to test Prisma connection and schema
+app.get('/api/debug/schema', async (req, res) => {
+  try {
+    // Test basic exam query
+    const examCount = await prisma.exam.count()
+    
+    // Try to check if new fields exist by querying with them
+    const testExam = await prisma.exam.findFirst({
+      select: {
+        id: true,
+        title: true,
+        timeLimit: true,
+        maxTabSwitch: true,
+        isPublished: true
+      }
+    })
+    
+    res.json({ 
+      status: 'ok', 
+      examCount,
+      testExam,
+      message: 'Schema looks good!'
+    })
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      error: error.message,
+      code: error.code,
+      meta: error.meta
+    })
+  }
 })
 
 // Start server (only in development)
