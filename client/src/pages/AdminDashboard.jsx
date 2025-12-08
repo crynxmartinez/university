@@ -685,6 +685,13 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
+                                onClick={() => navigate(`/admin/programs/${p.id}`)}
+                                className="px-3 py-1.5 text-xs bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f]"
+                                title="Manage"
+                              >
+                                Manage
+                              </button>
+                              <button
                                 onClick={() => openEditProgram(p)}
                                 className="text-gray-400 hover:text-[#1e3a5f] p-1"
                                 title="Edit"
