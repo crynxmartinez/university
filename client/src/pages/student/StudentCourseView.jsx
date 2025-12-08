@@ -154,12 +154,19 @@ export default function StudentCourseView() {
     }
   }
 
-  // Fetch exams when switching to exams view
+  // Fetch exams when switching to exams view OR when selecting an exam session
   useEffect(() => {
     if (course?.id && viewMode === 'exams') {
       fetchExams()
     }
   }, [course?.id, viewMode])
+
+  // Also fetch exams when an exam session is selected (for attempt status)
+  useEffect(() => {
+    if (course?.id && selectedSession && isExamSession(selectedSession)) {
+      fetchExams()
+    }
+  }, [course?.id, selectedSession?.id])
 
   const fetchExams = async () => {
     if (!course?.id) return
@@ -1160,18 +1167,33 @@ export default function StudentCourseView() {
               {/* Session Banner for LIVE courses - EXAM type */}
               {course.type === 'LIVE' && selectedSession && isExamSession(selectedSession) && (() => {
                 const examId = selectedSession.examId
-                const completed = isExamCompleted(examId)
-                const inProgress = isExamInProgress(examId)
-                const attempt = getExamAttempt(examId)
+                const examData = availableExams.find(e => e.id === examId)
+                const completed = examData?.attempt?.status === 'SUBMITTED'
+                const inProgress = examData?.attempt?.status === 'IN_PROGRESS'
+                const attempt = examData?.attempt || null
                 
                 // Debug logging
                 console.log('EXAM BANNER DEBUG:', {
                   examId,
+                  examData,
                   completed,
                   inProgress,
                   attempt,
-                  availableExams: availableExams.map(e => ({ id: e.id, attempt: e.attempt }))
+                  loadingExams,
+                  availableExamsCount: availableExams.length
                 })
+                
+                // Show loading while fetching exam data
+                if (loadingExams && !examData) {
+                  return (
+                    <div className="rounded-xl p-6 mb-6 bg-gradient-to-r from-gray-600 to-gray-400 text-white">
+                      <div className="flex items-center gap-4">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>Loading exam status...</span>
+                      </div>
+                    </div>
+                  )
+                }
                 
                 return (
                 <div className={`rounded-xl p-6 mb-6 text-white ${
