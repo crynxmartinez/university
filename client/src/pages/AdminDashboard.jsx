@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image, MapPin, Video, Calendar, Link as LinkIcon, MessageSquare, Award, Globe } from 'lucide-react'
+import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, GraduationCap, BookOpen, Menu, Search, MoreVertical, Eye, Edit, KeyRound, Trash2, ChevronLeft, ChevronRight, Plus, DollarSign, Clock, Image, MapPin, Video, Radio, Calendar, Link as LinkIcon, MessageSquare, Award, Globe, ExternalLink } from 'lucide-react'
 import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
 import { getAdminPrograms, deleteAdminProgram } from '../api/adminPrograms'
 import { getAdminCourses, deleteAdminCourse } from '../api/adminCourses'
@@ -703,59 +703,57 @@ export default function AdminDashboard() {
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {courses.map((c) => (
-                    <div 
-                      key={c.id} 
-                      className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition cursor-pointer"
-                      onClick={() => navigate(`/admin/courses/${c.id}`)}
+                    <div
+                      key={c.id}
+                      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition flex flex-col"
                     >
-                      {/* Image */}
-                      <div className={`h-40 relative ${c.type === 'LIVE' ? 'bg-gradient-to-br from-purple-600 to-purple-800' : 'bg-gradient-to-br from-blue-600 to-blue-800'}`}>
-                        <div className="w-full h-full flex items-center justify-center">
-                          {c.type === 'LIVE' ? (
-                            <Video className="w-16 h-16 text-white/30" />
-                          ) : (
-                            <GraduationCap className="w-16 h-16 text-white/30" />
-                          )}
-                        </div>
-                        <div className="absolute top-3 right-3 flex gap-2">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            c.isActive ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'
+                      {/* Course Header - thin colored bar */}
+                      <div className={`h-2 ${c.type === 'LIVE' ? 'bg-purple-500' : 'bg-[#1e3a5f]'}`}></div>
+                      
+                      <div className="p-5 flex flex-col flex-1">
+                        {/* Type & Status Badges */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                            c.type === 'RECORDED' 
+                              ? 'bg-blue-100 text-blue-700' 
+                              : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {c.type === 'RECORDED' ? <Video className="w-3 h-3" /> : <Radio className="w-3 h-3" />}
+                            {c.type === 'RECORDED' ? 'Recorded' : 'Live'}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            c.isActive 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-gray-100 text-gray-600'
                           }`}>
                             {c.isActive ? 'Active' : 'Inactive'}
                           </span>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            c.type === 'LIVE' ? 'bg-purple-200 text-purple-800' : 'bg-blue-200 text-blue-800'
-                          }`}>
-                            {c.type}
-                          </span>
                         </div>
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{c.name}</h3>
-                        <p className="text-xs text-gray-500 mb-0.5">
-                          <span className="font-medium">Created by:</span> {c.createdBy?.profile ? `${c.createdBy.profile.firstName} ${c.createdBy.profile.lastName}` : (c.createdBy?.role === 'SUPER_ADMIN' ? 'Admin' : 'Unknown')}
+
+                        {/* Course Name */}
+                        <h3 className="font-semibold text-gray-900 text-lg mb-2">{c.name}</h3>
+                        
+                        {/* Description */}
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
+                          {c.description || 'No description'}
                         </p>
-                        <p className="text-xs text-gray-500 mb-1">
-                          <span className="font-medium">Assigned to:</span> {c.teacher?.user?.profile ? `${c.teacher.user.profile.firstName} ${c.teacher.user.profile.lastName}` : 'No teacher assigned'}
-                        </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-lg font-bold text-[#1e3a5f]">₱{c.price?.toLocaleString() || '0'}</span>
-                          <span className="text-sm text-gray-500">{c.enrollments?.length || 0} enrolled</span>
+                        
+                        {/* Stats */}
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                          <span>{c.modules?.length || 0} modules</span>
+                          {c.type === 'LIVE' && (
+                            <span>{c.sessions?.length || 0} sessions</span>
+                          )}
                         </div>
-                        <div className="flex gap-2 mt-4">
+
+                        {/* Action Button */}
+                        <div className="pt-4 border-t mt-auto">
                           <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/courses/${c.id}`) }}
-                            className="flex-1 py-2 bg-[#1e3a5f] text-white text-sm rounded-lg hover:bg-[#2d5a87]"
+                            onClick={() => navigate(`/admin/courses/${c.id}`)}
+                            className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
                           >
-                            Manage
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeleteCourseConfirm(c) }}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                            <ExternalLink className="w-4 h-4" />
+                            Dashboard
                           </button>
                         </div>
                       </div>
