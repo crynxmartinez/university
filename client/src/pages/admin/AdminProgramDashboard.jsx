@@ -757,8 +757,8 @@ export default function AdminProgramDashboard() {
                           return (
                             <tr key={enrollment.id} className="hover:bg-gray-50">
                               <td className="px-4 py-3">
-                                <div className="font-medium">{enrollment.student?.user?.profile?.fullName || 'Unknown'}</div>
-                                <div className="text-sm text-gray-500">{enrollment.student?.user?.email}</div>
+                                <div className="font-medium">{enrollment.student?.profile ? `${enrollment.student.profile.firstName} ${enrollment.student.profile.lastName}` : 'Unknown'}</div>
+                                <div className="text-sm text-gray-500">{enrollment.student?.email}</div>
                               </td>
                               <td className="px-4 py-3 text-center text-sm text-gray-500">
                                 {new Date(enrollment.enrolledAt).toLocaleDateString()}

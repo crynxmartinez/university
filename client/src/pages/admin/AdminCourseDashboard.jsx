@@ -810,10 +810,10 @@ export default function AdminCourseDashboard() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-medium">
-                                {enrollment.student?.user?.profile?.fullName?.charAt(0) || 'S'}
+                                {enrollment.student?.user?.profile?.firstName?.charAt(0) || 'S'}
                               </div>
                               <span className="font-medium text-gray-900">
-                                {enrollment.student?.user?.profile?.fullName || 'Unknown'}
+                                {enrollment.student?.user?.profile ? `${enrollment.student.user.profile.firstName} ${enrollment.student.user.profile.lastName}` : 'Unknown'}
                               </span>
                             </div>
                           </td>
@@ -915,13 +915,13 @@ export default function AdminCourseDashboard() {
                       <option value="">-- No Teacher --</option>
                       {teachers.map((teacher) => (
                         <option key={teacher.id} value={teacher.id}>
-                          {teacher.user?.profile?.fullName || teacher.user?.email}
+                          {teacher.user?.profile ? `${teacher.user.profile.firstName} ${teacher.user.profile.lastName}` : teacher.user?.email}
                         </option>
                       ))}
                     </select>
                   ) : (
                     <p className="text-gray-900">
-                      {course.teacher?.user?.profile?.fullName || 'No teacher assigned'}
+                      {course.teacher?.user?.profile ? `${course.teacher.user.profile.firstName} ${course.teacher.user.profile.lastName}` : 'No teacher assigned'}
                     </p>
                   )}
                 </div>

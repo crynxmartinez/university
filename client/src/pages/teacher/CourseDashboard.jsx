@@ -322,7 +322,8 @@ export default function CourseDashboard() {
   }
 
   const filteredStudents = enrolledStudents.filter(enrollment => {
-    const name = enrollment.student?.user?.profile?.fullName || enrollment.student?.user?.email || ''
+    const profile = enrollment.student?.user?.profile
+    const name = profile ? `${profile.firstName} ${profile.lastName}` : (enrollment.student?.user?.email || '')
     const email = enrollment.student?.user?.email || ''
     const search = studentSearchTerm.toLowerCase()
     return name.toLowerCase().includes(search) || email.toLowerCase().includes(search)
@@ -683,7 +684,7 @@ export default function CourseDashboard() {
       const existingScore = exam.scores?.find(s => s.studentId === enrollment.student.id)
       return {
         studentId: enrollment.student.id,
-        studentName: enrollment.student.user.profile?.fullName || enrollment.student.user.email,
+        studentName: enrollment.student.user.profile ? `${enrollment.student.user.profile.firstName} ${enrollment.student.user.profile.lastName}` : enrollment.student.user.email,
         email: enrollment.student.user.email,
         score: existingScore?.score ?? '',
         notes: existingScore?.notes || ''
@@ -1585,7 +1586,7 @@ export default function CourseDashboard() {
                     const student = enrollment.student
                     const user = student?.user
                     const profile = user?.profile
-                    const fullName = profile?.fullName || user?.email?.split('@')[0] || 'Unknown'
+                    const fullName = profile ? `${profile.firstName} ${profile.lastName}` : (user?.email?.split('@')[0] || 'Unknown')
                     const email = user?.email || ''
                     const enrolledDate = new Date(enrollment.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',

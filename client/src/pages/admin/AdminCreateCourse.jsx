@@ -201,7 +201,7 @@ export default function AdminCreateCourse() {
                 <option value="">-- No Teacher (Assign Later) --</option>
                 {teachers.map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>
-                    {teacher.user?.profile?.fullName || teacher.user?.email || 'Unknown Teacher'}
+                    {teacher.user?.profile ? `${teacher.user.profile.firstName} ${teacher.user.profile.lastName}` : (teacher.user?.email || 'Unknown Teacher')}
                   </option>
                 ))}
               </select>

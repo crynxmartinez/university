@@ -140,10 +140,6 @@ export default function AdminDashboard() {
     setCoursesLoading(true)
     try {
       const data = await getAdminCourses()
-      console.log('Courses data:', data)
-      console.log('First course teacher:', data[0]?.teacher)
-      console.log('First course teacher.user:', data[0]?.teacher?.user)
-      console.log('First course teacher.user.profile:', data[0]?.teacher?.user?.profile)
       setCourses(data)
     } catch (err) {
       console.error('Failed to fetch courses:', err)
@@ -739,7 +735,7 @@ export default function AdminDashboard() {
                       <div className="p-4">
                         <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{c.name}</h3>
                         <p className="text-sm text-gray-500 mb-2">
-                          {c.teacher?.user?.profile?.fullName || 'No teacher assigned'}
+                          {c.teacher?.user?.profile ? `${c.teacher.user.profile.firstName} ${c.teacher.user.profile.lastName}` : 'No teacher assigned'}
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-[#1e3a5f]">₱{c.price?.toLocaleString() || '0'}</span>
