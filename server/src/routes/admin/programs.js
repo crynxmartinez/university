@@ -185,6 +185,28 @@ router.put('/:id', async (req, res) => {
   }
 })
 
+// PUT /api/admin/programs/:id/toggle-active - Toggle program active status
+router.put('/:id/toggle-active', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const existing = await prisma.program.findUnique({ where: { id } })
+    if (!existing) {
+      return res.status(404).json({ error: 'Program not found' })
+    }
+
+    const program = await prisma.program.update({
+      where: { id },
+      data: { isActive: !existing.isActive }
+    })
+
+    res.json(program)
+  } catch (error) {
+    console.error('Toggle program active error:', error)
+    res.status(500).json({ error: 'Failed to toggle program status' })
+  }
+})
+
 // DELETE /api/admin/programs/:id - Delete program
 router.delete('/:id', async (req, res) => {
   try {
@@ -622,6 +644,59 @@ router.get('/:programId/students', async (req, res) => {
   } catch (error) {
     console.error('Get students error:', error)
     res.status(500).json({ error: 'Failed to fetch students' })
+  }
+})
+
+// POST /api/admin/programs/:programId/students - Enroll a student
+router.post('/:programId/students', async (req, res) => {
+  try {
+    const { programId } = req.params
+    const { studentId } = req.body
+
+    // Check if already enrolled
+    const existing = await prisma.programEnrollment.findFirst({
+      where: { programId, studentId }
+    })
+
+    if (existing) {
+      return res.status(400).json({ error: 'Student already enrolled' })
+    }
+
+    const enrollment = await prisma.programEnrollment.create({
+      data: {
+        programId,
+        studentId,
+        status: 'ACTIVE'
+      },
+      include: {
+        student: {
+          include: {
+            user: { include: { profile: true } }
+          }
+        }
+      }
+    })
+
+    res.status(201).json(enrollment)
+  } catch (error) {
+    console.error('Enroll student error:', error)
+    res.status(500).json({ error: 'Failed to enroll student' })
+  }
+})
+
+// DELETE /api/admin/programs/:programId/students/:studentId - Remove student
+router.delete('/:programId/students/:studentId', async (req, res) => {
+  try {
+    const { programId, studentId } = req.params
+
+    await prisma.programEnrollment.deleteMany({
+      where: { programId, studentId }
+    })
+
+    res.json({ message: 'Student removed successfully' })
+  } catch (error) {
+    console.error('Remove student error:', error)
+    res.status(500).json({ error: 'Failed to remove student' })
   }
 })
 

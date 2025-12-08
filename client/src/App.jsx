@@ -10,8 +10,12 @@ import LoginPage from './pages/LoginPage'
 import SignUpPage from './pages/SignUpPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminCreateProgram from './pages/admin/AdminCreateProgram'
 import AdminProgramDashboard from './pages/admin/AdminProgramDashboard'
 import AdminProgramExamBuilder from './pages/admin/AdminProgramExamBuilder'
+import AdminCreateCourse from './pages/admin/AdminCreateCourse'
+import AdminCourseDashboard from './pages/admin/AdminCourseDashboard'
+import AdminCourseExamBuilder from './pages/admin/AdminCourseExamBuilder'
 import RegistrarDashboard from './pages/RegistrarDashboard'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import CreateCourse from './pages/teacher/CreateCourse'
@@ -50,9 +54,12 @@ function App() {
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/programs/create" element={<AdminCreateProgram />} />
         <Route path="/admin/programs/:id" element={<AdminProgramDashboard />} />
         <Route path="/admin/programs/:id/exam/:examId" element={<AdminProgramExamBuilder />} />
-        <Route path="/admin/courses/:id" element={<CourseDashboard />} />
+        <Route path="/admin/courses/create" element={<AdminCreateCourse />} />
+        <Route path="/admin/courses/:id" element={<AdminCourseDashboard />} />
+        <Route path="/admin/courses/:id/exam/:examId" element={<AdminCourseExamBuilder />} />
         <Route path="/registrar" element={<RegistrarDashboard />} />
         <Route path="/teacher" element={<TeacherDashboard />} />
         <Route path="/teacher/courses/create" element={<CreateCourse />} />

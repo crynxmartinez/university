@@ -32,6 +32,11 @@ export const deleteAdminProgram = async (id) => {
   return res.data
 }
 
+export const toggleAdminProgramActive = async (id) => {
+  const res = await axios.put(`${API_URL}/admin/programs/${id}/toggle-active`, {}, getAuthHeaders())
+  return res.data
+}
+
 // ============ MODULE CRUD ============
 
 export const createProgramModule = async (programId, data) => {
@@ -126,5 +131,15 @@ export const updateProgramAttendance = async (sessionId, attendance) => {
 
 export const getProgramStudents = async (programId) => {
   const res = await axios.get(`${API_URL}/admin/programs/${programId}/students`, getAuthHeaders())
+  return res.data
+}
+
+export const enrollProgramStudent = async (programId, studentId) => {
+  const res = await axios.post(`${API_URL}/admin/programs/${programId}/students`, { studentId }, getAuthHeaders())
+  return res.data
+}
+
+export const removeProgramStudent = async (programId, studentId) => {
+  const res = await axios.delete(`${API_URL}/admin/programs/${programId}/students/${studentId}`, getAuthHeaders())
   return res.data
 }

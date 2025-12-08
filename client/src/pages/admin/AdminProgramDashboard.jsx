@@ -8,12 +8,13 @@ import {
   GripVertical, CheckSquare, AlertTriangle, Folder, Award
 } from 'lucide-react'
 import { 
-  getAdminProgram, updateAdminProgram, deleteAdminProgram,
-  createProgramModule, updateProgramModule, deleteProgramModule,
-  createProgramLesson, updateProgramLesson, deleteProgramLesson,
+  getAdminProgram, updateAdminProgram, toggleAdminProgramActive, deleteAdminProgram,
+  createProgramModule, updateProgramModule, deleteProgramModule, reorderProgramModules,
+  createProgramLesson, updateProgramLesson, deleteProgramLesson, reorderProgramLessons,
   getProgramSessions, createProgramSession, updateProgramSession, deleteProgramSession,
   addProgramSessionMaterial, deleteProgramSessionMaterial,
-  getProgramStudents
+  getProgramAttendance, updateProgramAttendance,
+  getProgramStudents, enrollProgramStudent, removeProgramStudent
 } from '../../api/adminPrograms'
 import { 
   getProgramExams, createProgramExam, updateProgramExam, deleteProgramExam,
