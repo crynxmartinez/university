@@ -734,10 +734,10 @@ export default function AdminDashboard() {
                       {/* Content */}
                       <div className="p-4">
                         <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{c.name}</h3>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {c.teacher?.user?.profile ? `${c.teacher.user.profile.firstName} ${c.teacher.user.profile.lastName}` : 'No teacher assigned'}
+                        <p className="text-sm text-gray-500 mb-1">
+                          <span className="font-medium">Assigned to:</span> {c.teacher?.user?.profile ? `${c.teacher.user.profile.firstName} ${c.teacher.user.profile.lastName}` : 'No teacher assigned'}
                         </p>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mt-2">
                           <span className="text-lg font-bold text-[#1e3a5f]">₱{c.price?.toLocaleString() || '0'}</span>
                           <span className="text-sm text-gray-500">{c.enrollments?.length || 0} enrolled</span>
                         </div>
