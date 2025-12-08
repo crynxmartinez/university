@@ -95,6 +95,7 @@ model User {
   registrar Registrar?
   programEnrollments ProgramEnrollment[]
   notifications Notification[]
+  coursesCreated Course[] @relation("CoursesCreated")
 }
 
 // Profile - personal information
@@ -401,7 +402,7 @@ model ProgramEnrollment {
 
 // ============ COURSE MODELS ============
 
-// Course - created by teacher
+// Course - created by teacher or admin
 model Course {
   id              String     @id @default(cuid())
   slug            String     @unique  // URL-friendly identifier (e.g., "basic-fiqh-101")
@@ -417,11 +418,13 @@ model Course {
   enrollmentEnd   DateTime?  // When enrollment closes
   teacherId       String
   programId       String?
+  createdById     String?    // Who created this course (admin or teacher's user)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
   teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   program     Program?        @relation(fields: [programId], references: [id], onDelete: SetNull)
+  createdBy   User?           @relation("CoursesCreated", fields: [createdById], references: [id], onDelete: SetNull)
   modules     Module[]
   enrollments Enrollment[]
   sessions    ScheduledSession[]

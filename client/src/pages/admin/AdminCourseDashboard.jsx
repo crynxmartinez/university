@@ -903,6 +903,14 @@ export default function AdminCourseDashboard() {
                   )}
                 </div>
 
+                {/* Created By (Read-only) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Created By</label>
+                  <p className="text-gray-900">
+                    {course.createdBy?.profile ? `${course.createdBy.profile.firstName} ${course.createdBy.profile.lastName}` : (course.createdBy?.role === 'SUPER_ADMIN' ? 'Admin' : 'Unknown')}
+                  </p>
+                </div>
+
                 {/* Assigned Teacher */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Teacher</label>

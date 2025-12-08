@@ -53,6 +53,9 @@ router.get('/', async (req, res) => {
             }
           }
         },
+        createdBy: {
+          include: { profile: true }
+        },
         modules: {
           include: {
             lessons: true
@@ -105,6 +108,9 @@ router.get('/:id', async (req, res) => {
               include: { profile: true }
             }
           }
+        },
+        createdBy: {
+          include: { profile: true }
         },
         modules: {
           include: {
@@ -178,13 +184,17 @@ router.post('/', async (req, res) => {
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : null,
-        teacherId: teacherId || null
+        teacherId: teacherId || null,
+        createdById: req.user.id  // Track who created the course (admin)
       },
       include: {
         teacher: {
           include: {
             user: { include: { profile: true } }
           }
+        },
+        createdBy: {
+          include: { profile: true }
         },
         modules: true,
         sessions: true

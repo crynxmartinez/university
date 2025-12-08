@@ -231,7 +231,8 @@ router.post('/', authenticate, async (req, res) => {
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : null,
-        teacherId: req.user.teacher.id
+        teacherId: req.user.teacher.id,
+        createdById: req.user.id  // Track who created the course
       },
       include: {
         modules: true,
