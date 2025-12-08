@@ -799,7 +799,20 @@ export default function StudentDashboard() {
                                 )}
                               </div>
                               
-                              <p className="text-sm text-[#f7941d] font-medium mt-3">Click to view details →</p>
+                              <div className="flex gap-2 mt-3">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/student/programs/${program.id}`) }}
+                                  className="flex-1 py-2 bg-[#f7941d] text-white text-sm rounded-lg hover:bg-[#e8850f]"
+                                >
+                                  View Program
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedEnrolledProgram(program) }}
+                                  className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
+                                >
+                                  Info
+                                </button>
+                              </div>
                             </div>
                           </div>
                         )
