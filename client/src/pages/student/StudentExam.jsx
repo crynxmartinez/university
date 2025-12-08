@@ -13,6 +13,7 @@ export default function StudentExam() {
   const { id: courseSlug, examId } = useParams()
   const [searchParams] = useSearchParams()
   const sessionId = searchParams.get('sessionId') // For retake tracking
+  const attemptId = searchParams.get('attemptId') // For viewing results directly
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -42,10 +43,32 @@ export default function StudentExam() {
   const [attemptNumber, setAttemptNumber] = useState(1)
   const [previousScore, setPreviousScore] = useState(null)
 
-  // Start exam on mount
+  // Start exam or load results on mount
   useEffect(() => {
-    handleStartExam()
-  }, [examId])
+    if (attemptId) {
+      // If attemptId is provided, load results directly
+      loadResults(attemptId)
+    } else {
+      // Otherwise, start/resume exam
+      handleStartExam()
+    }
+  }, [examId, attemptId])
+
+  // Load results directly when attemptId is provided
+  const loadResults = async (id) => {
+    setLoading(true)
+    try {
+      const resultData = await getExamResult(id)
+      setResult(resultData)
+      setShowResult(true)
+    } catch (error) {
+      console.error('Failed to load results:', error)
+      toast.error('Failed to load exam results')
+      navigate(`/student/courses/${courseSlug}`)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleStartExam = async () => {
     setLoading(true)
@@ -79,8 +102,8 @@ export default function StudentExam() {
       }
     } catch (error) {
       console.error('Failed to start exam:', error)
-      if (error.response?.data?.error === 'You have already completed this exam') {
-        toast.error('You have already completed this exam')
+      if (error.response?.data?.error?.includes('already completed')) {
+        toast.error('You have already completed this exam for this session')
         navigate(`/student/courses/${courseSlug}`)
       } else {
         toast.error('Failed to load exam')

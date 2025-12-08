@@ -1233,7 +1233,7 @@ export default function StudentCourseView() {
                     {completed ? (
                       <div className="text-right">
                         <button
-                          onClick={() => navigate(`/student/courses/${id}/exam/${examId}`)}
+                          onClick={() => navigate(`/student/courses/${id}/exam/${examId}?attemptId=${attempt?.id}`)}
                           className="flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition shadow-lg"
                         >
                           <CheckCircle className="w-5 h-5" />
