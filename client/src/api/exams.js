@@ -97,8 +97,8 @@ export const getAvailableExams = async (courseId) => {
   return response.data
 }
 
-export const startExam = async (examId) => {
-  const response = await axios.post(`${API_URL}/exams/${examId}/start`, {}, getAuthHeader())
+export const startExam = async (examId, sessionId = null) => {
+  const response = await axios.post(`${API_URL}/exams/${examId}/start`, { sessionId }, getAuthHeader())
   return response.data
 }
 

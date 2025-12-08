@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   ArrowLeft, Clock, AlertTriangle, CheckCircle, XCircle,
   ChevronLeft, ChevronRight, Send, Loader2
@@ -11,6 +11,8 @@ import {
 
 export default function StudentExam() {
   const { id: courseSlug, examId } = useParams()
+  const [searchParams] = useSearchParams()
+  const sessionId = searchParams.get('sessionId') // For retake tracking
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -36,6 +38,10 @@ export default function StudentExam() {
   const [result, setResult] = useState(null)
   const [showResult, setShowResult] = useState(false)
 
+  // Retake tracking
+  const [attemptNumber, setAttemptNumber] = useState(1)
+  const [previousScore, setPreviousScore] = useState(null)
+
   // Start exam on mount
   useEffect(() => {
     handleStartExam()
@@ -44,7 +50,7 @@ export default function StudentExam() {
   const handleStartExam = async () => {
     setLoading(true)
     try {
-      const data = await startExam(examId)
+      const data = await startExam(examId, sessionId)
       
       // Check if already submitted
       if (data.attempt?.status !== 'IN_PROGRESS') {
@@ -61,6 +67,8 @@ export default function StudentExam() {
       setQuestions(data.exam.questions || [])
       setTabSwitchCount(data.attempt.tabSwitchCount || 0)
       setMaxTabSwitch(data.exam.maxTabSwitch || 3)
+      setAttemptNumber(data.attemptNumber || 1)
+      setPreviousScore(data.previousScore)
 
       // Calculate time remaining
       if (data.exam.timeLimit) {

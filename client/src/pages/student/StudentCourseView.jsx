@@ -1539,18 +1539,44 @@ export default function StudentCourseView() {
       )}
 
       {/* Pre-Exam Confirmation Modal */}
-      {examConfirmModal && (
+      {examConfirmModal && (() => {
+        const examData = availableExams.find(e => e.id === examConfirmModal.exam?.id)
+        const hasAttempt = examData?.attemptCount > 0
+        const latestScore = examData?.latestScore
+        const isRetake = hasAttempt && latestScore !== null
+        
+        return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isRetake ? 'bg-orange-100' : 'bg-yellow-100'
+              }`}>
+                <AlertTriangle className={`w-6 h-6 ${isRetake ? 'text-orange-600' : 'text-yellow-600'}`} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Start Exam?</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {isRetake ? 'Retake Exam?' : 'Start Exam?'}
+                </h3>
                 <p className="text-sm text-gray-500">{examConfirmModal.exam?.title}</p>
               </div>
             </div>
+            
+            {/* Retake Warning */}
+            {isRetake && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Retake Warning
+                </h4>
+                <p className="text-sm text-orange-700">
+                  You already took this exam and scored <strong>{latestScore}/{examData?.totalPoints}</strong> ({Math.round((latestScore / examData?.totalPoints) * 100)}%).
+                </p>
+                <p className="text-sm text-orange-700 mt-1">
+                  Taking this exam again will <strong>replace your previous score</strong> with your new score.
+                </p>
+              </div>
+            )}
             
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1567,6 +1593,12 @@ export default function StudentCourseView() {
                 <span className="text-sm text-gray-600">Tab Switch Limit</span>
                 <span className="text-sm font-medium text-gray-900">{examConfirmModal.exam?.maxTabSwitch || 3}</span>
               </div>
+              {isRetake && (
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <span className="text-sm text-orange-600">Attempt Number</span>
+                  <span className="text-sm font-medium text-orange-900">#{(examData?.attemptCount || 0) + 1}</span>
+                </div>
+              )}
             </div>
             
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
@@ -1590,18 +1622,23 @@ export default function StudentCourseView() {
               </button>
               <button
                 onClick={() => {
-                  navigate(`/student/courses/${id}/exam/${examConfirmModal.exam.id}`)
+                  // Pass sessionId via URL params for retake tracking
+                  const sessionId = examConfirmModal.sessionId || ''
+                  navigate(`/student/courses/${id}/exam/${examConfirmModal.exam.id}${sessionId ? `?sessionId=${sessionId}` : ''}`)
                   setExamConfirmModal(null)
                 }}
-                className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                className={`flex-1 px-4 py-2.5 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+                  isRetake ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'
+                }`}
               >
                 <FileText className="w-4 h-4" />
-                Start Exam
+                {isRetake ? 'Retake Exam' : 'Start Exam'}
               </button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
