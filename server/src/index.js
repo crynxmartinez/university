@@ -380,7 +380,7 @@ app.get('/api/debug/create-program-tables', async (req, res) => {
       logs.push('ProgramExam: ' + e.message)
     }
 
-    // Create ProgramSession table
+    // Create ProgramSession table (using TEXT for type to avoid enum issues)
     try {
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "ProgramSession" (
@@ -391,21 +391,27 @@ app.get('/api/debug/create-program-tables', async (req, res) => {
           "date" TIMESTAMP(3) NOT NULL,
           "startTime" TEXT NOT NULL,
           "endTime" TEXT NOT NULL,
-          "type" "SessionType" NOT NULL DEFAULT 'CLASS',
+          "type" TEXT NOT NULL DEFAULT 'CLASS',
           "meetingLink" TEXT,
           "notes" TEXT,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT "ProgramSession_pkey" PRIMARY KEY ("id"),
-          CONSTRAINT "ProgramSession_programId_fkey" FOREIGN KEY ("programId") REFERENCES "Program"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-          CONSTRAINT "ProgramSession_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "ProgramLesson"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-          CONSTRAINT "ProgramSession_examId_fkey" FOREIGN KEY ("examId") REFERENCES "ProgramExam"("id") ON DELETE CASCADE ON UPDATE CASCADE
+          CONSTRAINT "ProgramSession_programId_fkey" FOREIGN KEY ("programId") REFERENCES "Program"("id") ON DELETE CASCADE ON UPDATE CASCADE
         )
       `)
       logs.push('Created ProgramSession table')
     } catch (e) {
       logs.push('ProgramSession: ' + e.message)
     }
+
+    // Add foreign keys to ProgramSession separately
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ProgramSession" ADD CONSTRAINT "ProgramSession_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "ProgramLesson"("id") ON DELETE SET NULL ON UPDATE CASCADE`)
+    } catch (e) { /* ignore if exists */ }
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ProgramSession" ADD CONSTRAINT "ProgramSession_examId_fkey" FOREIGN KEY ("examId") REFERENCES "ProgramExam"("id") ON DELETE SET NULL ON UPDATE CASCADE`)
+    } catch (e) { /* ignore if exists */ }
 
     // Create ProgramSessionMaterial table
     try {
@@ -425,14 +431,14 @@ app.get('/api/debug/create-program-tables', async (req, res) => {
       logs.push('ProgramSessionMaterial: ' + e.message)
     }
 
-    // Create ProgramAttendance table
+    // Create ProgramAttendance table (using TEXT for status to avoid enum issues)
     try {
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "ProgramAttendance" (
           "id" TEXT NOT NULL,
           "sessionId" TEXT NOT NULL,
           "studentId" TEXT NOT NULL,
-          "status" "AttendanceStatus" NOT NULL DEFAULT 'PRESENT',
+          "status" TEXT NOT NULL DEFAULT 'PRESENT',
           "joinedAt" TIMESTAMP(3),
           "markedBy" TEXT NOT NULL DEFAULT 'AUTO',
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
