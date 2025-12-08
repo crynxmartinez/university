@@ -1167,20 +1167,28 @@ export default function StudentCourseView() {
               {/* Session Banner for LIVE courses - EXAM type */}
               {course.type === 'LIVE' && selectedSession && isExamSession(selectedSession) && (() => {
                 const examId = selectedSession.examId
+                const sessionId = selectedSession.id
                 const examData = availableExams.find(e => e.id === examId)
-                const completed = examData?.attempt?.status === 'SUBMITTED'
-                const inProgress = examData?.attempt?.status === 'IN_PROGRESS'
-                const attempt = examData?.attempt || null
+                
+                // Check if there's an attempt for THIS SPECIFIC SESSION
+                const attemptForThisSession = examData?.attempt?.sessionId === sessionId ? examData.attempt : null
+                const completed = attemptForThisSession?.status === 'SUBMITTED'
+                const inProgress = attemptForThisSession?.status === 'IN_PROGRESS'
+                
+                // For retake: check if there's ANY previous attempt (for showing retake warning)
+                const hasPreviousAttempt = examData?.attemptCount > 0
+                const latestScore = examData?.latestScore
                 
                 // Debug logging
                 console.log('EXAM BANNER DEBUG:', {
                   examId,
-                  examData,
+                  sessionId,
+                  attemptForThisSession,
                   completed,
                   inProgress,
-                  attempt,
-                  loadingExams,
-                  availableExamsCount: availableExams.length
+                  hasPreviousAttempt,
+                  latestScore,
+                  examData
                 })
                 
                 // Show loading while fetching exam data
@@ -1199,11 +1207,13 @@ export default function StudentCourseView() {
                 <div className={`rounded-xl p-6 mb-6 text-white ${
                   completed
                     ? 'bg-gradient-to-r from-blue-600 to-blue-400'
-                    : isSessionOngoing(selectedSession) 
-                      ? 'bg-gradient-to-r from-green-600 to-green-400' 
-                      : isSessionPast(selectedSession)
-                        ? 'bg-gradient-to-r from-gray-600 to-gray-400'
-                        : 'bg-gradient-to-r from-red-600 to-red-400'
+                    : isSessionOngoing(selectedSession) && hasPreviousAttempt
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-400'
+                      : isSessionOngoing(selectedSession) 
+                        ? 'bg-gradient-to-r from-green-600 to-green-400' 
+                        : isSessionPast(selectedSession)
+                          ? 'bg-gradient-to-r from-gray-600 to-gray-400'
+                          : 'bg-gradient-to-r from-red-600 to-red-400'
                 }`}>
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
@@ -1216,11 +1226,13 @@ export default function StudentCourseView() {
                             ? 'Exam Completed' 
                             : inProgress 
                               ? 'Exam In Progress'
-                              : isSessionOngoing(selectedSession) 
-                                ? 'Exam Open Now!' 
-                                : isSessionPast(selectedSession) 
-                                  ? 'Exam Closed' 
-                                  : 'Upcoming Exam'}
+                              : isSessionOngoing(selectedSession) && hasPreviousAttempt
+                                ? 'Retake Available'
+                                : isSessionOngoing(selectedSession) 
+                                  ? 'Exam Open Now!' 
+                                  : isSessionPast(selectedSession) 
+                                    ? 'Exam Closed' 
+                                    : 'Upcoming Exam'}
                         </h3>
                         <p className="text-white/80 text-sm">
                           {selectedSession.exam?.title || 'Exam'}
@@ -1233,38 +1245,47 @@ export default function StudentCourseView() {
                     {completed ? (
                       <div className="text-right">
                         <button
-                          onClick={() => navigate(`/student/courses/${id}/exam/${examId}?attemptId=${attempt?.id}`)}
+                          onClick={() => navigate(`/student/courses/${id}/exam/${examId}?attemptId=${attemptForThisSession?.id}`)}
                           className="flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50 transition shadow-lg"
                         >
                           <CheckCircle className="w-5 h-5" />
                           View Results
                         </button>
-                        {attempt?.score !== null && attempt?.score !== undefined && (
+                        {attemptForThisSession?.score !== null && attemptForThisSession?.score !== undefined && (
                           <p className="text-white/80 text-sm mt-2">
-                            Score: {attempt.score}/{selectedSession.exam?.totalPoints || '?'}
+                            Score: {attemptForThisSession.score}/{selectedSession.exam?.totalPoints || '?'}
                           </p>
                         )}
                       </div>
                     ) : inProgress ? (
                       <button
-                        onClick={() => navigate(`/student/courses/${id}/exam/${examId}`)}
+                        onClick={() => navigate(`/student/courses/${id}/exam/${examId}?sessionId=${sessionId}`)}
                         className="flex items-center gap-2 bg-white text-yellow-600 px-6 py-3 rounded-lg font-medium hover:bg-yellow-50 transition shadow-lg"
                       >
                         <FileText className="w-5 h-5" />
                         Resume Exam
                       </button>
                     ) : isSessionOngoing(selectedSession) ? (
-                      <button
-                        onClick={() => setExamConfirmModal({ 
-                          exam: selectedSession.exam, 
-                          schedule: formatExamSchedule(selectedSession.examId),
-                          sessionId: selectedSession.id
-                        })}
-                        className="flex items-center gap-2 bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition shadow-lg"
-                      >
-                        <FileText className="w-5 h-5" />
-                        Take Exam Now
-                      </button>
+                      <div className="text-right">
+                        <button
+                          onClick={() => setExamConfirmModal({ 
+                            exam: selectedSession.exam, 
+                            schedule: formatExamSchedule(selectedSession.examId),
+                            sessionId: selectedSession.id
+                          })}
+                          className={`flex items-center gap-2 bg-white px-6 py-3 rounded-lg font-medium transition shadow-lg ${
+                            hasPreviousAttempt ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'
+                          }`}
+                        >
+                          <FileText className="w-5 h-5" />
+                          {hasPreviousAttempt ? 'Retake Exam' : 'Take Exam Now'}
+                        </button>
+                        {hasPreviousAttempt && latestScore !== null && (
+                          <p className="text-white/80 text-xs mt-2">
+                            Previous score: {latestScore}/{selectedSession.exam?.totalPoints || '?'}
+                          </p>
+                        )}
+                      </div>
                     ) : isSessionPast(selectedSession) ? (
                       <span className="text-white/60 text-sm">This exam has ended</span>
                     ) : (
