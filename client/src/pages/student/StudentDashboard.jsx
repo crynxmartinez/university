@@ -351,7 +351,11 @@ export default function StudentDashboard() {
                       <Folder className="w-6 h-6 text-[#1e3a5f]" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">{myProgramEnrollments.length}</p>
+                      {loading ? (
+                        <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{myProgramEnrollments.length}</p>
+                      )}
                       <p className="text-gray-600 text-sm">Enrolled Programs</p>
                     </div>
                   </div>
@@ -362,7 +366,11 @@ export default function StudentDashboard() {
                       <BookOpen className="w-6 h-6 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">{myCourseEnrollments.length}</p>
+                      {loading ? (
+                        <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{myCourseEnrollments.length}</p>
+                      )}
                       <p className="text-gray-600 text-sm">Enrolled Courses</p>
                     </div>
                   </div>
@@ -373,7 +381,11 @@ export default function StudentDashboard() {
                       <Calendar className="w-6 h-6 text-[#f7941d]" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">{myProgramEnrollments.filter(e => e.program?.schedule).length}</p>
+                      {loading ? (
+                        <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{upcomingSessions.length}</p>
+                      )}
                       <p className="text-gray-600 text-sm">Upcoming Classes</p>
                     </div>
                   </div>
@@ -384,7 +396,11 @@ export default function StudentDashboard() {
                       <Award className="w-6 h-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
+                      {loading ? (
+                        <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">0</p>
+                      )}
                       <p className="text-gray-600 text-sm">Completed</p>
                     </div>
                   </div>
@@ -711,7 +727,12 @@ export default function StudentDashboard() {
               {/* My Enrolled Programs */}
               {enrollmentsTab === 'programs' && (
                 <>
-                  {myProgramEnrollments.length === 0 ? (
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f] mx-auto"></div>
+                      <p className="text-gray-500 mt-4">Loading your programs...</p>
+                    </div>
+                  ) : myProgramEnrollments.length === 0 ? (
                     <div className="text-center py-12">
                       <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled programs</h3>
@@ -802,7 +823,12 @@ export default function StudentDashboard() {
                     </button>
                   </div>
 
-                  {myCourseEnrollments.length === 0 ? (
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f] mx-auto"></div>
+                      <p className="text-gray-500 mt-4">Loading your courses...</p>
+                    </div>
+                  ) : myCourseEnrollments.length === 0 ? (
                     <div className="text-center py-12">
                       <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No enrolled courses</h3>
