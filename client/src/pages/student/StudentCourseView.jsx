@@ -968,7 +968,10 @@ export default function StudentCourseView() {
                             </button>
                           ) : examStatus.status === 'open' ? (
                             <button
-                              onClick={() => setExamConfirmModal({ exam, schedule })}
+                              onClick={() => {
+                              const examSession = getExamSchedule(exam.id)
+                              setExamConfirmModal({ exam, schedule, sessionId: examSession?.id })
+                            }}
                               className="w-full py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"
                             >
                               Take Exam Now
@@ -1223,7 +1226,8 @@ export default function StudentCourseView() {
                       <button
                         onClick={() => setExamConfirmModal({ 
                           exam: selectedSession.exam, 
-                          schedule: formatExamSchedule(selectedSession.examId) 
+                          schedule: formatExamSchedule(selectedSession.examId),
+                          sessionId: selectedSession.id
                         })}
                         className="flex items-center gap-2 bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-green-50 transition shadow-lg"
                       >
