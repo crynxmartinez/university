@@ -38,8 +38,17 @@ router.get('/course/:courseId', authenticate, async (req, res) => {
   try {
     const { courseId } = req.params
 
+    // Support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+
     const exams = await prisma.exam.findMany({
-      where: { courseId },
+      where: { courseId: course.id },
       include: {
         scores: {
           include: {
@@ -901,9 +910,18 @@ router.get('/student/available/:courseId', authenticate, async (req, res) => {
     const { courseId } = req.params
     const studentId = req.user.student.id
 
+    // Support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+
     // Check if student is enrolled
     const enrollment = await prisma.enrollment.findFirst({
-      where: { courseId, studentId }
+      where: { courseId: course.id, studentId }
     })
 
     if (!enrollment) {
@@ -913,7 +931,7 @@ router.get('/student/available/:courseId', authenticate, async (req, res) => {
     // Get published exams with attempt status
     const exams = await prisma.exam.findMany({
       where: { 
-        courseId,
+        courseId: course.id,
         isPublished: true
       },
       include: {
