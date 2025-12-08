@@ -45,6 +45,11 @@ router.get('/', async (req, res) => {
   try {
     const programs = await prisma.program.findMany({
       include: {
+        teacher: {
+          include: {
+            user: { include: { profile: true } }
+          }
+        },
         modules: {
           include: {
             lessons: true
@@ -74,6 +79,11 @@ router.get('/:id', async (req, res) => {
     const program = await prisma.program.findUnique({
       where: { id: req.params.id },
       include: {
+        teacher: {
+          include: {
+            user: { include: { profile: true } }
+          }
+        },
         modules: {
           include: {
             lessons: {
@@ -127,7 +137,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/programs - Create program
 router.post('/', async (req, res) => {
   try {
-    const { name, description, programType, price, priceType, schedule, location, meetingLink, image } = req.body
+    const { name, description, programType, teacherId, startDate, endDate, enrollmentEnd, image } = req.body
     
     // Generate slug from name
     const slug = name.toLowerCase()
@@ -140,13 +150,19 @@ router.post('/', async (req, res) => {
         name,
         description,
         programType: programType || 'ONLINE',
-        price: price || 0,
-        priceType: priceType || 'ONE_TIME',
-        schedule,
-        location,
-        meetingLink,
+        teacherId: teacherId || null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : null,
         image,
-        isActive: true
+        isActive: false
+      },
+      include: {
+        teacher: {
+          include: {
+            user: { include: { profile: true } }
+          }
+        }
       }
     })
     
@@ -160,7 +176,7 @@ router.post('/', async (req, res) => {
 // PUT /api/admin/programs/:id - Update program
 router.put('/:id', async (req, res) => {
   try {
-    const { name, description, programType, price, priceType, schedule, location, meetingLink, image, isActive } = req.body
+    const { name, description, programType, teacherId, startDate, endDate, enrollmentEnd, image, isActive } = req.body
     
     const program = await prisma.program.update({
       where: { id: req.params.id },
@@ -168,13 +184,19 @@ router.put('/:id', async (req, res) => {
         name,
         description,
         programType,
-        price,
-        priceType,
-        schedule,
-        location,
-        meetingLink,
+        teacherId: teacherId !== undefined ? teacherId : undefined,
+        startDate: startDate !== undefined ? (startDate ? new Date(startDate) : null) : undefined,
+        endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : undefined,
+        enrollmentEnd: enrollmentEnd !== undefined ? (enrollmentEnd ? new Date(enrollmentEnd) : null) : undefined,
         image,
         isActive
+      },
+      include: {
+        teacher: {
+          include: {
+            user: { include: { profile: true } }
+          }
+        }
       }
     })
     

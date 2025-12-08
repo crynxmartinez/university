@@ -145,8 +145,9 @@ model Teacher {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courses Course[]
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses  Course[]
+  programs Program[]
 }
 
 // Registrar record
@@ -174,21 +175,26 @@ model IdSequence {
 
 // Program - created by admin (initiatives like webinars, events, classes)
 model Program {
-  id          String      @id @default(cuid())
-  slug        String      @unique @default(cuid()) // URL-friendly identifier
-  name        String
-  description String?
-  price       Float       @default(0)
-  priceType   PriceType   @default(ONE_TIME)
-  programType ProgramType @default(ONLINE)
-  schedule    String?     // e.g., "Every Tuesday, 7:00 PM" or "March 15, 2025"
-  location    String?     // Address for in-person programs
-  meetingLink String?     // Zoom/Meet link for webinars
-  image       String?     // URL for card image
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String      @id @default(cuid())
+  slug          String      @unique @default(cuid()) // URL-friendly identifier
+  name          String
+  description   String?
+  price         Float       @default(0)
+  priceType     PriceType   @default(ONE_TIME)
+  programType   ProgramType @default(ONLINE)
+  schedule      String?     // e.g., "Every Tuesday, 7:00 PM" or "March 15, 2025"
+  location      String?     // Address for in-person programs
+  meetingLink   String?     // Zoom/Meet link for webinars
+  image         String?     // URL for card image
+  isActive      Boolean     @default(true)
+  startDate     DateTime?   // When the program begins
+  endDate       DateTime?   // When the program ends (auto-deactivate after this)
+  enrollmentEnd DateTime?   // When enrollment closes
+  teacherId     String?     // Assigned teacher
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   
+  teacher     Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   courses     Course[]
   enrollments ProgramEnrollment[]
   modules     ProgramModule[]
