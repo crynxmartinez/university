@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Globe, MapPin, Video, DollarSign, Image, Info } from 'lucide-react'
+import { ArrowLeft, Globe, MapPin, Image, Info } from 'lucide-react'
 import { createAdminProgram } from '../../api/adminPrograms'
 
 export default function AdminCreateProgram() {
@@ -11,9 +11,7 @@ export default function AdminCreateProgram() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [programType, setProgramType] = useState('ONLINE')
-  const [price, setPrice] = useState('')
-  const [priceType, setPriceType] = useState('ONE_TIME')
-  const [location, setLocation] = useState('')
+    const [location, setLocation] = useState('')
   const [meetingLink, setMeetingLink] = useState('')
   const [image, setImage] = useState('')
 
@@ -27,9 +25,7 @@ export default function AdminCreateProgram() {
         name,
         description,
         programType,
-        price: price ? parseFloat(price) : 0,
-        priceType,
-        location: location || null,
+                location: location || null,
         meetingLink: meetingLink || null,
         image: image || null
       })
@@ -167,43 +163,7 @@ export default function AdminCreateProgram() {
               </div>
             )}
 
-            {/* Pricing */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-gray-500" />
-                Pricing
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price (₱)
-                  </label>
-                  <input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price Type
-                  </label>
-                  <select
-                    value={priceType}
-                    onChange={(e) => setPriceType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  >
-                    <option value="ONE_TIME">One-Time Payment</option>
-                    <option value="MONTHLY">Monthly</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Image */}
+{/* Image */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
                 <Image className="w-5 h-5 text-gray-500" />

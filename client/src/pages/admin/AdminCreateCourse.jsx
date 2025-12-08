@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Video, Radio, Info, Calendar, Clock, User, DollarSign } from 'lucide-react'
+import { ArrowLeft, Video, Radio, Info, Calendar, Clock, User } from 'lucide-react'
 import { createAdminCourse, getTeachers } from '../../api/adminCourses'
 
 export default function AdminCreateCourse() {
@@ -8,9 +8,7 @@ export default function AdminCreateCourse() {
   const [description, setDescription] = useState('')
   const [type, setType] = useState('RECORDED')
   const [teacherId, setTeacherId] = useState('')
-  const [price, setPrice] = useState('')
-  const [priceType, setPriceType] = useState('ONE_TIME')
-  const [startDate, setStartDate] = useState('')
+    const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [enrollmentEnd, setEnrollmentEnd] = useState('')
   const [durationType, setDurationType] = useState('dates')
@@ -59,9 +57,7 @@ export default function AdminCreateCourse() {
         description,
         type,
         teacherId: teacherId || null,
-        price: price || 0,
-        priceType,
-        startDate: startDate || null,
+                startDate: startDate || null,
         endDate: actualEndDate || null,
         enrollmentEnd: enrollmentEnd || null
       })
@@ -214,43 +210,7 @@ export default function AdminCreateCourse() {
               </p>
             </div>
 
-            {/* Pricing */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-gray-500" />
-                Pricing
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price (₱)
-                  </label>
-                  <input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price Type
-                  </label>
-                  <select
-                    value={priceType}
-                    onChange={(e) => setPriceType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  >
-                    <option value="ONE_TIME">One-Time Payment</option>
-                    <option value="MONTHLY">Monthly</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Course Duration Section */}
+{/* Course Duration Section */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-gray-500" />
