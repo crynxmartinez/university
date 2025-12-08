@@ -209,7 +209,7 @@ app.get('/api/debug/migrate', async (req, res) => {
   }
 })
 
-// Fix enum and recreate ExamAttempt with correct type
+// Fix enum and recreate ExamAttempt with correct type (supports retakes)
 app.get('/api/debug/fix-exam-tables', async (req, res) => {
   const logs = []
   try {
@@ -236,12 +236,14 @@ app.get('/api/debug/fix-exam-tables', async (req, res) => {
       logs.push('ExamAttempt drop skipped: ' + e.message)
     }
 
-    // Step 3: Create ExamAttempt with enum type
+    // Step 3: Create ExamAttempt with sessionId for retake support
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ExamAttempt" (
         "id" TEXT NOT NULL,
         "examId" TEXT NOT NULL,
         "studentId" TEXT NOT NULL,
+        "sessionId" TEXT,
+        "attemptNumber" INTEGER NOT NULL DEFAULT 1,
         "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "submittedAt" TIMESTAMP(3),
         "tabSwitchCount" INTEGER NOT NULL DEFAULT 0,
@@ -251,10 +253,11 @@ app.get('/api/debug/fix-exam-tables', async (req, res) => {
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "ExamAttempt_pkey" PRIMARY KEY ("id"),
         CONSTRAINT "ExamAttempt_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-        CONSTRAINT "ExamAttempt_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT "ExamAttempt_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT "ExamAttempt_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ScheduledSession"("id") ON DELETE SET NULL ON UPDATE CASCADE
       )
     `)
-    logs.push('Created ExamAttempt table')
+    logs.push('Created ExamAttempt table with sessionId')
 
     // Step 4: Create ExamAnswer
     await prisma.$executeRawUnsafe(`
@@ -272,10 +275,10 @@ app.get('/api/debug/fix-exam-tables', async (req, res) => {
     `)
     logs.push('Created ExamAnswer table')
 
-    // Step 5: Create indexes
+    // Step 5: Create indexes - unique per session (allows retakes on different sessions)
     try {
-      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ExamAttempt_examId_studentId_key" ON "ExamAttempt"("examId", "studentId")`)
-      logs.push('Created ExamAttempt index')
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ExamAttempt_examId_studentId_sessionId_key" ON "ExamAttempt"("examId", "studentId", "sessionId")`)
+      logs.push('Created ExamAttempt unique index (per session)')
     } catch (e) {
       logs.push('ExamAttempt index skipped: ' + e.message)
     }
@@ -287,7 +290,7 @@ app.get('/api/debug/fix-exam-tables', async (req, res) => {
       logs.push('ExamAnswer index skipped: ' + e.message)
     }
 
-    res.json({ status: 'ok', message: 'Exam tables fixed successfully!', logs })
+    res.json({ status: 'ok', message: 'Exam tables fixed with retake support!', logs })
   } catch (error) {
     console.error('Fix exam tables error:', error)
     res.status(500).json({ error: error.message, logs })

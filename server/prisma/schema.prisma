@@ -251,6 +251,7 @@ model ScheduledSession {
   materials    SessionMaterial[]
   studentNotes StudentNote[]
   attendance   SessionAttendance[]
+  examAttempts ExamAttempt[]       // Exam attempts for this session
 }
 
 // SessionMaterial - date-specific materials attached to a scheduled session
@@ -417,6 +418,8 @@ model ExamAttempt {
   id             String            @id @default(cuid())
   examId         String
   studentId      String
+  sessionId      String?           // Links to scheduled session (for retake tracking)
+  attemptNumber  Int               @default(1) // Which attempt this is (1, 2, 3...)
   startedAt      DateTime          @default(now())
   submittedAt    DateTime?
   tabSwitchCount Int               @default(0) // Track tab/window switches
@@ -425,11 +428,12 @@ model ExamAttempt {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  exam    Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam    Exam              @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ScheduledSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   answers ExamAnswer[]
 
-  @@unique([examId, studentId]) // One attempt per student per exam
+  @@unique([examId, studentId, sessionId]) // One attempt per student per exam per session
 }
 
 // ExamAnswer - student's answer to a question

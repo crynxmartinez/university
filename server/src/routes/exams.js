@@ -358,15 +358,20 @@ router.get('/student-grade/:courseId', authenticate, async (req, res) => {
     const { courseId } = req.params
     const studentId = req.user.student.id
 
-    // Get course with exams
+    // Get course with exams and attempts
     const course = await prisma.course.findUnique({
       where: { id: courseId },
       include: {
         exams: {
+          where: { isPublished: true },
           orderBy: { order: 'asc' },
           include: {
             scores: {
               where: { studentId }
+            },
+            attempts: {
+              where: { studentId, status: 'SUBMITTED' },
+              orderBy: { submittedAt: 'desc' } // Latest first
             }
           }
         }
@@ -377,12 +382,14 @@ router.get('/student-grade/:courseId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Course not found' })
     }
 
-    // Calculate grade
+    // Calculate grade using LATEST attempt score (not ExamScore table)
     let totalEarned = 0
     let totalPossible = 0
     const examScores = course.exams.map(exam => {
-      const scoreRecord = exam.scores[0] // Only one score per student per exam
-      const score = scoreRecord?.score ?? null
+      // Use latest attempt score (supports retakes)
+      const latestAttempt = exam.attempts[0]
+      const score = latestAttempt?.score ?? null
+      const attemptCount = exam.attempts.length
       
       if (score !== null) {
         totalEarned += score
@@ -394,7 +401,15 @@ router.get('/student-grade/:courseId', authenticate, async (req, res) => {
         examTitle: exam.title,
         totalPoints: exam.totalPoints,
         score,
-        gradedAt: scoreRecord?.gradedAt
+        attemptCount,
+        attemptNumber: latestAttempt?.attemptNumber || 0,
+        gradedAt: latestAttempt?.submittedAt,
+        // Include attempt history for transparency
+        attemptHistory: exam.attempts.map(a => ({
+          attemptNumber: a.attemptNumber,
+          score: a.score,
+          submittedAt: a.submittedAt
+        }))
       }
     })
 
@@ -856,25 +871,49 @@ router.get('/student/available/:courseId', authenticate, async (req, res) => {
           select: { id: true }
         },
         attempts: {
-          where: { studentId }
+          where: { studentId },
+          orderBy: { createdAt: 'desc' } // Get all attempts, newest first
         }
       },
       orderBy: { order: 'asc' }
     })
 
-    const result = exams.map(exam => ({
-      id: exam.id,
-      title: exam.title,
-      description: exam.description,
-      totalPoints: exam.totalPoints,
-      timeLimit: exam.timeLimit,
-      questionCount: exam.questions.length,
-      attempt: exam.attempts[0] ? {
-        status: exam.attempts[0].status,
-        score: exam.attempts[0].score,
-        submittedAt: exam.attempts[0].submittedAt
-      } : null
-    }))
+    const result = exams.map(exam => {
+      // Get latest attempt (for current status)
+      const latestAttempt = exam.attempts[0]
+      // Get all completed attempts for history
+      const completedAttempts = exam.attempts.filter(a => a.status === 'SUBMITTED')
+      // Get latest score (what counts for grade)
+      const latestScore = completedAttempts[0]?.score || null
+      
+      return {
+        id: exam.id,
+        title: exam.title,
+        description: exam.description,
+        totalPoints: exam.totalPoints,
+        timeLimit: exam.timeLimit,
+        maxTabSwitch: exam.maxTabSwitch,
+        questionCount: exam.questions.length,
+        attemptCount: exam.attempts.length,
+        // Latest attempt info
+        attempt: latestAttempt ? {
+          id: latestAttempt.id,
+          status: latestAttempt.status,
+          score: latestAttempt.score,
+          attemptNumber: latestAttempt.attemptNumber,
+          submittedAt: latestAttempt.submittedAt,
+          sessionId: latestAttempt.sessionId
+        } : null,
+        // Latest score (what counts for grade)
+        latestScore,
+        // All attempts history
+        attemptHistory: completedAttempts.map(a => ({
+          attemptNumber: a.attemptNumber,
+          score: a.score,
+          submittedAt: a.submittedAt
+        }))
+      }
+    })
 
     res.json(result)
   } catch (error) {
@@ -891,6 +930,7 @@ router.post('/:examId/start', authenticate, async (req, res) => {
     }
 
     const { examId } = req.params
+    const { sessionId } = req.body // Optional: links attempt to specific scheduled session
     const studentId = req.user.student.id
 
     // Get exam with questions
@@ -926,16 +966,18 @@ router.post('/:examId/start', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not enrolled in this course' })
     }
 
-    // Check for existing attempt
-    const existingAttempt = await prisma.examAttempt.findUnique({
+    // Check for existing attempt FOR THIS SESSION
+    const existingAttempt = await prisma.examAttempt.findFirst({
       where: {
-        examId_studentId: { examId, studentId }
+        examId,
+        studentId,
+        sessionId: sessionId || null
       }
     })
 
     if (existingAttempt) {
       if (existingAttempt.status !== 'IN_PROGRESS') {
-        return res.status(400).json({ error: 'You have already completed this exam' })
+        return res.status(400).json({ error: 'You have already completed this exam for this session' })
       }
       // Return existing in-progress attempt
       return res.json({
@@ -955,11 +997,24 @@ router.post('/:examId/start', authenticate, async (req, res) => {
       })
     }
 
+    // Count previous attempts for this exam (for attemptNumber)
+    const previousAttempts = await prisma.examAttempt.count({
+      where: { examId, studentId }
+    })
+
+    // Get previous best score for warning
+    const previousBest = await prisma.examAttempt.findFirst({
+      where: { examId, studentId, status: 'SUBMITTED' },
+      orderBy: { score: 'desc' }
+    })
+
     // Create new attempt
     const attempt = await prisma.examAttempt.create({
       data: {
         examId,
         studentId,
+        sessionId: sessionId || null,
+        attemptNumber: previousAttempts + 1,
         startedAt: new Date()
       }
     })
@@ -967,6 +1022,8 @@ router.post('/:examId/start', authenticate, async (req, res) => {
     // Return exam with questions (hide correct answers)
     res.json({
       attempt,
+      previousScore: previousBest?.score || null,
+      attemptNumber: previousAttempts + 1,
       exam: {
         ...exam,
         questions: exam.questions.map(q => ({
