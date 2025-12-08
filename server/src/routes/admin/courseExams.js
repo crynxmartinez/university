@@ -336,6 +336,96 @@ router.put('/exam/:examId/questions/reorder', async (req, res) => {
   }
 })
 
+// PUT /api/admin/course-exams/exam/:examId/questions/batch - Batch save all questions
+router.put('/exam/:examId/questions/batch', async (req, res) => {
+  try {
+    const { examId } = req.params
+    const { questions, deletedQuestionIds } = req.body
+
+    // Verify exam exists
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    // Delete removed questions
+    if (deletedQuestionIds && deletedQuestionIds.length > 0) {
+      await prisma.examQuestion.deleteMany({
+        where: { id: { in: deletedQuestionIds } }
+      })
+    }
+
+    // Process each question
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i]
+      
+      if (q.id) {
+        // Update existing question
+        // First delete old choices
+        await prisma.examChoice.deleteMany({
+          where: { questionId: q.id }
+        })
+        
+        // Update question and create new choices
+        await prisma.examQuestion.update({
+          where: { id: q.id },
+          data: {
+            question: q.question,
+            points: q.points,
+            order: i + 1,
+            choices: {
+              create: q.choices.map((c, idx) => ({
+                text: c.text,
+                isCorrect: c.isCorrect,
+                order: idx + 1
+              }))
+            }
+          }
+        })
+      } else {
+        // Create new question
+        await prisma.examQuestion.create({
+          data: {
+            examId,
+            question: q.question,
+            points: q.points,
+            order: i + 1,
+            choices: {
+              create: q.choices.map((c, idx) => ({
+                text: c.text,
+                isCorrect: c.isCorrect,
+                order: idx + 1
+              }))
+            }
+          }
+        })
+      }
+    }
+
+    // Update exam total points
+    await updateExamTotalPoints(examId)
+
+    // Return updated exam
+    const updatedExam = await prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        questions: {
+          include: { choices: { orderBy: { order: 'asc' } } },
+          orderBy: { order: 'asc' }
+        }
+      }
+    })
+
+    res.json(updatedExam)
+  } catch (error) {
+    console.error('Batch save questions error:', error)
+    res.status(500).json({ error: 'Failed to save questions' })
+  }
+})
+
 // ============ SCORES ============
 
 // POST /api/admin/course-exams/exam/:examId/scores - Save scores for students

@@ -59,6 +59,11 @@ export const reorderCourseExamQuestions = async (examId, questionIds) => {
   return res.data
 }
 
+export const saveAllCourseExamQuestions = async (examId, data) => {
+  const res = await axios.put(`${API_URL}/admin/course-exams/exam/${examId}/questions/batch`, data, getAuthHeaders())
+  return res.data
+}
+
 // ============ GRADES / SCORES ============
 
 export const getCourseGrades = async (courseId) => {
