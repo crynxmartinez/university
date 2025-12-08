@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { getCourse, updateCourse, toggleCourseActive, deleteCourse } from '../../api/courses'
 import { getCourseSessions, createSession, updateSession, deleteSession, addMaterial, deleteMaterial } from '../../api/sessions'
-import { updateModule, deleteModule, getModuleDeleteInfo, reorderModules } from '../../api/modules'
+import { createModule, updateModule, deleteModule, getModuleDeleteInfo, reorderModules } from '../../api/modules'
 import { updateLesson, deleteLesson, getLessonDeleteInfo, reorderLessons } from '../../api/lessons'
 import { getEnrolledStudents, removeEnrollment } from '../../api/enrollments'
 import { getSessionAttendance, updateSessionAttendance } from '../../api/attendance'
@@ -187,6 +187,8 @@ export default function CourseDashboard() {
   const [deleteMaterialConfirm, setDeleteMaterialConfirm] = useState(null)
 
   // Module/Lesson edit state
+  const [showModuleModal, setShowModuleModal] = useState(false)
+  const [moduleForm, setModuleForm] = useState({ name: '' })
   const [editModuleModal, setEditModuleModal] = useState(null) // { id, name }
   const [editLessonModal, setEditLessonModal] = useState(null) // { id, name, description, materials, videoUrl }
   const [deleteModuleConfirm, setDeleteModuleConfirm] = useState(null) // { id, info }
@@ -420,6 +422,27 @@ export default function CourseDashboard() {
   )
 
   // Module handlers
+  const openAddModule = () => {
+    setModuleForm({ name: '' })
+    setShowModuleModal(true)
+  }
+
+  const handleCreateModule = async () => {
+    if (!moduleForm.name.trim()) return
+    setSavingModule(true)
+    try {
+      await createModule({ courseId: course.id, name: moduleForm.name })
+      await fetchCourse()
+      setShowModuleModal(false)
+      setModuleForm({ name: '' })
+      toast.success('Module created')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to create module')
+    } finally {
+      setSavingModule(false)
+    }
+  }
+
   const openEditModule = (module) => {
     setEditModuleModal({ id: module.id, name: module.name })
   }
@@ -1056,13 +1079,13 @@ export default function CourseDashboard() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-600">Create class templates that can be scheduled on the calendar</p>
-                <Link
-                  to={`/teacher/courses/${course?.slug || id}/modules/create`}
+                <button
+                  onClick={openAddModule}
                   className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
                 >
                   <Plus className="w-4 h-4" />
                   Add Module
-                </Link>
+                </button>
               </div>
 
               {course.modules?.length === 0 ? (
@@ -1070,13 +1093,13 @@ export default function CourseDashboard() {
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No class templates yet</h3>
                   <p className="text-gray-500 mb-4">Create modules and lessons to use as class templates</p>
-                  <Link
-                    to={`/teacher/courses/${course?.slug || id}/modules/create`}
+                  <button
+                    onClick={openAddModule}
                     className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
                   >
                     <Plus className="w-5 h-5" />
                     Create First Module
-                  </Link>
+                  </button>
                 </div>
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleModuleDragEnd}>
@@ -2322,6 +2345,47 @@ export default function CourseDashboard() {
               >
                 {savingScores && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 {savingScores ? 'Saving...' : 'Save Scores'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Module Modal */}
+      {showModuleModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Add Module</h3>
+              <button onClick={() => setShowModuleModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Module Name *</label>
+              <input
+                type="text"
+                value={moduleForm.name}
+                onChange={(e) => setModuleForm({ name: e.target.value })}
+                placeholder="e.g., Introduction to Programming"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+              />
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowModuleModal(false)}
+                disabled={savingModule}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateModule}
+                disabled={savingModule || !moduleForm.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingModule && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {savingModule ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
