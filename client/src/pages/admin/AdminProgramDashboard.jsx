@@ -151,7 +151,7 @@ export default function AdminProgramDashboard() {
   const navigate = useNavigate()
   const toast = useToast()
   
-  const [Program, setProgram] = useState(null)
+  const [program, setProgram] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('class')
   const [sidebarOpen, setSidebarOpen] = useState(true)
