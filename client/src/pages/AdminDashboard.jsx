@@ -734,9 +734,21 @@ export default function AdminDashboard() {
                         <h3 className="font-semibold text-gray-900 text-lg mb-2">{c.name}</h3>
                         
                         {/* Description */}
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-3">
                           {c.description || 'No description'}
                         </p>
+
+                        {/* Admin Info - Created by & Assigned to */}
+                        <div className="text-xs text-gray-500 space-y-1 mb-4 flex-1">
+                          <p>
+                            <span className="font-medium text-gray-600">Created by:</span>{' '}
+                            {c.createdBy?.profile ? `${c.createdBy.profile.firstName} ${c.createdBy.profile.lastName}` : (c.createdBy?.role === 'SUPER_ADMIN' ? 'Admin' : 'Unknown')}
+                          </p>
+                          <p>
+                            <span className="font-medium text-gray-600">Assigned to:</span>{' '}
+                            {c.teacher?.user?.profile ? `${c.teacher.user.profile.firstName} ${c.teacher.user.profile.lastName}` : <span className="text-amber-600">No teacher assigned</span>}
+                          </p>
+                        </div>
                         
                         {/* Stats */}
                         <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
