@@ -297,6 +297,269 @@ app.get('/api/debug/fix-exam-tables', async (req, res) => {
   }
 })
 
+// Create Program tables migration
+app.get('/api/debug/create-program-tables', async (req, res) => {
+  const logs = []
+  try {
+    // Add slug column to Program if not exists
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Program" ADD COLUMN IF NOT EXISTS "slug" TEXT`)
+      await prisma.$executeRawUnsafe(`UPDATE "Program" SET "slug" = id WHERE "slug" IS NULL`)
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Program" ALTER COLUMN "slug" SET NOT NULL`)
+      logs.push('Added slug column to Program')
+    } catch (e) {
+      logs.push('Program slug: ' + e.message)
+    }
+
+    // Create ProgramModule table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramModule" (
+          "id" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "order" INTEGER NOT NULL DEFAULT 0,
+          "programId" TEXT NOT NULL,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramModule_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramModule_programId_fkey" FOREIGN KEY ("programId") REFERENCES "Program"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramModule table')
+    } catch (e) {
+      logs.push('ProgramModule: ' + e.message)
+    }
+
+    // Create ProgramLesson table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramLesson" (
+          "id" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "description" TEXT,
+          "materials" TEXT,
+          "videoUrl" TEXT,
+          "order" INTEGER NOT NULL DEFAULT 0,
+          "moduleId" TEXT NOT NULL,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramLesson_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramLesson_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "ProgramModule"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramLesson table')
+    } catch (e) {
+      logs.push('ProgramLesson: ' + e.message)
+    }
+
+    // Create ProgramExam table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramExam" (
+          "id" TEXT NOT NULL,
+          "programId" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "description" TEXT,
+          "totalPoints" INTEGER NOT NULL DEFAULT 100,
+          "order" INTEGER NOT NULL DEFAULT 0,
+          "timeLimit" INTEGER,
+          "maxTabSwitch" INTEGER NOT NULL DEFAULT 3,
+          "isPublished" BOOLEAN NOT NULL DEFAULT false,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramExam_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramExam_programId_fkey" FOREIGN KEY ("programId") REFERENCES "Program"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramExam table')
+    } catch (e) {
+      logs.push('ProgramExam: ' + e.message)
+    }
+
+    // Create ProgramSession table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramSession" (
+          "id" TEXT NOT NULL,
+          "programId" TEXT NOT NULL,
+          "lessonId" TEXT,
+          "examId" TEXT,
+          "date" TIMESTAMP(3) NOT NULL,
+          "startTime" TEXT NOT NULL,
+          "endTime" TEXT NOT NULL,
+          "type" "SessionType" NOT NULL DEFAULT 'CLASS',
+          "meetingLink" TEXT,
+          "notes" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramSession_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramSession_programId_fkey" FOREIGN KEY ("programId") REFERENCES "Program"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramSession_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "ProgramLesson"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramSession_examId_fkey" FOREIGN KEY ("examId") REFERENCES "ProgramExam"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramSession table')
+    } catch (e) {
+      logs.push('ProgramSession: ' + e.message)
+    }
+
+    // Create ProgramSessionMaterial table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramSessionMaterial" (
+          "id" TEXT NOT NULL,
+          "sessionId" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "driveUrl" TEXT NOT NULL,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramSessionMaterial_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramSessionMaterial_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ProgramSession"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramSessionMaterial table')
+    } catch (e) {
+      logs.push('ProgramSessionMaterial: ' + e.message)
+    }
+
+    // Create ProgramAttendance table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramAttendance" (
+          "id" TEXT NOT NULL,
+          "sessionId" TEXT NOT NULL,
+          "studentId" TEXT NOT NULL,
+          "status" "AttendanceStatus" NOT NULL DEFAULT 'PRESENT',
+          "joinedAt" TIMESTAMP(3),
+          "markedBy" TEXT NOT NULL DEFAULT 'AUTO',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramAttendance_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramAttendance_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ProgramSession"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramAttendance_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ProgramAttendance_sessionId_studentId_key" ON "ProgramAttendance"("sessionId", "studentId")`)
+      logs.push('Created ProgramAttendance table')
+    } catch (e) {
+      logs.push('ProgramAttendance: ' + e.message)
+    }
+
+    // Create ProgramExamQuestion table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramExamQuestion" (
+          "id" TEXT NOT NULL,
+          "examId" TEXT NOT NULL,
+          "question" TEXT NOT NULL,
+          "points" INTEGER NOT NULL DEFAULT 10,
+          "order" INTEGER NOT NULL DEFAULT 0,
+          CONSTRAINT "ProgramExamQuestion_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramExamQuestion_examId_fkey" FOREIGN KEY ("examId") REFERENCES "ProgramExam"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramExamQuestion table')
+    } catch (e) {
+      logs.push('ProgramExamQuestion: ' + e.message)
+    }
+
+    // Create ProgramExamChoice table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramExamChoice" (
+          "id" TEXT NOT NULL,
+          "questionId" TEXT NOT NULL,
+          "text" TEXT NOT NULL,
+          "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+          "order" INTEGER NOT NULL DEFAULT 0,
+          CONSTRAINT "ProgramExamChoice_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramExamChoice_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "ProgramExamQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      logs.push('Created ProgramExamChoice table')
+    } catch (e) {
+      logs.push('ProgramExamChoice: ' + e.message)
+    }
+
+    // Create ProgramExamAttempt table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramExamAttempt" (
+          "id" TEXT NOT NULL,
+          "examId" TEXT NOT NULL,
+          "studentId" TEXT NOT NULL,
+          "sessionId" TEXT,
+          "attemptNumber" INTEGER NOT NULL DEFAULT 1,
+          "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "submittedAt" TIMESTAMP(3),
+          "tabSwitchCount" INTEGER NOT NULL DEFAULT 0,
+          "status" "ExamAttemptStatus" NOT NULL DEFAULT 'IN_PROGRESS',
+          "score" DOUBLE PRECISION,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramExamAttempt_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramExamAttempt_examId_fkey" FOREIGN KEY ("examId") REFERENCES "ProgramExam"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramExamAttempt_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramExamAttempt_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ProgramSession"("id") ON DELETE SET NULL ON UPDATE CASCADE
+        )
+      `)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ProgramExamAttempt_examId_studentId_sessionId_key" ON "ProgramExamAttempt"("examId", "studentId", "sessionId")`)
+      logs.push('Created ProgramExamAttempt table')
+    } catch (e) {
+      logs.push('ProgramExamAttempt: ' + e.message)
+    }
+
+    // Create ProgramExamAnswer table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramExamAnswer" (
+          "id" TEXT NOT NULL,
+          "attemptId" TEXT NOT NULL,
+          "questionId" TEXT NOT NULL,
+          "choiceId" TEXT,
+          "isCorrect" BOOLEAN NOT NULL DEFAULT false,
+          CONSTRAINT "ProgramExamAnswer_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramExamAnswer_attemptId_fkey" FOREIGN KEY ("attemptId") REFERENCES "ProgramExamAttempt"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramExamAnswer_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "ProgramExamQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramExamAnswer_choiceId_fkey" FOREIGN KEY ("choiceId") REFERENCES "ProgramExamChoice"("id") ON DELETE SET NULL ON UPDATE CASCADE
+        )
+      `)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ProgramExamAnswer_attemptId_questionId_key" ON "ProgramExamAnswer"("attemptId", "questionId")`)
+      logs.push('Created ProgramExamAnswer table')
+    } catch (e) {
+      logs.push('ProgramExamAnswer: ' + e.message)
+    }
+
+    // Create ProgramStudentNote table
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ProgramStudentNote" (
+          "id" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "studentId" TEXT NOT NULL,
+          "sessionId" TEXT,
+          "lessonId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ProgramStudentNote_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "ProgramStudentNote_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramStudentNote_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ProgramSession"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "ProgramStudentNote_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "ProgramLesson"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        )
+      `)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ProgramStudentNote_studentId_sessionId_key" ON "ProgramStudentNote"("studentId", "sessionId")`)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ProgramStudentNote_studentId_lessonId_key" ON "ProgramStudentNote"("studentId", "lessonId")`)
+      logs.push('Created ProgramStudentNote table')
+    } catch (e) {
+      logs.push('ProgramStudentNote: ' + e.message)
+    }
+
+    res.json({ status: 'ok', message: 'Program tables created!', logs })
+  } catch (error) {
+    console.error('Create program tables error:', error)
+    res.status(500).json({ error: error.message, logs })
+  }
+})
+
 // Debug endpoint to check tables
 app.get('/api/debug/check-tables', async (req, res) => {
   try {

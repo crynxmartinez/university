@@ -130,6 +130,11 @@ model Student {
   attendance   SessionAttendance[] // Attendance records for sessions
   examScores   ExamScore[]         // Exam scores for grading
   examAttempts ExamAttempt[]       // Exam attempts
+  
+  // Program relations
+  programAttendance    ProgramAttendance[]    // Attendance for program sessions
+  programExamAttempts  ProgramExamAttempt[]   // Program exam attempts
+  programNotes         ProgramStudentNote[]   // Notes for program content
 }
 
 // Teacher record
@@ -170,6 +175,7 @@ model IdSequence {
 // Program - created by admin (initiatives like webinars, events, classes)
 model Program {
   id          String      @id @default(cuid())
+  slug        String      @unique @default(cuid()) // URL-friendly identifier
   name        String
   description String?
   price       Float       @default(0)
@@ -185,6 +191,192 @@ model Program {
   
   courses     Course[]
   enrollments ProgramEnrollment[]
+  modules     ProgramModule[]
+  sessions    ProgramSession[]
+  exams       ProgramExam[]
+}
+
+// ProgramModule - sections within a program (like Module for Course)
+model ProgramModule {
+  id        String   @id @default(cuid())
+  name      String
+  order     Int      @default(0)
+  programId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  program Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
+  lessons ProgramLesson[]
+}
+
+// ProgramLesson - content within a module (like Lesson for Course)
+model ProgramLesson {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  materials   String?  // Google Drive links
+  videoUrl    String?  // YouTube link for recorded content
+  order       Int      @default(0)
+  moduleId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module       ProgramModule          @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  sessions     ProgramSession[]       // Sessions that use this lesson
+  studentNotes ProgramStudentNote[]   // Student notes for this lesson
+}
+
+// ProgramSession - scheduled sessions for LIVE programs (like ScheduledSession)
+model ProgramSession {
+  id          String      @id @default(cuid())
+  programId   String
+  lessonId    String?     // Optional - for CLASS type sessions
+  examId      String?     // Optional - for EXAM type sessions
+  date        DateTime
+  startTime   String      // e.g., "19:00"
+  endTime     String      // e.g., "21:00"
+  type        SessionType @default(CLASS)
+  meetingLink String?     // Zoom/Meet link
+  notes       String?     // Admin notes visible to students
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  program      Program                  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  lesson       ProgramLesson?           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  exam         ProgramExam?             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  materials    ProgramSessionMaterial[]
+  studentNotes ProgramStudentNote[]
+  attendance   ProgramAttendance[]
+  examAttempts ProgramExamAttempt[]
+}
+
+// ProgramSessionMaterial - materials for a specific session
+model ProgramSessionMaterial {
+  id        String   @id @default(cuid())
+  sessionId String
+  name      String
+  driveUrl  String
+  createdAt DateTime @default(now())
+
+  session ProgramSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ProgramAttendance - tracks student attendance for program sessions
+model ProgramAttendance {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus @default(PRESENT)
+  joinedAt  DateTime?
+  markedBy  String           @default("AUTO")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  session ProgramSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+}
+
+// ProgramExam - exam for a program (like Exam for Course)
+model ProgramExam {
+  id          String   @id @default(cuid())
+  programId   String
+  title       String
+  description String?
+  totalPoints Int      @default(100)
+  order       Int      @default(0)
+  timeLimit   Int?     // Minutes
+  maxTabSwitch Int     @default(3)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program   Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
+  questions ProgramExamQuestion[]
+  attempts  ProgramExamAttempt[]
+  sessions  ProgramSession[]
+}
+
+// ProgramExamQuestion - question in a program exam
+model ProgramExamQuestion {
+  id       String @id @default(cuid())
+  examId   String
+  question String
+  points   Int    @default(10)
+  order    Int    @default(0)
+
+  exam    ProgramExam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  choices ProgramExamChoice[]
+  answers ProgramExamAnswer[]
+}
+
+// ProgramExamChoice - answer choice for a program exam question
+model ProgramExamChoice {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question ProgramExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  ProgramExamAnswer[]
+}
+
+// ProgramExamAttempt - student's attempt at a program exam
+model ProgramExamAttempt {
+  id             String            @id @default(cuid())
+  examId         String
+  studentId      String
+  sessionId      String?
+  attemptNumber  Int               @default(1)
+  startedAt      DateTime          @default(now())
+  submittedAt    DateTime?
+  tabSwitchCount Int               @default(0)
+  status         ExamAttemptStatus @default(IN_PROGRESS)
+  score          Float?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  exam    ProgramExam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ProgramSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  answers ProgramExamAnswer[]
+
+  @@unique([examId, studentId, sessionId])
+}
+
+// ProgramExamAnswer - student's answer to a program exam question
+model ProgramExamAnswer {
+  id         String  @id @default(cuid())
+  attemptId  String
+  questionId String
+  choiceId   String?
+  isCorrect  Boolean @default(false)
+
+  attempt  ProgramExamAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question ProgramExamQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  choice   ProgramExamChoice?   @relation(fields: [choiceId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId])
+}
+
+// ProgramStudentNote - student notes for program sessions/lessons
+model ProgramStudentNote {
+  id        String   @id @default(cuid())
+  content   String
+  studentId String
+  sessionId String?  // For LIVE programs
+  lessonId  String?  // For RECORDED content
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ProgramSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lesson  ProgramLesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, sessionId])
+  @@unique([studentId, lessonId])
 }
 
 // Program Enrollment - student enrolls in a program
