@@ -112,7 +112,9 @@ export default function AdminProgramDashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch program:', error)
-      toast.error('Failed to load program')
+      console.error('Error response:', error.response?.data)
+      console.error('Program ID:', id)
+      toast.error(error.response?.data?.error || 'Failed to load program')
     } finally {
       setLoading(false)
     }
