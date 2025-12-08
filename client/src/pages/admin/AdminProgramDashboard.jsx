@@ -835,7 +835,7 @@ export default function AdminProgramDashboard() {
   const menuItems = [
     { id: 'class', label: 'Class', icon: BookOpen },
     { id: 'exam', label: 'Exam', icon: FileText },
-    { id: 'schedule', label: 'Schedule', icon: Calendar, liveOnly: true },
+    { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'students', label: 'Students', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
@@ -848,7 +848,7 @@ export default function AdminProgramDashboard() {
     )
   }
 
-  if (!Program) {
+  if (!program) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -885,9 +885,7 @@ export default function AdminProgramDashboard() {
         </div>
 
         <nav className="flex-1 p-4">
-          {menuItems.map((item) => {
-            if (item.liveOnly) return null // Programs always show all tabs
-            return (
+          {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
@@ -898,8 +896,7 @@ export default function AdminProgramDashboard() {
                 <item.icon className="w-5 h-5" />
                 {item.label}
               </button>
-            )
-          })}
+          ))}
         </nav>
       </aside>
 
