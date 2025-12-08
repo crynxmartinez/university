@@ -1,12 +1,42 @@
 import express from 'express'
+import jwt from 'jsonwebtoken'
 import prisma from '../../lib/prisma.js'
-import { authenticate, requireRole } from '../../middleware/auth.js'
 
 const router = express.Router()
 
+// Middleware to verify token and require SUPER_ADMIN
+const requireAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key')
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    })
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+
+    if (user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' })
+    }
+
+    req.user = user
+    next()
+  } catch (error) {
+    console.error('Auth error:', error)
+    res.status(401).json({ error: 'Invalid token' })
+  }
+}
+
 // All routes require SUPER_ADMIN role
-router.use(authenticate)
-router.use(requireRole(['SUPER_ADMIN']))
+router.use(requireAdmin)
 
 // ============ PROGRAM CRUD ============
 

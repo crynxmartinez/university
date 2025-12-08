@@ -1,15 +1,43 @@
 import express from 'express'
+import jwt from 'jsonwebtoken'
 import prisma from '../lib/prisma.js'
-import { authenticate, requireRole } from '../middleware/auth.js'
 
 const router = express.Router()
 
-// All routes require STUDENT role
-router.use(authenticate)
-router.use(requireRole(['STUDENT']))
+// Middleware to verify token and get user
+const authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key')
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { student: true }
+    })
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+
+    if (user.role !== 'STUDENT' || !user.student) {
+      return res.status(403).json({ error: 'Only students can access this' })
+    }
+
+    req.user = user
+    next()
+  } catch (error) {
+    console.error('Auth error:', error)
+    res.status(401).json({ error: 'Invalid token' })
+  }
+}
 
 // GET /api/student-programs/enrolled - Get student's enrolled programs
-router.get('/enrolled', async (req, res) => {
+router.get('/enrolled', authenticate, async (req, res) => {
   try {
     const student = await prisma.student.findFirst({
       where: { userId: req.user.id }
@@ -46,7 +74,7 @@ router.get('/enrolled', async (req, res) => {
 })
 
 // GET /api/student-programs/:programId - Get program details for student
-router.get('/:programId', async (req, res) => {
+router.get('/:programId', authenticate, async (req, res) => {
   try {
     const { programId } = req.params
 
@@ -95,7 +123,7 @@ router.get('/:programId', async (req, res) => {
 })
 
 // GET /api/student-programs/:programId/sessions - Get upcoming sessions
-router.get('/:programId/sessions', async (req, res) => {
+router.get('/:programId/sessions', authenticate, async (req, res) => {
   try {
     const { programId } = req.params
 
@@ -117,7 +145,7 @@ router.get('/:programId/sessions', async (req, res) => {
 })
 
 // GET /api/student-programs/:programId/exams/available - Get available exams
-router.get('/:programId/exams/available', async (req, res) => {
+router.get('/:programId/exams/available', authenticate, async (req, res) => {
   try {
     const { programId } = req.params
 
@@ -165,7 +193,7 @@ router.get('/:programId/exams/available', async (req, res) => {
 })
 
 // POST /api/student-programs/exams/:examId/start - Start exam attempt
-router.post('/exams/:examId/start', async (req, res) => {
+router.post('/exams/:examId/start', authenticate, async (req, res) => {
   try {
     const { examId } = req.params
     const { sessionId } = req.body
@@ -268,7 +296,7 @@ router.post('/exams/:examId/start', async (req, res) => {
 })
 
 // POST /api/student-programs/exams/attempt/:attemptId/answer - Save answer
-router.post('/exams/attempt/:attemptId/answer', async (req, res) => {
+router.post('/exams/attempt/:attemptId/answer', authenticate, async (req, res) => {
   try {
     const { attemptId } = req.params
     const { questionId, choiceId } = req.body
@@ -319,7 +347,7 @@ router.post('/exams/attempt/:attemptId/answer', async (req, res) => {
 })
 
 // POST /api/student-programs/exams/attempt/:attemptId/submit - Submit exam
-router.post('/exams/attempt/:attemptId/submit', async (req, res) => {
+router.post('/exams/attempt/:attemptId/submit', authenticate, async (req, res) => {
   try {
     const { attemptId } = req.params
 
@@ -381,7 +409,7 @@ router.post('/exams/attempt/:attemptId/submit', async (req, res) => {
 })
 
 // POST /api/student-programs/exams/attempt/:attemptId/tab-switch - Record tab switch
-router.post('/exams/attempt/:attemptId/tab-switch', async (req, res) => {
+router.post('/exams/attempt/:attemptId/tab-switch', authenticate, async (req, res) => {
   try {
     const { attemptId } = req.params
 
@@ -425,7 +453,7 @@ router.post('/exams/attempt/:attemptId/tab-switch', async (req, res) => {
 })
 
 // GET /api/student-programs/exams/attempt/:attemptId/result - Get exam result
-router.get('/exams/attempt/:attemptId/result', async (req, res) => {
+router.get('/exams/attempt/:attemptId/result', authenticate, async (req, res) => {
   try {
     const { attemptId } = req.params
 
@@ -494,7 +522,7 @@ router.get('/exams/attempt/:attemptId/result', async (req, res) => {
 })
 
 // GET /api/student-programs/:programId/grade - Get student's grade for program
-router.get('/:programId/grade', async (req, res) => {
+router.get('/:programId/grade', authenticate, async (req, res) => {
   try {
     const { programId } = req.params
 
@@ -568,7 +596,7 @@ router.get('/:programId/grade', async (req, res) => {
 })
 
 // POST /api/student-programs/sessions/:sessionId/join - Mark attendance
-router.post('/sessions/:sessionId/join', async (req, res) => {
+router.post('/sessions/:sessionId/join', authenticate, async (req, res) => {
   try {
     const { sessionId } = req.params
 
