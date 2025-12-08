@@ -1179,18 +1179,7 @@ export default function StudentCourseView() {
                 const hasPreviousAttempt = examData?.attemptCount > 0
                 const latestScore = examData?.latestScore
                 
-                // Debug logging
-                console.log('EXAM BANNER DEBUG:', {
-                  examId,
-                  sessionId,
-                  attemptForThisSession,
-                  completed,
-                  inProgress,
-                  hasPreviousAttempt,
-                  latestScore,
-                  examData
-                })
-                
+                                
                 // Show loading while fetching exam data
                 if (loadingExams && !examData) {
                   return (
