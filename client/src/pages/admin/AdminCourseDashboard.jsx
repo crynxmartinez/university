@@ -1024,65 +1024,49 @@ export default function AdminCourseDashboard() {
 
           {/* Schedule Tab (LIVE courses only) */}
           {activeTab === 'schedule' && course.type === 'LIVE' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
-              </div>
-
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Calendar */}
               <div className="bg-white rounded-xl shadow-sm p-6">
-                {/* Calendar Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <button
-                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
-                  >
+                <div className="flex items-center justify-between mb-4">
+                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <h2 className="text-lg font-semibold">
-                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </h2>
-                  <button
-                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
-                  >
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+                    <button onClick={() => setCurrentMonth(new Date())} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition">Today</button>
+                  </div>
+                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-1">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                      {day}
-                    </div>
+                    <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">{day}</div>
                   ))}
                   {getDaysInMonth(currentMonth).map((date, index) => {
                     const daySessions = date ? getSessionsForDate(date) : []
                     const isToday = date?.toDateString() === new Date().toDateString()
+                    const isSelected = date && selectedDate && formatDate(date) === formatDate(selectedDate)
                     
                     return (
                       <div
                         key={index}
-                        onClick={() => date && setSelectedDate(date.toISOString().split('T')[0])}
-                        className={`min-h-[80px] p-2 border rounded-lg cursor-pointer transition ${
-                          date ? 'hover:bg-gray-50' : 'bg-gray-50'
-                        } ${isToday ? 'border-[#f7941d]' : 'border-gray-200'}`}
+                        onClick={() => date && handleDateClick(date)}
+                        onContextMenu={(e) => { e.preventDefault(); if (date && copiedSession) handlePasteSession(date) }}
+                        className={`min-h-[70px] p-1.5 border rounded-lg cursor-pointer transition text-center ${
+                          !date ? 'bg-gray-50 cursor-default' : 'hover:bg-gray-50'
+                        } ${isToday ? 'border-[#f7941d] border-2' : 'border-gray-200'} ${isSelected ? 'bg-blue-50 border-blue-300' : ''}`}
                       >
                         {date && (
                           <>
-                            <span className={`text-sm ${isToday ? 'font-bold text-[#f7941d]' : 'text-gray-700'}`}>
-                              {date.getDate()}
-                            </span>
-                            {daySessions.map(session => (
-                              <div
-                                key={session.id}
-                                className={`mt-1 text-xs p-1 rounded truncate ${
-                                  session.type === 'EXAM' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                                }`}
-                              >
-                                {session.startTime} - {session.type}
-                              </div>
-                            ))}
+                            <span className={`text-sm ${isToday ? 'font-bold text-[#f7941d]' : 'text-gray-700'}`}>{date.getDate()}</span>
+                            <div className="mt-1 space-y-0.5">
+                              {daySessions.slice(0, 2).map(session => (
+                                <div key={session.id} className={`w-full h-1.5 rounded-full ${getSessionTypeColor(session.type)}`}></div>
+                              ))}
+                              {daySessions.length > 2 && <div className="text-xs text-gray-400">+{daySessions.length - 2}</div>}
+                            </div>
                           </>
                         )}
                       </div>
@@ -1090,59 +1074,93 @@ export default function AdminCourseDashboard() {
                   })}
                 </div>
 
-                {/* Add Session Button */}
-                {selectedDate && (
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between">
+                {/* Legend */}
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t text-xs text-gray-500">
+                  <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Class</div>
+                  <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-red-500"></div> Exam</div>
+                  {copiedSession && <div className="flex items-center gap-1 ml-auto text-green-600"><Clipboard className="w-3 h-3" /> Right-click to paste</div>}
+                </div>
+              </div>
+
+              {/* Session Details */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                {selectedDate ? (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="font-medium">
-                          {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                        </h3>
-                        <p className="text-sm text-gray-500">{getSessionsForDate(new Date(selectedDate)).length} sessions</p>
+                        <h3 className="font-semibold text-gray-900">{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+                        <p className="text-sm text-gray-500">{getSessionsForDate(selectedDate).length} session(s)</p>
                       </div>
-                      <button
-                        onClick={() => { setShowSessionModal(true); setEditingSession(null) }}
-                        className="px-4 py-2 bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f]"
-                      >
-                        Add Session
+                      <button onClick={() => { setEditingSession(null); setSessionForm({ type: 'CLASS', lessonId: '', examId: '', startTime: '19:00', endTime: '21:00', meetingLink: '', notes: '' }); setShowSessionModal(true) }} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition">
+                        <Plus className="w-4 h-4" />Add Session
                       </button>
                     </div>
-                    
-                    {/* Sessions for selected date */}
-                    <div className="mt-4 space-y-2">
-                      {getSessionsForDate(new Date(selectedDate)).map(session => (
-                        <div key={session.id} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                          <div>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              session.type === 'EXAM' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                              {session.type}
-                            </span>
-                            <span className="ml-2 text-sm">{session.startTime} - {session.endTime}</span>
+
+                    {getSessionsForDate(selectedDate).length === 0 ? (
+                      <div className="text-center py-12">
+                        <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No sessions scheduled</p>
+                        <p className="text-sm text-gray-400">Click "Add Session" to create one</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {getSessionsForDate(selectedDate).map(session => (
+                          <div key={session.id} className={`border rounded-xl p-4 ${getSessionTypeBgColor(session.type)}`}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${session.type === 'EXAM' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'}`}>{session.type}</span>
+                                  <span className="text-sm text-gray-600">{formatTime12h(session.startTime)} - {formatTime12h(session.endTime)}</span>
+                                </div>
+                                {session.lesson && <p className="text-sm font-medium text-gray-900">{session.lesson.name}</p>}
+                                {session.exam && <p className="text-sm font-medium text-gray-900">{session.exam.title}</p>}
+                                {session.meetingLink ? (
+                                  <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                                    <LinkIcon className="w-3 h-3" />{session.meetingLink.includes('zoom') ? 'Zoom Meeting' : session.meetingLink.includes('meet') ? 'Google Meet' : 'Meeting Link'}
+                                  </a>
+                                ) : (
+                                  <p className="text-sm text-amber-600 flex items-center gap-1 mt-1"><AlertTriangle className="w-3 h-3" />No meeting link</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => handleCopySession(session)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white rounded transition" title="Copy session"><Copy className="w-4 h-4" /></button>
+                                <button onClick={() => handleEditSession(session)} className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-white rounded transition" title="Edit"><Edit3 className="w-4 h-4" /></button>
+                                <button onClick={() => setDeleteSessionConfirm(session.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                            </div>
+
+                            {/* Materials */}
+                            {session.materials?.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Materials</p>
+                                <div className="space-y-1">
+                                  {session.materials.map(material => (
+                                    <div key={material.id} className="flex items-center justify-between text-sm">
+                                      <a href={material.driveUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                        <FileText className="w-3 h-3" />{material.name}
+                                      </a>
+                                      <button onClick={() => setDeleteMaterialConfirm({ sessionId: session.id, materialId: material.id })} className="text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-2">
+                              <button onClick={() => handleAddMaterial(session.id)} className="text-xs text-[#1e3a5f] hover:underline flex items-center gap-1"><Plus className="w-3 h-3" />Add Material</button>
+                              <button onClick={() => openAttendanceModal(session)} className="text-xs text-green-600 hover:underline flex items-center gap-1 ml-auto"><CheckSquare className="w-3 h-3" />Attendance</button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => openAttendance(session)}
-                              className="text-sm text-[#1e3a5f] hover:underline"
-                            >
-                              Attendance
-                            </button>
-                            <button
-                              onClick={() => { setEditingSession(session); setSessionForm({ type: session.type, lessonId: session.lessonId || '', examId: session.examId || '', startTime: session.startTime, endTime: session.endTime, meetingLink: session.meetingLink || '', notes: session.notes || '' }); setShowSessionModal(true) }}
-                              className="p-1 text-gray-400 hover:text-[#1e3a5f]"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteSessionConfirm(session.id)}
-                              className="p-1 text-gray-400 hover:text-red-500"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-16">
+                    <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Date</h3>
+                    <p className="text-gray-500">Click on a date in the calendar to view or add sessions</p>
                   </div>
                 )}
               </div>
@@ -1701,6 +1719,43 @@ export default function AdminCourseDashboard() {
               <button onClick={() => setShowScoreModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition">Cancel</button>
               <button onClick={handleSaveScores} disabled={scoreSaving} className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50">
                 {scoreSaving ? 'Saving...' : 'Save Scores'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Material Modal */}
+      {showMaterialModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Add Material</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Material Name</label>
+                <input
+                  type="text"
+                  value={materialForm.name}
+                  onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
+                  placeholder="e.g., Lecture Slides"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Google Drive URL</label>
+                <input
+                  type="url"
+                  value={materialForm.driveUrl}
+                  onChange={(e) => setMaterialForm({ ...materialForm, driveUrl: e.target.value })}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowMaterialModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancel</button>
+              <button onClick={handleSaveMaterial} disabled={materialSaving || !materialForm.name || !materialForm.driveUrl} className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50">
+                {materialSaving ? 'Adding...' : 'Add Material'}
               </button>
             </div>
           </div>
