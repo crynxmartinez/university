@@ -59,12 +59,14 @@ function SortableLesson({ lesson, onEdit, onDelete, courseType }) {
         <button
           onClick={() => onEdit(lesson)}
           className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100"
+          title="Edit class"
         >
           <Edit3 className="w-4 h-4" />
         </button>
         <button
           onClick={() => onDelete(lesson.id)}
           className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100"
+          title="Delete class"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -95,15 +97,15 @@ function SortableModule({ module, index, expanded, onToggle, onEdit, onDelete, o
           </span>
           <button onClick={onToggle} className="flex items-center gap-2 flex-1 text-left">
             <span className="font-medium text-gray-900">{module.name}</span>
-            <span className="text-sm text-gray-500">({module.lessons?.length || 0} lessons)</span>
+            <span className="text-sm text-gray-500">({module.lessons?.length || 0} classes)</span>
             {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100">
+          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100" title="Edit module">
             <Edit3 className="w-4 h-4" />
           </button>
-          <button onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100">
+          <button onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="Delete module">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -122,10 +124,10 @@ function SortableModule({ module, index, expanded, onToggle, onEdit, onDelete, o
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="p-4 text-center text-gray-500 text-sm">No lessons yet</div>
+            <div className="p-4 text-center text-gray-500 text-sm">No classes in this module</div>
           )}
           <div className="p-3 border-t">
-            <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Lesson</button>
+            <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Class</button>
           </div>
         </div>
       )}
@@ -915,8 +917,8 @@ export default function AdminCourseDashboard() {
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold text-gray-900">
-              {activeTab === 'class' && 'Course Content'}
-              {activeTab === 'exam' && 'Exams'}
+              {activeTab === 'class' && 'Class Templates'}
+              {activeTab === 'exam' && 'Exam Templates'}
               {activeTab === 'schedule' && 'Schedule'}
               {activeTab === 'students' && 'Enrolled Students'}
               {activeTab === 'settings' && 'Settings'}
@@ -930,7 +932,7 @@ export default function AdminCourseDashboard() {
           {activeTab === 'class' && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-600">Manage course modules and lessons</p>
+                <p className="text-gray-600">Create class templates that can be scheduled on the calendar</p>
                 <button
                   onClick={() => { setShowModuleModal(true); setEditingModule(null); setModuleForm({ name: '' }) }}
                   className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
@@ -943,8 +945,8 @@ export default function AdminCourseDashboard() {
               {course.modules?.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No modules yet</h3>
-                  <p className="text-gray-500 mb-4">Create modules and lessons for this course</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No class templates yet</h3>
+                  <p className="text-gray-500 mb-4">Create modules and classes to use as class templates</p>
                   <button
                     onClick={() => setShowModuleModal(true)}
                     className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
@@ -985,7 +987,7 @@ export default function AdminCourseDashboard() {
           {activeTab === 'exam' && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-600">Create and manage exams</p>
+                <p className="text-gray-600">Create exams to grade your students</p>
                 <button
                   onClick={() => handleOpenExamModal()}
                   className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
@@ -1004,7 +1006,7 @@ export default function AdminCourseDashboard() {
                 <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                   <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Exams Yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first exam</p>
+                  <p className="text-gray-500 mb-6">Create your first exam to start grading students</p>
                   <button
                     onClick={() => handleOpenExamModal()}
                     className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
@@ -1279,33 +1281,65 @@ export default function AdminCourseDashboard() {
                   <p className="text-gray-500">No students match your search</p>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-3">
                   {filteredStudents.map((enrollment) => {
-                    const profile = enrollment.student?.user?.profile
-                    const user = enrollment.student?.user
+                    const student = enrollment.student
+                    const user = student?.user
+                    const profile = user?.profile
                     const fullName = profile ? `${profile.firstName} ${profile.lastName}` : (user?.email?.split('@')[0] || 'Unknown')
-                    const initials = profile ? `${profile.firstName?.charAt(0) || ''}${profile.lastName?.charAt(0) || ''}` : 'S'
+                    const email = user?.email || ''
+                    const enrolledDate = new Date(enrollment.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                    const stats = enrollment.attendanceStats || { attended: 0, total: 0, percentage: 0 }
 
                     return (
-                      <div key={enrollment.id} className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-[#1e3a5f] to-[#2d5a87] rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                            {initials}
+                      <div key={enrollment.id} className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition group">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold text-lg">
+                              {fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{fullName}</h4>
+                              <p className="text-sm text-gray-500">{email}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">Enrolled: {enrolledDate}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 truncate">{fullName}</h4>
-                            <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-                            <p className="text-xs text-gray-400 mt-1">Enrolled {new Date(enrollment.createdAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</p>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-4 border-t flex items-center justify-end">
                           <button
-                            onClick={() => setRemoveStudentConfirm({ id: enrollment.student?.id, name: fullName })}
-                            className="text-sm text-red-600 hover:text-red-700 hover:underline"
+                            onClick={() => setRemoveStudentConfirm({ id: student?.id, name: fullName })}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                            title="Remove student"
                           >
-                            Remove
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
+                        
+                        {/* Attendance Progress */}
+                        {course?.type === 'LIVE' && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-gray-600">Attendance</span>
+                              <span className={`font-medium ${
+                                stats.percentage >= 80 ? 'text-green-600' : 
+                                stats.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {stats.percentage}% ({stats.attended}/{stats.total} sessions)
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all ${
+                                  stats.percentage >= 80 ? 'bg-green-500' : 
+                                  stats.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${stats.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
