@@ -1553,69 +1553,143 @@ export default function AdminCourseDashboard() {
 
       {/* Session Modal */}
       {showSessionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">{editingSession ? 'Edit Session' : 'Add Session'}</h2>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">
+                {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : (editingSession ? 'Edit Session' : 'Add Session')}
+              </h2>
+              <button onClick={() => setShowSessionModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {/* Session Type Toggle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select
-                  value={sessionForm.type}
-                  onChange={(e) => setSessionForm({ ...sessionForm, type: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                >
-                  <option value="CLASS">Class</option>
-                  <option value="EXAM">Exam</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
+                <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                  <button
+                    type="button"
+                    onClick={() => setSessionForm({ ...sessionForm, type: 'CLASS', examId: '' })}
+                    className={`flex-1 py-2.5 text-sm font-medium transition ${
+                      sessionForm.type === 'CLASS' ? 'bg-[#1e3a5f] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    CLASS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSessionForm({ ...sessionForm, type: 'EXAM', lessonId: '' })}
+                    className={`flex-1 py-2.5 text-sm font-medium transition ${
+                      sessionForm.type === 'EXAM' ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    EXAM
+                  </button>
+                </div>
               </div>
+
+              {/* Class Template / Exam Selection */}
+              {sessionForm.type === 'CLASS' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Class Template *</label>
+                  <select
+                    value={sessionForm.lessonId}
+                    onChange={(e) => setSessionForm({ ...sessionForm, lessonId: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  >
+                    <option value="">Select a class template...</option>
+                    {getAllLessons().map(lesson => (
+                      <option key={lesson.id} value={lesson.id}>{lesson.moduleName} - {lesson.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Exam *</label>
+                  <select
+                    value={sessionForm.examId}
+                    onChange={(e) => setSessionForm({ ...sessionForm, examId: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  >
+                    <option value="">Select an exam...</option>
+                    {exams.map(exam => (
+                      <option key={exam.id} value={exam.id}>{exam.title}</option>
+                    ))}
+                  </select>
+                  {sessionForm.examId && exams.find(e => e.id === sessionForm.examId) && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Students who already took this exam won't be able to retake it
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
                   <input
                     type="time"
                     value={sessionForm.startTime}
                     onChange={(e) => setSessionForm({ ...sessionForm, startTime: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
                   <input
                     type="time"
                     value={sessionForm.endTime}
                     onChange={(e) => setSessionForm({ ...sessionForm, endTime: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                   />
                 </div>
               </div>
-              <input
-                type="url"
-                value={sessionForm.meetingLink}
-                onChange={(e) => setSessionForm({ ...sessionForm, meetingLink: e.target.value })}
-                placeholder="Meeting link (Zoom/Meet)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
-              <textarea
-                value={sessionForm.notes}
-                onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
-                placeholder="Notes (optional)"
-                rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
+
+              {/* Meeting Link */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Link</label>
+                <input
+                  type="url"
+                  value={sessionForm.meetingLink}
+                  onChange={(e) => setSessionForm({ ...sessionForm, meetingLink: e.target.value })}
+                  placeholder="https://zoom.us/j/..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={sessionForm.notes}
+                  onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
+                  placeholder="Instructions or notes for students..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
             </div>
-            <div className="flex gap-2 mt-4">
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
               <button
                 onClick={() => setShowSessionModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveSession}
-                disabled={saving}
-                className="flex-1 px-4 py-2 bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f] disabled:opacity-50"
+                disabled={sessionSaving}
+                className="px-5 py-2.5 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save'}
+                {sessionSaving ? 'Saving...' : (editingSession ? 'Update' : 'Create')}
               </button>
             </div>
           </div>
