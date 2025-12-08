@@ -246,14 +246,17 @@ router.post('/', authenticate, async (req, res) => {
   }
 })
 
-// PUT /api/courses/:id - Update a course
-router.put('/:id', authenticate, async (req, res) => {
+// PUT /api/courses/:idOrSlug - Update a course
+router.put('/:idOrSlug', authenticate, async (req, res) => {
   try {
-    const { id } = req.params
+    const { idOrSlug } = req.params
     const { name, description, type, isActive, startDate, endDate, enrollmentEnd } = req.body
 
-    // Check ownership
-    const existing = await prisma.course.findUnique({ where: { id } })
+    // Check ownership - support both id and slug
+    let existing = await prisma.course.findUnique({ where: { id: idOrSlug } })
+    if (!existing) {
+      existing = await prisma.course.findUnique({ where: { slug: idOrSlug } })
+    }
     if (!existing) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -264,11 +267,11 @@ router.put('/:id', authenticate, async (req, res) => {
     // Regenerate slug if name changed
     let slug = existing.slug
     if (name && name !== existing.name) {
-      slug = await generateUniqueSlug(name, id)
+      slug = await generateUniqueSlug(name, existing.id)
     }
 
     const course = await prisma.course.update({
-      where: { id },
+      where: { id: existing.id },
       data: { 
         name, 
         slug,
@@ -289,20 +292,26 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 })
 
-// PUT /api/courses/:id/toggle-active - Toggle course active status
-router.put('/:id/toggle-active', authenticate, async (req, res) => {
+// PUT /api/courses/:idOrSlug/toggle-active - Toggle course active status
+router.put('/:idOrSlug/toggle-active', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'TEACHER' || !req.user.teacher) {
       return res.status(403).json({ error: 'Only teachers can update courses' })
     }
 
-    const { id } = req.params
+    const { idOrSlug } = req.params
 
-    // Check ownership
-    const existing = await prisma.course.findUnique({ 
-      where: { id },
+    // Check ownership - support both id and slug
+    let existing = await prisma.course.findUnique({ 
+      where: { id: idOrSlug },
       include: { sessions: true }
     })
+    if (!existing) {
+      existing = await prisma.course.findUnique({ 
+        where: { slug: idOrSlug },
+        include: { sessions: true }
+      })
+    }
     if (!existing) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -316,7 +325,7 @@ router.put('/:id/toggle-active', authenticate, async (req, res) => {
     }
 
     const course = await prisma.course.update({
-      where: { id },
+      where: { id: existing.id },
       data: { isActive: !existing.isActive },
       include: { modules: true, sessions: true }
     })
@@ -328,13 +337,16 @@ router.put('/:id/toggle-active', authenticate, async (req, res) => {
   }
 })
 
-// DELETE /api/courses/:id - Delete a course
-router.delete('/:id', authenticate, async (req, res) => {
+// DELETE /api/courses/:idOrSlug - Delete a course
+router.delete('/:idOrSlug', authenticate, async (req, res) => {
   try {
-    const { id } = req.params
+    const { idOrSlug } = req.params
 
-    // Check ownership
-    const existing = await prisma.course.findUnique({ where: { id } })
+    // Check ownership - support both id and slug
+    let existing = await prisma.course.findUnique({ where: { id: idOrSlug } })
+    if (!existing) {
+      existing = await prisma.course.findUnique({ where: { slug: idOrSlug } })
+    }
     if (!existing) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -342,7 +354,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to delete this course' })
     }
 
-    await prisma.course.delete({ where: { id } })
+    await prisma.course.delete({ where: { id: existing.id } })
 
     res.json({ message: 'Course deleted successfully' })
   } catch (error) {
