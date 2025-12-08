@@ -59,9 +59,19 @@ export const reorderProgramExamQuestions = async (examId, questionIds) => {
   return res.data
 }
 
-// ============ GRADES ============
+// ============ GRADES / SCORES ============
 
 export const getProgramGrades = async (programId) => {
   const res = await axios.get(`${API_URL}/admin/program-exams/${programId}/grades`, getAuthHeaders())
+  return res.data
+}
+
+export const saveProgramExamScores = async (examId, scores) => {
+  const res = await axios.post(`${API_URL}/admin/program-exams/exam/${examId}/scores`, { scores }, getAuthHeaders())
+  return res.data
+}
+
+export const saveAllProgramExamQuestions = async (examId, data) => {
+  const res = await axios.put(`${API_URL}/admin/program-exams/exam/${examId}/questions/batch`, data, getAuthHeaders())
   return res.data
 }

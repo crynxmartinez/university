@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { 
   ArrowLeft, BookOpen, Calendar, Users, Settings, Menu, 
-  Plus, Video, Radio, ChevronDown, ChevronRight, Play,
+  Plus, Video, Radio, ChevronDown, ChevronRight,
   ToggleLeft, ToggleRight, Trash2, Edit3, Save, X,
-  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, 
-  GripVertical, CheckSquare, AlertTriangle, Folder, Award
+  ChevronLeft, Clock, Link as LinkIcon, FileText, Copy, Clipboard,
+  GripVertical, CheckSquare, AlertTriangle
 } from 'lucide-react'
 import { 
   getAdminProgram, updateAdminProgram, toggleAdminProgramActive, deleteAdminProgram,
@@ -14,20 +14,144 @@ import {
   getProgramSessions, createProgramSession, updateProgramSession, deleteProgramSession,
   addProgramSessionMaterial, deleteProgramSessionMaterial,
   getProgramAttendance, updateProgramAttendance,
-  getProgramStudents, enrollProgramStudent, removeProgramStudent
+  getProgramStudents, removeProgramStudent
 } from '../../api/adminPrograms'
 import { 
   getProgramExams, createProgramExam, updateProgramExam, deleteProgramExam,
-  getProgramGrades
+  saveProgramExamScores
 } from '../../api/adminProgramExams'
 import { useToast, ConfirmModal } from '../../components/Toast'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+// Sortable Lesson Component
+function SortableLesson({ lesson, onEdit, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lesson.id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="p-4 flex items-center justify-between hover:bg-gray-50 group">
+      <div className="flex items-center gap-3">
+        <button {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600 touch-none">
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
+        <div>
+          <span className="text-gray-900 font-medium">{lesson.name}</span>
+          {lesson.description && (
+            <p className="text-sm text-gray-500 mt-0.5">{lesson.description}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {lesson.materials && (
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Materials</span>
+        )}
+        {lesson.videoUrl && (
+          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Video</span>
+        )}
+        <button
+          onClick={() => onEdit(lesson)}
+          className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100"
+          title="Edit class"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onDelete(lesson.id)}
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100"
+          title="Delete class"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Sortable Module Component
+function SortableModule({ module, index, expanded, onToggle, onEdit, onDelete, onAddLesson, onEditLesson, onDeleteLesson, onLessonDragEnd, sensors }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: module.id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition group">
+        <div className="flex items-center gap-3 flex-1">
+          <button {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600 touch-none">
+            <GripVertical className="w-5 h-5" />
+          </button>
+          <span className="w-8 h-8 bg-[#1e3a5f] text-white rounded-lg flex items-center justify-center text-sm font-bold">
+            {index + 1}
+          </span>
+          <button onClick={onToggle} className="flex items-center gap-2 flex-1 text-left">
+            <span className="font-medium text-gray-900">{module.name}</span>
+            <span className="text-sm text-gray-500">({module.lessons?.length || 0} classes)</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded transition opacity-0 group-hover:opacity-100" title="Edit module">
+            <Edit3 className="w-4 h-4" />
+          </button>
+          <button onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="Delete module">
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button onClick={onToggle} className="p-1">
+            {expanded ? (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+        </div>
+      </div>
+      
+      {expanded && (
+        <div className="border-t">
+          {module.lessons?.length > 0 ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onLessonDragEnd}>
+              <SortableContext items={module.lessons.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                <div className="divide-y">
+                  {module.lessons.map((lesson) => (
+                    <SortableLesson key={lesson.id} lesson={lesson} onEdit={onEditLesson} onDelete={onDeleteLesson} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="p-4 text-center">
+              <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
+              <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Class</button>
+            </div>
+          )}
+          {module.lessons?.length > 0 && (
+            <div className="p-4">
+              <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Class</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function AdminProgramDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
   
-  const [program, setProgram] = useState(null)
+  const [Program, setProgram] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('class')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -39,14 +163,25 @@ export default function AdminProgramDashboard() {
   const [moduleForm, setModuleForm] = useState({ name: '' })
   const [showLessonModal, setShowLessonModal] = useState(false)
   const [editingLesson, setEditingLesson] = useState(null)
-  const [lessonForm, setLessonForm] = useState({ name: '', description: '', materials: '', videoUrl: '' })
+  const [lessonForm, setLessonForm] = useState({ name: '', description: '', videoUrl: '' })
+  const [lessonMaterialUrls, setLessonMaterialUrls] = useState([''])
   const [selectedModuleId, setSelectedModuleId] = useState(null)
+  const [savingLesson, setSavingLesson] = useState(false)
   
   // Exam state
   const [exams, setExams] = useState([])
+  const [loadingExams, setLoadingExams] = useState(false)
   const [showExamModal, setShowExamModal] = useState(false)
   const [editingExam, setEditingExam] = useState(null)
   const [examForm, setExamForm] = useState({ title: '', description: '', totalPoints: 100 })
+  const [examSaving, setExamSaving] = useState(false)
+  const [deletingExam, setDeletingExam] = useState(false)
+  
+  // Score entry state
+  const [showScoreModal, setShowScoreModal] = useState(false)
+  const [scoringExam, setScoringExam] = useState(null)
+  const [scoreEntries, setScoreEntries] = useState([])
+  const [scoreSaving, setScoreSaving] = useState(false)
   
   // Session state
   const [sessions, setSessions] = useState([])
@@ -63,73 +198,102 @@ export default function AdminProgramDashboard() {
     meetingLink: '',
     notes: ''
   })
+  const [sessionSaving, setSessionSaving] = useState(false)
+  const [deletingSession, setDeletingSession] = useState(false)
+  const [copiedSession, setCopiedSession] = useState(null)
+  
+  // Material state
+  const [showMaterialModal, setShowMaterialModal] = useState(false)
+  const [materialSessionId, setMaterialSessionId] = useState(null)
+  const [materialForm, setMaterialForm] = useState({ name: '', driveUrl: '' })
+  const [materialSaving, setMaterialSaving] = useState(false)
   
   // Students state
-  const [students, setStudents] = useState([])
-  const [grades, setGrades] = useState([])
+  const [enrolledStudents, setEnrolledStudents] = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+  const [studentSearchTerm, setStudentSearchTerm] = useState('')
+  const [removingStudent, setRemovingStudent] = useState(false)
   
-  // Delete confirmations
+  // Settings state
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editEnrollmentEnd, setEditEnrollmentEnd] = useState('')
+  const [editPrice, setEditPrice] = useState(0)
+  const [editPriceType, setEditPriceType] = useState('ONE_TIME')
+  const [toggling, setToggling] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  
+  // Attendance state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false)
+  const [attendanceSession, setAttendanceSession] = useState(null)
+  const [attendanceList, setAttendanceList] = useState([])
+  const [attendanceSaving, setAttendanceSaving] = useState(false)
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
+  
+  // Confirm modals
   const [deleteModuleConfirm, setDeleteModuleConfirm] = useState(null)
   const [deleteLessonConfirm, setDeleteLessonConfirm] = useState(null)
   const [deleteExamConfirm, setDeleteExamConfirm] = useState(null)
   const [deleteSessionConfirm, setDeleteSessionConfirm] = useState(null)
+  const [deleteMaterialConfirm, setDeleteMaterialConfirm] = useState(null)
+  const [removeStudentConfirm, setRemoveStudentConfirm] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   
-  // Settings state
-  const [settingsForm, setSettingsForm] = useState({})
-  const [savingSettings, setSavingSettings] = useState(false)
+  // Loading states
+  const [saving, setSaving] = useState(false)
+  const [deletingModule, setDeletingModule] = useState(false)
+  const [deletingLesson, setDeletingLesson] = useState(false)
+  
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   useEffect(() => {
     fetchProgram()
   }, [id])
 
   useEffect(() => {
-    if (program) {
-      fetchExams()
+    if (program?.id) {
       fetchSessions()
-      fetchStudents()
     }
   }, [program?.id])
+
+  useEffect(() => {
+    if (activeTab === 'students' && program?.id) {
+      fetchStudents()
+    }
+    if (activeTab === 'exam' && program?.id) {
+      fetchExams()
+    }
+  }, [activeTab, program?.id])
 
   const fetchProgram = async () => {
     try {
       const data = await getAdminProgram(id)
       setProgram(data)
-      setSettingsForm({
-        name: data.name,
-        description: data.description || '',
-        programType: data.programType,
-        price: data.price || 0,
-        priceType: data.priceType || 'ONE_TIME',
-        schedule: data.schedule || '',
-        location: data.location || '',
-        meetingLink: data.meetingLink || '',
-        image: data.image || '',
-        isActive: data.isActive
-      })
-      // Expand first module by default
-      if (data.modules?.length > 0) {
-        setExpandedModules({ [data.modules[0].id]: true })
-      }
+      // Initialize edit form values
+      setEditName(data.name)
+      setEditDescription(data.description || '')
+      setEditStartDate(data.startDate ? data.startDate.split('T')[0] : '')
+      setEditEndDate(data.endDate ? data.endDate.split('T')[0] : '')
+      setEditEnrollmentEnd(data.enrollmentEnd ? data.enrollmentEnd.split('T')[0] : '')
+      setEditPrice(data.price || 0)
+      setEditPriceType(data.priceType || 'ONE_TIME')
     } catch (error) {
-      console.error('Failed to fetch program:', error)
-      console.error('Error response:', error.response?.data)
-      console.error('Program ID:', id)
-      toast.error(error.response?.data?.error || 'Failed to load program')
+      console.error('Failed to fetch Program:', error)
+      toast.error('Failed to load Program')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchExams = async () => {
-    try {
-      const data = await getProgramExams(program.id)
-      setExams(data)
-    } catch (error) {
-      console.error('Failed to fetch exams:', error)
-    }
-  }
-
   const fetchSessions = async () => {
+    if (!program?.id) return
     try {
       const data = await getProgramSessions(program.id)
       setSessions(data)
@@ -138,20 +302,45 @@ export default function AdminProgramDashboard() {
     }
   }
 
+  const fetchExams = async () => {
+    if (!program?.id) return
+    setLoadingExams(true)
+    try {
+      const data = await getProgramExams(program.id)
+      setExams(data)
+    } catch (error) {
+      console.error('Failed to fetch exams:', error)
+    } finally {
+      setLoadingExams(false)
+    }
+  }
+
   const fetchStudents = async () => {
+    if (!program?.id) return
+    setLoadingStudents(true)
     try {
       const data = await getProgramStudents(program.id)
-      setStudents(data)
-      // Also fetch grades
-      const gradesData = await getProgramGrades(program.id)
-      setGrades(gradesData)
+      setEnrolledStudents(data)
     } catch (error) {
       console.error('Failed to fetch students:', error)
+    } finally {
+      setLoadingStudents(false)
     }
   }
 
   // Module handlers
+  const toggleModule = (moduleId) => {
+    setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }))
+  }
+
+  const openEditModule = (module) => {
+    setEditingModule(module)
+    setModuleForm({ name: module.name })
+    setShowModuleModal(true)
+  }
+
   const handleSaveModule = async () => {
+    setSaving(true)
     try {
       if (editingModule) {
         await updateProgramModule(editingModule.id, moduleForm)
@@ -160,60 +349,133 @@ export default function AdminProgramDashboard() {
         await createProgramModule(program.id, moduleForm)
         toast.success('Module created')
       }
-      fetchProgram()
       setShowModuleModal(false)
       setEditingModule(null)
       setModuleForm({ name: '' })
+      fetchProgram()
     } catch (error) {
       toast.error('Failed to save module')
+    } finally {
+      setSaving(false)
     }
   }
 
   const handleDeleteModule = async () => {
+    if (!deleteModuleConfirm) return
+    setDeletingModule(true)
     try {
       await deleteProgramModule(deleteModuleConfirm)
       toast.success('Module deleted')
+      setDeleteModuleConfirm(null)
       fetchProgram()
     } catch (error) {
       toast.error('Failed to delete module')
     } finally {
-      setDeleteModuleConfirm(null)
+      setDeletingModule(false)
+    }
+  }
+
+  const handleModuleDragEnd = async (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = program.modules.findIndex(m => m.id === active.id)
+    const newIndex = program.modules.findIndex(m => m.id === over.id)
+    const newModules = arrayMove(program.modules, oldIndex, newIndex)
+    setProgram(prev => ({ ...prev, modules: newModules }))
+    try {
+      await reorderProgramModules(program.id, newModules.map(m => m.id))
+    } catch (error) {
+      toast.error('Failed to reorder modules')
+      fetchProgram()
     }
   }
 
   // Lesson handlers
+  const openEditLesson = (lesson) => {
+    const urls = lesson.materials ? lesson.materials.split('\n').filter(u => u.trim()) : ['']
+    setLessonMaterialUrls(urls.length > 0 ? urls : [''])
+    setEditingLesson(lesson)
+    setLessonForm({ name: lesson.name, description: lesson.description || '', videoUrl: lesson.videoUrl || '' })
+    setShowLessonModal(true)
+  }
+
+  const addLessonMaterialUrl = () => setLessonMaterialUrls([...lessonMaterialUrls, ''])
+  const removeLessonMaterialUrl = (index) => setLessonMaterialUrls(lessonMaterialUrls.filter((_, i) => i !== index))
+  const updateLessonMaterialUrl = (index, value) => {
+    const updated = [...lessonMaterialUrls]
+    updated[index] = value
+    setLessonMaterialUrls(updated)
+  }
+
   const handleSaveLesson = async () => {
+    setSavingLesson(true)
+    const materials = lessonMaterialUrls.filter(u => u.trim()).join('\n')
     try {
       if (editingLesson) {
-        await updateProgramLesson(editingLesson.id, lessonForm)
+        await updateProgramLesson(editingLesson.id, { ...lessonForm, materials })
         toast.success('Lesson updated')
       } else {
-        await createProgramLesson(selectedModuleId, lessonForm)
+        await createProgramLesson(selectedModuleId, { ...lessonForm, materials })
         toast.success('Lesson created')
       }
-      fetchProgram()
       setShowLessonModal(false)
       setEditingLesson(null)
-      setLessonForm({ name: '', description: '', materials: '', videoUrl: '' })
+      setLessonForm({ name: '', description: '', videoUrl: '' })
+      setLessonMaterialUrls([''])
+      fetchProgram()
     } catch (error) {
       toast.error('Failed to save lesson')
+    } finally {
+      setSavingLesson(false)
     }
   }
 
   const handleDeleteLesson = async () => {
+    if (!deleteLessonConfirm) return
+    setDeletingLesson(true)
     try {
       await deleteProgramLesson(deleteLessonConfirm)
-      toast.success('Lesson deleted')
+      toast.success('Class deleted')
+      setDeleteLessonConfirm(null)
       fetchProgram()
     } catch (error) {
-      toast.error('Failed to delete lesson')
+      toast.error('Failed to delete class')
     } finally {
-      setDeleteLessonConfirm(null)
+      setDeletingLesson(false)
+    }
+  }
+
+  const handleLessonDragEnd = async (moduleId, event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const module = program.modules.find(m => m.id === moduleId)
+    if (!module) return
+    const oldIndex = module.lessons.findIndex(l => l.id === active.id)
+    const newIndex = module.lessons.findIndex(l => l.id === over.id)
+    const newLessons = arrayMove(module.lessons, oldIndex, newIndex)
+    setProgram(prev => ({ ...prev, modules: prev.modules.map(m => m.id === moduleId ? { ...m, lessons: newLessons } : m) }))
+    try {
+      await reorderProgramLessons(moduleId, newLessons.map(l => l.id))
+    } catch (error) {
+      toast.error('Failed to reorder lessons')
+      fetchProgram()
     }
   }
 
   // Exam handlers
+  const handleOpenExamModal = (exam = null) => {
+    if (exam) {
+      setEditingExam(exam)
+      setExamForm({ title: exam.title, description: exam.description || '', totalPoints: exam.totalPoints })
+    } else {
+      setEditingExam(null)
+      setExamForm({ title: '', description: '', totalPoints: 100 })
+    }
+    setShowExamModal(true)
+  }
+
   const handleSaveExam = async () => {
+    setExamSaving(true)
     try {
       if (editingExam) {
         await updateProgramExam(editingExam.id, examForm)
@@ -222,113 +484,84 @@ export default function AdminProgramDashboard() {
         await createProgramExam(program.id, examForm)
         toast.success('Exam created')
       }
-      fetchExams()
       setShowExamModal(false)
       setEditingExam(null)
-      setExamForm({ title: '', description: '', totalPoints: 100 })
+      fetchExams()
     } catch (error) {
       toast.error('Failed to save exam')
+    } finally {
+      setExamSaving(false)
     }
   }
 
   const handleDeleteExam = async () => {
+    setDeletingExam(true)
     try {
       await deleteProgramExam(deleteExamConfirm)
       toast.success('Exam deleted')
+      setDeleteExamConfirm(null)
       fetchExams()
     } catch (error) {
       toast.error('Failed to delete exam')
     } finally {
-      setDeleteExamConfirm(null)
+      setDeletingExam(false)
     }
   }
 
-  // Session handlers
-  const handleSaveSession = async () => {
-    if (!selectedDate) return
-    try {
-      const sessionData = {
-        date: formatDate(selectedDate),
-        ...sessionForm
+  // Score entry handlers
+  const handleOpenScoreModal = (exam) => {
+    setScoringExam(exam)
+    const entries = enrolledStudents.map(enrollment => {
+      const existingScore = exam.scores?.find(s => s.studentId === enrollment.student?.id)
+      const profile = enrollment.student?.user?.profile
+      return {
+        studentId: enrollment.student?.id,
+        studentName: profile ? `${profile.firstName} ${profile.lastName}` : enrollment.student?.user?.email,
+        email: enrollment.student?.user?.email,
+        score: existingScore?.score ?? '',
+        notes: existingScore?.notes || ''
       }
-      if (editingSession) {
-        await updateProgramSession(editingSession.id, sessionData)
-        toast.success('Session updated')
-      } else {
-        await createProgramSession(program.id, sessionData)
-        toast.success('Session created')
-      }
-      fetchSessions()
-      setShowSessionModal(false)
-      setEditingSession(null)
-    } catch (error) {
-      toast.error('Failed to save session')
-    }
+    })
+    setScoreEntries(entries)
+    setShowScoreModal(true)
   }
 
-  const handleDeleteSession = async () => {
+  const handleScoreChange = (studentId, value) => {
+    setScoreEntries(prev => prev.map(entry => entry.studentId === studentId ? { ...entry, score: value } : entry))
+  }
+
+  const handleSaveScores = async () => {
+    setScoreSaving(true)
     try {
-      await deleteProgramSession(deleteSessionConfirm)
-      toast.success('Session deleted')
-      fetchSessions()
+      const scores = scoreEntries.filter(e => e.score !== '').map(e => ({ studentId: e.studentId, score: parseFloat(e.score), notes: e.notes }))
+      await saveProgramExamScores(scoringExam.id, scores)
+      toast.success('Scores saved')
+      setShowScoreModal(false)
+      fetchExams()
     } catch (error) {
-      toast.error('Failed to delete session')
+      toast.error('Failed to save scores')
     } finally {
-      setDeleteSessionConfirm(null)
-      setShowSessionModal(false)
+      setScoreSaving(false)
     }
   }
 
-  // Settings handlers
-  const handleSaveSettings = async () => {
-    setSavingSettings(true)
-    try {
-      await updateAdminProgram(program.id, settingsForm)
-      toast.success('Settings saved')
-      fetchProgram()
-    } catch (error) {
-      toast.error('Failed to save settings')
-    } finally {
-      setSavingSettings(false)
-    }
-  }
-
-  // Helper functions
-  const formatDate = (date) => {
-    const d = new Date(date)
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  const formatTime12h = (time24) => {
-    if (!time24) return ''
-    const [hours, minutes] = time24.split(':')
-    const h = parseInt(hours)
-    const ampm = h >= 12 ? 'PM' : 'AM'
-    const h12 = h % 12 || 12
-    return `${h12}:${minutes} ${ampm}`
-  }
-
+  // Calendar helpers
   const getDaysInMonth = (date) => {
     const year = date.getFullYear()
     const month = date.getMonth()
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
     const days = []
-    
-    // Add empty cells for days before first day
-    for (let i = 0; i < firstDay.getDay(); i++) {
-      days.push(null)
-    }
-    
-    // Add all days in month
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push(new Date(year, month, i))
-    }
-    
+    for (let i = 0; i < firstDay.getDay(); i++) days.push(null)
+    for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i))
     return days
+  }
+
+  const formatDate = (date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   const getSessionsForDate = (date) => {
@@ -340,15 +573,272 @@ export default function AdminProgramDashboard() {
     })
   }
 
-  const getAllLessons = () => {
-    return program?.modules?.flatMap(m => 
-      m.lessons?.map(l => ({ ...l, moduleName: m.name })) || []
-    ) || []
+  const getSessionTypeColor = (type) => {
+    switch (type) {
+      case 'CLASS': return 'bg-blue-500'
+      case 'EXAM': return 'bg-red-500'
+      default: return 'bg-gray-500'
+    }
   }
 
-  const toggleModule = (moduleId) => {
-    setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }))
+  const getSessionTypeBgColor = (type) => {
+    switch (type) {
+      case 'CLASS': return 'bg-blue-50 border-l-4 border-l-blue-500 border-y border-r border-blue-200'
+      case 'EXAM': return 'bg-red-50 border-l-4 border-l-red-500 border-y border-r border-red-200'
+      default: return 'bg-gray-50 border-l-4 border-l-gray-400 border-y border-r border-gray-200'
+    }
   }
+
+  const formatTime12h = (time) => {
+    if (!time) return 'No time'
+    const [h, m] = time.split(':')
+    const hour = parseInt(h)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const hour12 = hour % 12 || 12
+    return `${hour12}:${m} ${ampm}`
+  }
+
+  const getAllLessons = () => {
+    if (!program?.modules) return []
+    return program.modules.flatMap(module => (module.lessons || []).map(lesson => ({ ...lesson, moduleName: module.name })))
+  }
+
+  // Session handlers
+  const handleDateClick = (date) => {
+    if (!date) return
+    setSelectedDate(date)
+    const existingSessions = getSessionsForDate(date)
+    if (existingSessions.length === 0) {
+      setEditingSession(null)
+      setSessionForm({ type: 'CLASS', lessonId: '', examId: '', startTime: '19:00', endTime: '21:00', meetingLink: '', notes: '' })
+      setShowSessionModal(true)
+    }
+  }
+
+  const handleEditSession = (session) => {
+    setEditingSession(session)
+    setSelectedDate(new Date(session.date))
+    setSessionForm({ type: session.type, lessonId: session.lessonId || '', examId: session.examId || '', startTime: session.startTime, endTime: session.endTime || '', meetingLink: session.meetingLink || '', notes: session.notes || '' })
+    setShowSessionModal(true)
+  }
+
+  const handleSaveSession = async () => {
+    if (!selectedDate) return
+    setSessionSaving(true)
+    try {
+      if (editingSession) {
+        const updated = await updateProgramSession(editingSession.id, { date: formatDate(selectedDate), ...sessionForm })
+        setSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
+      } else {
+        const created = await createProgramSession(program.id, { date: formatDate(selectedDate), ...sessionForm })
+        setSessions(prev => [...prev, created])
+      }
+      setShowSessionModal(false)
+      setEditingSession(null)
+      toast.success(editingSession ? 'Session updated' : 'Session created')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to save session')
+    } finally {
+      setSessionSaving(false)
+    }
+  }
+
+  const handleDeleteSession = async () => {
+    if (!deleteSessionConfirm) return
+    setDeletingSession(true)
+    try {
+      await deleteProgramSession(deleteSessionConfirm)
+      setSessions(prev => prev.filter(s => s.id !== deleteSessionConfirm))
+      setShowSessionModal(false)
+      toast.success('Session deleted')
+    } catch (error) {
+      toast.error('Failed to delete session')
+    } finally {
+      setDeletingSession(false)
+      setDeleteSessionConfirm(null)
+    }
+  }
+
+  const handleCopySession = (session) => {
+    setCopiedSession({ type: session.type, lessonId: session.lessonId, examId: session.examId, startTime: session.startTime, endTime: session.endTime, meetingLink: session.meetingLink, notes: session.notes })
+    toast.success('Session copied! Right-click on a date to paste')
+  }
+
+  const handlePasteSession = async (date) => {
+    if (!copiedSession) return
+    try {
+      const created = await createProgramSession(program.id, { date: formatDate(date), ...copiedSession })
+      setSessions(prev => [...prev, created])
+      toast.success('Session pasted')
+    } catch (error) {
+      toast.error('Failed to paste session')
+    }
+  }
+
+  // Material handlers
+  const handleAddMaterial = (sessionId) => {
+    setMaterialSessionId(sessionId)
+    setMaterialForm({ name: '', driveUrl: '' })
+    setShowMaterialModal(true)
+  }
+
+  const handleSaveMaterial = async () => {
+    setMaterialSaving(true)
+    try {
+      const updated = await addProgramSessionMaterial(materialSessionId, materialForm)
+      setSessions(prev => prev.map(s => s.id === materialSessionId ? updated : s))
+      setShowMaterialModal(false)
+      toast.success('Material added')
+    } catch (error) {
+      toast.error('Failed to add material')
+    } finally {
+      setMaterialSaving(false)
+    }
+  }
+
+  const handleDeleteMaterial = async () => {
+    if (!deleteMaterialConfirm) return
+    try {
+      await deleteProgramSessionMaterial(deleteMaterialConfirm.sessionId, deleteMaterialConfirm.materialId)
+      setSessions(prev => prev.map(s => s.id === deleteMaterialConfirm.sessionId ? { ...s, materials: s.materials.filter(m => m.id !== deleteMaterialConfirm.materialId) } : s))
+      toast.success('Material deleted')
+    } catch (error) {
+      toast.error('Failed to delete material')
+    } finally {
+      setDeleteMaterialConfirm(null)
+    }
+  }
+
+  // Attendance handlers
+  const openAttendanceModal = async (session) => {
+    setAttendanceSession(session)
+    setShowAttendanceModal(true)
+    setLoadingAttendance(true)
+    try {
+      const data = await getProgramAttendance(session.id)
+      setAttendanceList(data)
+    } catch (error) {
+      toast.error('Failed to load attendance')
+      setShowAttendanceModal(false)
+    } finally {
+      setLoadingAttendance(false)
+    }
+  }
+
+  const toggleAttendance = (studentId) => {
+    setAttendanceList(prev => prev.map(item => 
+      item.studentId === studentId 
+        ? { ...item, status: item.status === 'PRESENT' ? 'ABSENT' : 'PRESENT' }
+        : item
+    ))
+  }
+
+  const markAllPresent = () => {
+    setAttendanceList(prev => prev.map(item => ({ ...item, status: 'PRESENT' })))
+  }
+
+  const markAllAbsent = () => {
+    setAttendanceList(prev => prev.map(item => ({ ...item, status: 'ABSENT' })))
+  }
+
+  const handleSaveAttendance = async () => {
+    setAttendanceSaving(true)
+    try {
+      const attendance = attendanceList.map(item => ({
+        studentId: item.studentId,
+        status: item.status
+      }))
+      await updateProgramAttendance(attendanceSession.id, attendance)
+      toast.success('Attendance saved')
+      setShowAttendanceModal(false)
+    } catch (error) {
+      toast.error('Failed to save attendance')
+    } finally {
+      setAttendanceSaving(false)
+    }
+  }
+
+  // Student handlers
+  const handleRemoveStudent = async () => {
+    if (!removeStudentConfirm) return
+    setRemovingStudent(true)
+    try {
+      await removeProgramStudent(program.id, removeStudentConfirm.id)
+      setEnrolledStudents(prev => prev.filter(e => e.student?.id !== removeStudentConfirm.id))
+      setRemoveStudentConfirm(null)
+      toast.success('Student removed from Program')
+    } catch (error) {
+      toast.error('Failed to remove student')
+    } finally {
+      setRemovingStudent(false)
+    }
+  }
+
+  const filteredStudents = enrolledStudents.filter(enrollment => {
+    const profile = enrollment.student?.user?.profile
+    const name = profile ? `${profile.firstName} ${profile.lastName}` : (enrollment.student?.user?.email || '')
+    const email = enrollment.student?.user?.email || ''
+    const search = studentSearchTerm.toLowerCase()
+    return name.toLowerCase().includes(search) || email.toLowerCase().includes(search)
+  })
+
+  // Settings handlers
+  const handleToggleActive = async () => {
+    setToggling(true)
+    try {
+      const updated = await toggleAdminProgramActive(program.id)
+      setProgram(updated)
+      toast.success(updated.isActive ? 'Program activated' : 'Program deactivated')
+    } catch (error) {
+      toast.error('Failed to toggle Program status')
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  const handleSaveSettings = async () => {
+    setSaving(true)
+    try {
+      const updated = await updateAdminProgram(program.id, {
+        name: editName,
+        description: editDescription,
+        startDate: editStartDate || null,
+        endDate: editEndDate || null,
+        enrollmentEnd: editEnrollmentEnd || null,
+        price: parseFloat(editPrice) || 0,
+        priceType: editPriceType
+      })
+      setProgram(updated)
+      setEditing(false)
+      toast.success('Program updated')
+    } catch (error) {
+      toast.error('Failed to update Program')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteProgram = async () => {
+    setDeleting(true)
+    try {
+      await deleteAdminProgram(program.id)
+      toast.success('Program deleted')
+      navigate('/admin')
+    } catch (error) {
+      toast.error('Failed to delete Program')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // Menu items
+  const menuItems = [
+    { id: 'class', label: 'Class', icon: BookOpen },
+    { id: 'exam', label: 'Exam', icon: FileText },
+    { id: 'schedule', label: 'Schedule', icon: Calendar, liveOnly: true },
+    { id: 'students', label: 'Students', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ]
 
   if (loading) {
     return (
@@ -358,14 +848,12 @@ export default function AdminProgramDashboard() {
     )
   }
 
-  if (!program) {
+  if (!Program) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Program not found</h2>
-          <button onClick={() => navigate('/admin')} className="mt-4 text-[#f7941d] hover:underline">
-            Back to Dashboard
-          </button>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Program not found</h2>
+          <Link to="/admin" className="text-[#f7941d] hover:underline">Back to Dashboard</Link>
         </div>
       </div>
     )
@@ -374,70 +862,75 @@ export default function AdminProgramDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-[#1e3a5f] text-white transition-all duration-300 overflow-hidden flex-shrink-0`}>
-        <div className="p-4">
-          <Link to="/admin" className="flex items-center gap-2 text-blue-200 hover:text-white mb-6">
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-[#1e3a5f] text-white transition-all duration-300 overflow-hidden flex flex-col`}>
+        <div className="p-4 border-b border-white/10">
+          <Link to="/admin" className="flex items-center gap-2 text-blue-200 hover:text-white transition text-sm">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
-          
-          <div className="mb-6">
-            <h2 className="text-lg font-bold truncate">{program.name}</h2>
-            <span className={`text-xs px-2 py-1 rounded-full ${program.isActive ? 'bg-green-500' : 'bg-gray-500'}`}>
+        </div>
+        
+        <div className="p-4 border-b border-white/10">
+          <h2 className="font-bold text-lg truncate">{program.name}</h2>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-300">
+              {program.programType || 'ONLINE'}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              program.isActive ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'
+            }`}>
               {program.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
+        </div>
 
-          <nav className="space-y-2">
-            {[
-              { id: 'class', icon: BookOpen, label: 'Content' },
-              { id: 'exam', icon: FileText, label: 'Exams' },
-              { id: 'schedule', icon: Calendar, label: 'Schedule' },
-              { id: 'students', icon: Users, label: 'Students' },
-              { id: 'settings', icon: Settings, label: 'Settings' }
-            ].map(tab => (
+        <nav className="flex-1 p-4">
+          {menuItems.map((item) => {
+            if (item.liveOnly) return null // Programs always show all tabs
+            return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                  activeTab === tab.id ? 'bg-[#f7941d] text-white' : 'text-blue-200 hover:bg-[#2d5a87]'
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition ${
+                  activeTab === item.id ? 'bg-white/10 text-white' : 'text-blue-200 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <tab.icon className="w-5 h-5" />
-                {tab.label}
+                <item.icon className="w-5 h-5" />
+                {item.label}
               </button>
-            ))}
-          </nav>
-        </div>
-      </div>
+            )
+          })}
+        </nav>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+        <header className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-lg">
-              <Menu className="w-5 h-5" />
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-500 hover:text-gray-700">
+              <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold text-gray-900">
-              {activeTab === 'class' && 'Program Content'}
+              {activeTab === 'class' && 'Class Templates'}
               {activeTab === 'exam' && 'Exam Templates'}
               {activeTab === 'schedule' && 'Schedule'}
               {activeTab === 'students' && 'Enrolled Students'}
               {activeTab === 'settings' && 'Settings'}
             </h1>
           </div>
-        </div>
+        </header>
 
-        <div className="p-6">
-          {/* Content Tab */}
+        {/* Content Area */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          {/* Class Tab */}
           {activeTab === 'class' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <p className="text-gray-600">Organize your program content into modules and lessons</p>
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-gray-600">Create class templates that can be scheduled on the calendar</p>
                 <button
-                  onClick={() => { setEditingModule(null); setModuleForm({ name: '' }); setShowModuleModal(true) }}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a87]"
+                  onClick={() => { setShowModuleModal(true); setEditingModule(null); setModuleForm({ name: '' }) }}
+                  className="flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
                 >
                   <Plus className="w-4 h-4" />
                   Add Module
@@ -446,109 +939,75 @@ export default function AdminProgramDashboard() {
 
               {program.modules?.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                  <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No modules yet</h3>
-                  <p className="text-gray-500 mb-4">Create your first module to start adding content</p>
+                  <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No class templates yet</h3>
+                  <p className="text-gray-500 mb-4">Create modules and classes to use as class templates</p>
+                  <button
+                    onClick={() => setShowModuleModal(true)}
+                    className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create First Module
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {program.modules?.map((module, idx) => (
-                    <div key={module.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                      <div 
-                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-                        onClick={() => toggleModule(module.id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          {expandedModules[module.id] ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                          <span className="font-semibold text-gray-900">Module {idx + 1}: {module.name}</span>
-                          <span className="text-sm text-gray-500">({module.lessons?.length || 0} lessons)</span>
-                        </div>
-                        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => { setSelectedModuleId(module.id); setEditingLesson(null); setLessonForm({ name: '', description: '', materials: '', videoUrl: '' }); setShowLessonModal(true) }}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                            title="Add Lesson"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => { setEditingModule(module); setModuleForm({ name: module.name }); setShowModuleModal(true) }}
-                            className="p-2 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded-lg"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteModuleConfirm(module.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {expandedModules[module.id] && (
-                        <div className="border-t divide-y">
-                          {module.lessons?.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500">
-                              No lessons yet. Click + to add one.
-                            </div>
-                          ) : (
-                            module.lessons?.map(lesson => (
-                              <div key={lesson.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                                <div className="flex items-center gap-3">
-                                  <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
-                                  <div>
-                                    <span className="text-gray-900 font-medium">{lesson.name}</span>
-                                    {lesson.description && <p className="text-sm text-gray-500">{lesson.description}</p>}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {lesson.materials && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Materials</span>}
-                                  {lesson.videoUrl && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Video</span>}
-                                  <button
-                                    onClick={() => { setEditingLesson(lesson); setLessonForm({ name: lesson.name, description: lesson.description || '', materials: lesson.materials || '', videoUrl: lesson.videoUrl || '' }); setShowLessonModal(true) }}
-                                    className="p-2 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded-lg"
-                                  >
-                                    <Edit3 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteLessonConfirm(lesson.id)}
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleModuleDragEnd}>
+                  <SortableContext items={program.modules.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {program.modules.map((module, index) => (
+                        <SortableModule 
+                          key={module.id} 
+                          module={module} 
+                          index={index}
+                          expanded={expandedModules[module.id]}
+                          onToggle={() => toggleModule(module.id)}
+                          onEdit={() => openEditModule(module)}
+                          onDelete={() => setDeleteModuleConfirm(module.id)}
+                          onAddLesson={() => { setSelectedModuleId(module.id); setEditingLesson(null); setLessonForm({ name: '', description: '', videoUrl: '' }); setLessonMaterialUrls(['']); setShowLessonModal(true) }}
+                          onEditLesson={openEditLesson}
+                          onDeleteLesson={(lessonId) => setDeleteLessonConfirm(lessonId)}
+                          onLessonDragEnd={(event) => handleLessonDragEnd(module.id, event)}
+                          sensors={sensors}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           )}
 
           {/* Exam Tab */}
           {activeTab === 'exam' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
+            <div>
+              <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-600">Create exams to grade your students</p>
                 <button
-                  onClick={() => { setEditingExam(null); setExamForm({ title: '', description: '', totalPoints: 100 }); setShowExamModal(true) }}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a87]"
+                  onClick={() => handleOpenExamModal()}
+                  className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-4 py-2 rounded-lg font-medium transition"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                   Add Exam
                 </button>
               </div>
 
-              {exams.length === 0 ? (
+              {loadingExams ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading exams...</p>
+                </div>
+              ) : exams.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                   <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No exams yet</h3>
-                  <p className="text-gray-500">Create your first exam to start grading</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Exams Yet</h3>
+                  <p className="text-gray-500 mb-6">Create your first exam to start grading students</p>
+                  <button
+                    onClick={() => handleOpenExamModal()}
+                    className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white px-6 py-3 rounded-lg font-medium transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create First Exam
+                  </button>
                 </div>
               ) : (
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -567,36 +1026,30 @@ export default function AdminProgramDashboard() {
                       {exams.map((exam, index) => (
                         <tr key={exam.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
-                          <td className="px-6 py-4 font-medium text-gray-900">{exam.title}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{exam.description || '-'}</td>
+                          <td className="px-6 py-4"><span className="font-medium text-gray-900">{exam.title}</span></td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{exam.description || <span className="text-gray-400 italic">No description</span>}</td>
                           <td className="px-6 py-4 text-center">
-                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">{exam.totalPoints} pts</span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">{exam.totalPoints} pts</span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             {exam.isPublished ? (
-                              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs">Published</span>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Published</span>
                             ) : (
-                              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">Draft</span>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Draft</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => navigate(`/admin/programs/${id}/exam/${exam.id}`)}
-                                className="px-3 py-1.5 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg"
-                              >
-                                Questions
+                              <Link to={`/admin/programs/${program.id}/exam/${exam.id}`} className="px-3 py-1.5 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg transition flex items-center gap-1">
+                                <FileText className="w-4 h-4" />Questions
+                              </Link>
+                              <button onClick={() => handleOpenScoreModal(exam)} className="px-3 py-1.5 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition flex items-center gap-1">
+                                <CheckSquare className="w-4 h-4" />Scores
                               </button>
-                              <button
-                                onClick={() => { setEditingExam(exam); setExamForm({ title: exam.title, description: exam.description || '', totalPoints: exam.totalPoints }); setShowExamModal(true) }}
-                                className="p-2 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded-lg"
-                              >
+                              <button onClick={() => handleOpenExamModal(exam)} className="p-2 text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition">
                                 <Edit3 className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => setDeleteExamConfirm(exam.id)}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                              >
+                              <button onClick={() => setDeleteExamConfirm(exam.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -613,117 +1066,178 @@ export default function AdminProgramDashboard() {
           {/* Schedule Tab */}
           {activeTab === 'schedule' && (
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Calendar */}
+              {/* Calendar - takes 2 columns */}
               <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+                {/* Calendar Header */}
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold">
-                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </h3>
-                  <div className="flex gap-2">
-                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))} className="p-2 hover:bg-gray-100 rounded-lg">
-                      <ChevronLeft className="w-5 h-5" />
+                  <h2 className="text-xl font-bold text-gray-900">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                      <ChevronLeft className="w-5 h-5 text-gray-600" />
                     </button>
-                    <button onClick={() => setCurrentMonth(new Date())} className="px-3 py-1 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">Today</button>
-                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))} className="p-2 hover:bg-gray-100 rounded-lg">
-                      <ChevronRight className="w-5 h-5" />
+                    <button onClick={() => { setCurrentMonth(new Date()); setSelectedDate(new Date()) }} className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm font-medium rounded-lg transition">
+                      Today
+                    </button>
+                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                      <ChevronRight className="w-5 h-5 text-gray-600" />
                     </button>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-7 gap-1">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">{day}</div>
+
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 mb-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+                    <div key={day} className={`text-center text-sm font-medium py-3 ${idx === 0 || idx === 6 ? 'text-red-500' : 'text-gray-600'}`}>
+                      {day}
+                    </div>
                   ))}
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7">
                   {getDaysInMonth(currentMonth).map((date, index) => {
-                    const dateSessions = date ? getSessionsForDate(date) : []
-                    const isToday = date && formatDate(date) === formatDate(new Date())
+                    const daySessions = date ? getSessionsForDate(date) : []
+                    const isToday = date?.toDateString() === new Date().toDateString()
                     const isSelected = date && selectedDate && formatDate(date) === formatDate(selectedDate)
+                    const isWeekend = date && (date.getDay() === 0 || date.getDay() === 6)
                     
                     return (
                       <div
                         key={index}
                         onClick={() => date && setSelectedDate(date)}
-                        className={`min-h-[80px] p-2 border rounded-lg cursor-pointer transition ${
-                          !date ? 'bg-gray-50' :
-                          isSelected ? 'border-[#f7941d] bg-orange-50' :
-                          isToday ? 'border-blue-500 bg-blue-50' :
-                          'border-gray-200 hover:border-gray-300'
-                        }`}
+                        onContextMenu={(e) => { e.preventDefault(); if (date && copiedSession) handlePasteSession(date) }}
+                        className={`min-h-[100px] p-2 border-t border-l cursor-pointer transition ${
+                          index % 7 === 6 ? 'border-r' : ''
+                        } ${Math.floor(index / 7) === Math.floor((getDaysInMonth(currentMonth).length - 1) / 7) ? 'border-b' : ''} ${
+                          !date ? 'bg-gray-50/50 cursor-default' : 'hover:bg-blue-50/50'
+                        } ${isSelected ? 'bg-blue-50' : ''}`}
                       >
                         {date && (
                           <>
-                            <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
-                              {date.getDate()}
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-sm font-medium ${isWeekend ? 'text-red-500' : 'text-gray-700'} ${isToday ? 'bg-[#1e3a5f] text-white w-7 h-7 rounded-full flex items-center justify-center' : ''}`}>
+                                {date.getDate()}
+                              </span>
+                              {daySessions.length > 0 && (
+                                <span className="text-xs text-gray-400">{daySessions.length > 2 ? `+${daySessions.length - 2}` : ''}</span>
+                              )}
                             </div>
-                            {dateSessions.slice(0, 2).map(session => (
-                              <div key={session.id} className={`text-xs px-1 py-0.5 rounded mt-1 truncate ${
-                                session.type === 'EXAM' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                              }`}>
-                                {formatTime12h(session.startTime)}
-                              </div>
-                            ))}
-                            {dateSessions.length > 2 && (
-                              <div className="text-xs text-gray-500">+{dateSessions.length - 2} more</div>
-                            )}
+                            <div className="space-y-1">
+                              {daySessions.slice(0, 2).map(session => (
+                                <div 
+                                  key={session.id} 
+                                  className={`text-xs px-1.5 py-0.5 rounded truncate ${
+                                    session.type === 'EXAM' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                  }`}
+                                >
+                                  {formatTime12h(session.startTime)}
+                                </div>
+                              ))}
+                            </div>
                           </>
                         )}
                       </div>
                     )
                   })}
                 </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-6 mt-4 pt-4 text-sm text-gray-600">
+                  <span className="text-gray-500">Legend:</span>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-blue-500"></div> Class</div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-500"></div> Exam</div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-500"></div> Review</div>
+                  {copiedSession && <div className="flex items-center gap-1.5 ml-auto text-green-600"><Clipboard className="w-4 h-4" /> Right-click to paste</div>}
+                </div>
               </div>
 
-              {/* Sessions List */}
+              {/* Session Details */}
               <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  {selectedDate ? formatDate(selectedDate) : 'Select a date'}
-                </h3>
-                
-                {selectedDate && (
+                {selectedDate ? (
                   <>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold text-gray-900">{selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</h3>
+                      <p className="text-sm text-gray-500 mt-1">{getSessionsForDate(selectedDate).length} session(s)</p>
+                    </div>
+                    <div className="flex items-center justify-end mb-4">
+                      <button onClick={() => { setEditingSession(null); setSessionForm({ type: 'CLASS', lessonId: '', examId: '', startTime: '19:00', endTime: '21:00', meetingLink: '', notes: '' }); setShowSessionModal(true) }} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition text-sm">
+                        <Plus className="w-4 h-4" />Add Session
+                      </button>
+                    </div>
+
                     {getSessionsForDate(selectedDate).length === 0 ? (
-                      <div className="text-center py-8">
+                      <div className="text-center py-12">
                         <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 mb-3">No sessions scheduled</p>
-                        <button
-                          onClick={() => { setEditingSession(null); setShowSessionModal(true) }}
-                          className="text-[#f7941d] hover:underline"
-                        >
-                          + Add Session
-                        </button>
+                        <p className="text-gray-500">No sessions scheduled</p>
+                        <p className="text-sm text-gray-400">Click "Add Session" to create one</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {getSessionsForDate(selectedDate).map(session => (
-                          <div key={session.id} className={`border rounded-lg p-3 ${session.type === 'EXAM' ? 'border-red-200 bg-red-50' : 'border-blue-200 bg-blue-50'}`}>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <span className={`text-xs px-2 py-0.5 rounded ${session.type === 'EXAM' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'}`}>
-                                  {session.type}
-                                </span>
-                                <p className="font-medium mt-1">{session.lesson?.name || session.exam?.title || 'Session'}</p>
-                                <p className="text-sm text-gray-600">{formatTime12h(session.startTime)} - {formatTime12h(session.endTime)}</p>
+                          <div key={session.id} className={`rounded-xl p-4 ${getSessionTypeBgColor(session.type)}`}>
+                            {/* No meeting link warning banner */}
+                            {!session.meetingLink && (
+                              <div className="flex items-center gap-2 text-amber-600 text-xs mb-3 bg-amber-50 px-2 py-1.5 rounded border border-amber-200">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span className="font-medium">No meeting link</span>
                               </div>
-                              <div className="flex gap-1">
-                                <button onClick={() => { setEditingSession(session); setSessionForm({ type: session.type, lessonId: session.lessonId || '', examId: session.examId || '', startTime: session.startTime, endTime: session.endTime, meetingLink: session.meetingLink || '', notes: session.notes || '' }); setShowSessionModal(true) }} className="p-1 hover:bg-white rounded">
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setDeleteSessionConfirm(session.id)} className="p-1 hover:bg-white rounded text-red-600">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                            )}
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${session.type === 'EXAM' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'}`}>{session.type}</span>
+                                  <span className="text-sm text-gray-600">{formatTime12h(session.startTime)} - {formatTime12h(session.endTime)}</span>
+                                </div>
+                                {session.lesson && <p className="text-sm font-medium text-gray-900">{session.lesson.name}</p>}
+                                {session.exam && <p className="text-sm font-medium text-gray-900">{session.exam.title}</p>}
+                                {session.meetingLink && (
+                                  <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                                    <LinkIcon className="w-3 h-3" />{session.meetingLink.includes('zoom') ? 'Zoom Meeting' : session.meetingLink.includes('meet') ? 'Google Meet' : 'Meeting Link'}
+                                  </a>
+                                )}
                               </div>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => handleCopySession(session)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white rounded transition" title="Copy session"><Copy className="w-4 h-4" /></button>
+                                <button onClick={() => handleEditSession(session)} className="p-1.5 text-gray-400 hover:text-[#1e3a5f] hover:bg-white rounded transition" title="Edit"><Edit3 className="w-4 h-4" /></button>
+                                <button onClick={() => setDeleteSessionConfirm(session.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                            </div>
+
+                            {/* Materials */}
+                            {session.materials?.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Materials</p>
+                                <div className="space-y-1">
+                                  {session.materials.map(material => (
+                                    <div key={material.id} className="flex items-center justify-between text-sm">
+                                      <a href={material.driveUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                        <FileText className="w-3 h-3" />{material.name}
+                                      </a>
+                                      <button onClick={() => setDeleteMaterialConfirm({ sessionId: session.id, materialId: material.id })} className="text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-2">
+                              <button onClick={() => handleAddMaterial(session.id)} className="text-xs text-[#1e3a5f] hover:underline flex items-center gap-1"><Plus className="w-3 h-3" />Add Material</button>
+                              <button onClick={() => openAttendanceModal(session)} className="text-xs text-green-600 hover:underline flex items-center gap-1 ml-auto"><CheckSquare className="w-3 h-3" />Attendance</button>
                             </div>
                           </div>
                         ))}
-                        <button
-                          onClick={() => { setEditingSession(null); setShowSessionModal(true) }}
-                          className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-[#f7941d] hover:text-[#f7941d]"
-                        >
-                          + Add Another Session
-                        </button>
                       </div>
                     )}
                   </>
+                ) : (
+                  <div className="h-full flex flex-col">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Select a date</h3>
+                    <div className="flex-1 flex flex-col items-center justify-center text-center">
+                      <Calendar className="w-16 h-16 text-gray-300 mb-4" />
+                      <p className="text-gray-500">Click on a date to view or add sessions</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -731,181 +1245,314 @@ export default function AdminProgramDashboard() {
 
           {/* Students Tab */}
           {activeTab === 'students' && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Enrolled Students ({students.length})</h3>
-                
-                {students.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No students enrolled yet</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-4 py-3 text-sm font-semibold">Student</th>
-                          <th className="text-center px-4 py-3 text-sm font-semibold">Enrolled</th>
-                          <th className="text-center px-4 py-3 text-sm font-semibold">Grade</th>
-                          <th className="text-center px-4 py-3 text-sm font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {students.map(enrollment => {
-                          const studentGrade = grades.find(g => g.odId === enrollment.studentId)
-                          return (
-                            <tr key={enrollment.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3">
-                                <div className="font-medium">{enrollment.student?.profile ? `${enrollment.student.profile.firstName} ${enrollment.student.profile.lastName}` : 'Unknown'}</div>
-                                <div className="text-sm text-gray-500">{enrollment.student?.email}</div>
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-gray-500">
-                                {new Date(enrollment.enrolledAt).toLocaleDateString()}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                {studentGrade?.percentage !== null ? (
-                                  <span className={`px-2 py-1 rounded text-sm font-medium ${
-                                    studentGrade.passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {Math.round(studentGrade.percentage)}%
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  enrollment.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                                  enrollment.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {enrollment.status}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <p className="text-gray-600">Manage enrolled students</p>
+                  <span className="px-3 py-1 bg-[#1e3a5f] text-white text-sm font-medium rounded-full">{enrolledStudents.length} students</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search students..."
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none w-64"
+                  />
+                </div>
               </div>
+
+              {loadingStudents ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading students...</p>
+                </div>
+              ) : enrolledStudents.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Enrolled</h3>
+                  <p className="text-gray-500">Students will appear here once they enroll in this Program</p>
+                </div>
+              ) : filteredStudents.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Results</h3>
+                  <p className="text-gray-500">No students match your search</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredStudents.map((enrollment) => {
+                    const student = enrollment.student
+                    const user = student?.user
+                    const profile = user?.profile
+                    const fullName = profile ? `${profile.firstName} ${profile.lastName}` : (user?.email?.split('@')[0] || 'Unknown')
+                    const email = user?.email || ''
+                    const enrolledDate = new Date(enrollment.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                    const stats = enrollment.attendanceStats || { attended: 0, total: 0, percentage: 0 }
+
+                    return (
+                      <div key={enrollment.id} className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition group">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold text-lg">
+                              {fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{fullName}</h4>
+                              <p className="text-sm text-gray-500">{email}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">Enrolled: {enrolledDate}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setRemoveStudentConfirm({ id: student?.id, name: fullName })}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                            title="Remove student"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        {/* Attendance Progress */}
+                        {sessions.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-gray-600">Attendance</span>
+                              <span className={`font-medium ${
+                                stats.percentage >= 80 ? 'text-green-600' : 
+                                stats.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {stats.percentage}% ({stats.attended}/{stats.total} sessions)
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all ${
+                                  stats.percentage >= 80 ? 'bg-green-500' : 
+                                  stats.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${stats.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="max-w-2xl">
-              <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Program Name</label>
-                  <input
-                    type="text"
-                    value={settingsForm.name || ''}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={settingsForm.description || ''}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              {/* Program Status */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Program Status</h3>
+                <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Program Type</label>
-                    <select
-                      value={settingsForm.programType || 'ONLINE'}
-                      onChange={e => setSettingsForm(prev => ({ ...prev, programType: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                    >
-                      <option value="ONLINE">Online</option>
-                      <option value="WEBINAR">Webinar</option>
-                      <option value="IN_PERSON">In-Person</option>
-                      <option value="HYBRID">Hybrid</option>
-                      <option value="EVENT">Event</option>
-                    </select>
+                    <p className="font-medium text-gray-900">{program.isActive ? 'Program is Active' : 'Program is Inactive'}</p>
+                    <p className="text-sm text-gray-500">{program.isActive ? 'Students can see and enroll in this Program' : 'Program is hidden from students'}</p>
                   </div>
+                  <button
+                    onClick={handleToggleActive}
+                    disabled={toggling}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 ${
+                      program.isActive ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {toggling ? (
+                      <><div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> {program.isActive ? 'Deactivating...' : 'Activating...'}</>
+                    ) : program.isActive ? (
+                      <><ToggleRight className="w-5 h-5" /> Deactivate</>
+                    ) : (
+                      <><ToggleLeft className="w-5 h-5" /> Activate</>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Program Details */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Program Details</h3>
+                  {!editing && (
+                    <button onClick={() => setEditing(true)} className="flex items-center gap-2 text-[#1e3a5f] hover:underline font-medium">
+                      <Edit3 className="w-4 h-4" />Edit
+                    </button>
+                  )}
+                </div>
+
+                {editing ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Program Name</label>
+                      <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={4} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                      <p className="px-4 py-3 bg-gray-100 rounded-lg text-gray-600">{program.programType || 'ONLINE'}<span className="text-xs text-gray-400 ml-2">(cannot be changed)</span></p>
+                    </div>
+                    
+                    {/* Program Duration */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Program Duration</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                          <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                          <input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} min={editStartDate} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enrollment Period */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Enrollment Period</h4>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment Deadline</label>
+                        <input type="date" value={editEnrollmentEnd} onChange={(e) => setEditEnrollmentEnd(e.target.value)} max={editEndDate} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none" />
+                      </div>
+                    </div>
+
+                    {/* Admin-specific: Price */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Pricing</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Price (₱)</label>
+                          <input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Price Type</label>
+                          <select value={editPriceType} onChange={(e) => setEditPriceType(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none">
+                            <option value="ONE_TIME">One-Time</option>
+                            <option value="MONTHLY">Monthly</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button onClick={() => { setEditing(false); setEditName(program.name); setEditDescription(program.description || ''); setEditStartDate(program.startDate ? program.startDate.split('T')[0] : ''); setEditEndDate(program.endDate ? program.endDate.split('T')[0] : ''); setEditEnrollmentEnd(program.enrollmentEnd ? program.enrollmentEnd.split('T')[0] : ''); setEditPrice(program.price || 0); setEditPriceType(program.priceType || 'ONE_TIME'); }} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                        <X className="w-4 h-4" />Cancel
+                      </button>
+                      <button onClick={handleSaveSettings} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50">
+                        <Save className="w-4 h-4" />{saving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Name</p>
+                      <p className="font-medium text-gray-900">{program.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Description</p>
+                      <p className="text-gray-900">{program.description || 'No description'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Type</p>
+                      <p className="font-medium text-gray-900">{program.programType || 'ONLINE'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Created By</p>
+                      <p className="font-medium text-gray-900">{program.createdBy?.profile ? `${program.createdBy.profile.firstName} ${program.createdBy.profile.lastName}` : (program.createdBy?.role === 'SUPER_ADMIN' ? 'Admin' : 'Unknown')}</p>
+                    </div>
+                                        <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                      <div>
+                        <p className="text-sm text-gray-500">Start Date</p>
+                        <p className="font-medium text-gray-900">{program.startDate ? new Date(program.startDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : 'Not set'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">End Date</p>
+                        <p className="font-medium text-gray-900">{program.endDate ? new Date(program.endDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : 'Not set'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Enrollment Deadline</p>
+                      <p className="font-medium text-gray-900">{program.enrollmentEnd ? new Date(program.enrollmentEnd).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) : 'No deadline'}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                      <div>
+                        <p className="text-sm text-gray-500">Price</p>
+                        <p className="font-medium text-gray-900">₱{program.price?.toLocaleString() || '0'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Price Type</p>
+                        <p className="font-medium text-gray-900">{program.priceType === 'MONTHLY' ? 'Monthly' : 'One-Time'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Danger Zone */}
+              <div className="bg-white rounded-xl shadow-sm p-6 border border-red-200">
+                <h3 className="text-lg font-semibold text-red-600 mb-4">Danger Zone</h3>
+                <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select
-                      value={settingsForm.isActive ? 'active' : 'inactive'}
-                      onChange={e => setSettingsForm(prev => ({ ...prev, isActive: e.target.value === 'active' }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
+                    <p className="font-medium text-gray-900">Delete Program</p>
+                    <p className="text-sm text-gray-500">Permanently delete this Program and all its content</p>
                   </div>
+                  <button onClick={() => setShowDeleteModal(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition">
+                    <Trash2 className="w-4 h-4" />Delete
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
-                  <input
-                    type="text"
-                    value={settingsForm.schedule || ''}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, schedule: e.target.value }))}
-                    placeholder="e.g., Every Tuesday, 7:00 PM"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location (for in-person)</label>
-                  <input
-                    type="text"
-                    value={settingsForm.location || ''}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, location: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Link (for webinars)</label>
-                  <input
-                    type="url"
-                    value={settingsForm.meetingLink || ''}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, meetingLink: e.target.value }))}
-                    placeholder="https://zoom.us/j/..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleSaveSettings}
-                  disabled={savingSettings}
-                  className="w-full py-3 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a87] disabled:opacity-50"
-                >
-                  {savingSettings ? 'Saving...' : 'Save Settings'}
-                </button>
               </div>
             </div>
           )}
-        </div>
+        </main>
       </div>
 
       {/* Module Modal */}
       {showModuleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">{editingModule ? 'Edit Module' : 'Add Module'}</h3>
-            <input
-              type="text"
-              value={moduleForm.name}
-              onChange={e => setModuleForm({ name: e.target.value })}
-              placeholder="Module name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-            />
-            <div className="flex gap-3">
-              <button onClick={() => setShowModuleModal(false)} className="flex-1 py-2 border border-gray-300 rounded-lg">Cancel</button>
-              <button onClick={handleSaveModule} className="flex-1 py-2 bg-[#1e3a5f] text-white rounded-lg">{editingModule ? 'Update' : 'Create'}</button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{editingModule ? 'Edit Module' : 'Add Module'}</h3>
+              <button onClick={() => setShowModuleModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Module Name *</label>
+              <input
+                type="text"
+                value={moduleForm.name}
+                onChange={(e) => setModuleForm({ name: e.target.value })}
+                placeholder="e.g., Introduction to Programming"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+              />
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowModuleModal(false)}
+                disabled={saving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveModule}
+                disabled={saving || !moduleForm.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {saving ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
@@ -913,42 +1560,100 @@ export default function AdminProgramDashboard() {
 
       {/* Lesson Modal */}
       {showLessonModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <h3 className="text-lg font-semibold mb-4">{editingLesson ? 'Edit Lesson' : 'Add Lesson'}</h3>
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={lessonForm.name}
-                onChange={e => setLessonForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Lesson name"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-              <textarea
-                value={lessonForm.description}
-                onChange={e => setLessonForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Description (optional)"
-                rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="url"
-                value={lessonForm.videoUrl}
-                onChange={e => setLessonForm(prev => ({ ...prev, videoUrl: e.target.value }))}
-                placeholder="Video URL (optional)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="text"
-                value={lessonForm.materials}
-                onChange={e => setLessonForm(prev => ({ ...prev, materials: e.target.value }))}
-                placeholder="Materials link (optional)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{editingLesson ? 'Edit Class' : 'Add Class'}</h3>
+              <button onClick={() => setShowLessonModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setShowLessonModal(false)} className="flex-1 py-2 border border-gray-300 rounded-lg">Cancel</button>
-              <button onClick={handleSaveLesson} className="flex-1 py-2 bg-[#1e3a5f] text-white rounded-lg">{editingLesson ? 'Update' : 'Create'}</button>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class Name *</label>
+                <input
+                  type="text"
+                  value={lessonForm.name}
+                  onChange={(e) => setLessonForm({ ...lessonForm, name: e.target.value })}
+                  placeholder="e.g., Introduction to Variables"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={lessonForm.description}
+                  onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
+                  placeholder="Optional description for this class"
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Materials (URLs)</label>
+                <div className="space-y-2">
+                  {lessonMaterialUrls.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => updateLessonMaterialUrl(index, e.target.value)}
+                        placeholder="https://drive.google.com/..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      />
+                      {lessonMaterialUrls.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeLessonMaterialUrl(index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addLessonMaterialUrl}
+                  className="mt-2 flex items-center gap-1 text-sm text-[#1e3a5f] hover:text-[#2d5a87] font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Material
+                </button>
+              </div>
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center gap-2">
+                      <Video className="w-4 h-4 text-blue-600" />
+                      Video URL (YouTube)
+                    </div>
+                  </label>
+                  <input
+                    type="url"
+                    value={lessonForm.videoUrl}
+                    onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+              </div>
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowLessonModal(false)}
+                disabled={savingLesson}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveLesson}
+                disabled={savingLesson || !lessonForm.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingLesson && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {savingLesson ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
@@ -956,174 +1661,684 @@ export default function AdminProgramDashboard() {
 
       {/* Exam Modal */}
       {showExamModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">{editingExam ? 'Edit Exam' : 'Add Exam'}</h3>
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={examForm.title}
-                onChange={e => setExamForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Exam title"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-              <textarea
-                value={examForm.description}
-                onChange={e => setExamForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Description (optional)"
-                rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="number"
-                value={examForm.totalPoints}
-                onChange={e => setExamForm(prev => ({ ...prev, totalPoints: parseInt(e.target.value) || 100 }))}
-                placeholder="Total points"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{editingExam ? 'Edit Exam' : 'Create Exam'}</h3>
+              <button onClick={() => setShowExamModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setShowExamModal(false)} className="flex-1 py-2 border border-gray-300 rounded-lg">Cancel</button>
-              <button onClick={handleSaveExam} className="flex-1 py-2 bg-[#1e3a5f] text-white rounded-lg">{editingExam ? 'Update' : 'Create'}</button>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Title *</label>
+                <input
+                  type="text"
+                  value={examForm.title}
+                  onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
+                  placeholder="e.g., Quiz 1, Midterm, Final Exam"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={examForm.description}
+                  onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
+                  placeholder="Optional description for this exam"
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Points *</label>
+                <input
+                  type="number"
+                  value={examForm.totalPoints}
+                  onChange={(e) => setExamForm({ ...examForm, totalPoints: parseInt(e.target.value) || 0 })}
+                  placeholder="100"
+                  min="1"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowExamModal(false)}
+                disabled={examSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveExam}
+                disabled={examSaving || !examForm.title.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {examSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {examSaving ? 'Saving...' : (editingExam ? 'Update Exam' : 'Create Exam')}
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Session Modal */}
-      {showSessionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <h3 className="text-lg font-semibold mb-4">{editingSession ? 'Edit Session' : 'Add Session'}</h3>
-            <div className="space-y-4">
+      {showSessionModal && (() => {
+        const publishedExams = exams.filter(e => e.isPublished)
+        const selectedExamId = sessionForm.examId
+        const existingExamSessions = sessions.filter(s => s.examId === selectedExamId)
+        const isRetakeSession = selectedExamId && existingExamSessions.length > 0
+        const isFormValid = sessionForm.startTime && sessionForm.endTime && 
+          ((sessionForm.type === 'CLASS' && sessionForm.lessonId) || (sessionForm.type === 'EXAM' && sessionForm.examId))
+
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {selectedDate ? selectedDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' }) : (editingSession ? 'Edit Session' : 'Add Session')}
+              </h3>
+              <button onClick={() => setShowSessionModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              {/* Session Type Toggle */}
               <div>
-                <label className="block text-sm font-medium mb-1">Session Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSessionForm(prev => ({ ...prev, type: 'CLASS', examId: '' }))}
-                    className={`flex-1 py-2 rounded-lg ${sessionForm.type === 'CLASS' ? 'bg-[#1e3a5f] text-white' : 'bg-gray-100'}`}
+                    type="button"
+                    onClick={() => setSessionForm({ ...sessionForm, type: 'CLASS', examId: '' })}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                      sessionForm.type === 'CLASS' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     CLASS
                   </button>
                   <button
-                    onClick={() => setSessionForm(prev => ({ ...prev, type: 'EXAM', lessonId: '' }))}
-                    className={`flex-1 py-2 rounded-lg ${sessionForm.type === 'EXAM' ? 'bg-red-500 text-white' : 'bg-gray-100'}`}
+                    type="button"
+                    onClick={() => setSessionForm({ ...sessionForm, type: 'EXAM', lessonId: '' })}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                      sessionForm.type === 'EXAM' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     EXAM
                   </button>
                 </div>
               </div>
 
-              {sessionForm.type === 'CLASS' && (
+              {/* Class Template / Exam Selection */}
+              {sessionForm.type === 'CLASS' ? (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Lesson (optional)</label>
-                  <select
-                    value={sessionForm.lessonId}
-                    onChange={e => setSessionForm(prev => ({ ...prev, lessonId: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="">Select a lesson...</option>
-                    {getAllLessons().map(lesson => (
-                      <option key={lesson.id} value={lesson.id}>{lesson.moduleName} → {lesson.name}</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Class Template *</label>
+                  {getAllLessons().length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      No class templates available. Create classes in the "Class" tab first.
+                    </div>
+                  ) : (
+                    <select
+                      value={sessionForm.lessonId}
+                      onChange={(e) => setSessionForm({ ...sessionForm, lessonId: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                    >
+                      <option value="">Select a class template...</option>
+                      {getAllLessons().map(lesson => (
+                        <option key={lesson.id} value={lesson.id}>{lesson.moduleName} → {lesson.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Exam *</label>
+                  {publishedExams.length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      No published exams available. Create and publish exams in the "Exam" tab first.
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={sessionForm.examId}
+                        onChange={(e) => setSessionForm({ ...sessionForm, examId: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      >
+                        <option value="">Select an exam...</option>
+                        {publishedExams.map(exam => {
+                          const scheduledCount = sessions.filter(s => s.examId === exam.id).length
+                          return (
+                            <option key={exam.id} value={exam.id}>
+                              {exam.title} ({exam.totalPoints} pts){scheduledCount > 0 ? ` - ${scheduledCount} session(s)` : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                      
+                      {/* Retake Warning */}
+                      {isRetakeSession && (
+                        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-orange-800">Retake Session</p>
+                              <p className="text-xs text-orange-700 mt-1">
+                                This exam has been scheduled {existingExamSessions.length} time(s) before. 
+                                Creating this session will allow students to <strong>retake the exam</strong>. 
+                                Their latest score will be used for grading.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
-              {sessionForm.type === 'EXAM' && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Exam</label>
-                  <select
-                    value={sessionForm.examId}
-                    onChange={e => setSessionForm(prev => ({ ...prev, examId: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  >
-                    <option value="">Select an exam...</option>
-                    {exams.filter(e => e.isPublished).map(exam => (
-                      <option key={exam.id} value={exam.id}>{exam.title} ({exam.totalPoints} pts)</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
+              {/* Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Start Time</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
                   <input
                     type="time"
                     value={sessionForm.startTime}
-                    onChange={e => setSessionForm(prev => ({ ...prev, startTime: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) => setSessionForm({ ...sessionForm, startTime: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">End Time</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
                   <input
                     type="time"
                     value={sessionForm.endTime}
-                    onChange={e => setSessionForm(prev => ({ ...prev, endTime: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    onChange={(e) => setSessionForm({ ...sessionForm, endTime: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                   />
                 </div>
               </div>
 
+              {/* Meeting Link */}
               <div>
-                <label className="block text-sm font-medium mb-1">Meeting Link</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Link</label>
                 <input
                   type="url"
                   value={sessionForm.meetingLink}
-                  onChange={e => setSessionForm(prev => ({ ...prev, meetingLink: e.target.value }))}
+                  onChange={(e) => setSessionForm({ ...sessionForm, meetingLink: e.target.value })}
                   placeholder="https://zoom.us/j/..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                 />
               </div>
 
+              {/* Notes */}
               <div>
-                <label className="block text-sm font-medium mb-1">Notes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
                   value={sessionForm.notes}
-                  onChange={e => setSessionForm(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
+                  placeholder="Instructions or notes for students..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
                 />
               </div>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setShowSessionModal(false)} className="flex-1 py-2 border border-gray-300 rounded-lg">Cancel</button>
-              <button onClick={handleSaveSession} className="flex-1 py-2 bg-[#1e3a5f] text-white rounded-lg">{editingSession ? 'Update' : 'Create'}</button>
+
+            {/* Footer */}
+            <div className="p-6 border-t flex items-center justify-between">
+              <div>
+                {editingSession && (
+                  <button
+                    onClick={() => setDeleteSessionConfirm(editingSession.id)}
+                    className="text-red-600 hover:text-red-700 font-medium"
+                  >
+                    Delete Session
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowSessionModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSession}
+                  disabled={sessionSaving || !isFormValid}
+                  className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {sessionSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                  {sessionSaving ? 'Saving...' : (editingSession ? 'Update' : 'Create')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        )
+      })()}
+
+      {/* Attendance Modal */}
+      {showAttendanceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Session Attendance</h3>
+                {attendanceSession && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    {attendanceSession.lesson?.name || attendanceSession.exam?.title} • {new Date(attendanceSession.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setShowAttendanceModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingAttendance ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading attendance...</p>
+                </div>
+              ) : attendanceList.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No students enrolled in this Program</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-gray-600">
+                      {attendanceList.filter(a => a.status === 'PRESENT').length} / {attendanceList.length} present
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={markAllPresent}
+                        className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition"
+                      >
+                        Mark All Present
+                      </button>
+                      <button
+                        onClick={markAllAbsent}
+                        className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition"
+                      >
+                        Mark All Absent
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {attendanceList.map((item) => (
+                      <div
+                        key={item.studentId}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${
+                          item.status === 'PRESENT' 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-red-50 border-red-200'
+                        }`}
+                        onClick={() => toggleAttendance(item.studentId)}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold ${
+                          item.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-400'
+                        }`}>
+                          {(item.studentName || item.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{item.studentName || item.name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500 truncate">{item.email}</p>
+                        </div>
+                        <div className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
+                          item.status === 'PRESENT' 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-red-400 text-white'
+                        }`}>
+                          {item.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowAttendanceModal(false)}
+                disabled={attendanceSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAttendance}
+                disabled={attendanceSaving || loadingAttendance}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {attendanceSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {attendanceSaving ? 'Saving...' : 'Save Attendance'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmations */}
-      <ConfirmModal
-        isOpen={!!deleteModuleConfirm}
-        title="Delete Module"
-        message="Are you sure you want to delete this module? All lessons inside will also be deleted."
-        onConfirm={handleDeleteModule}
-        onCancel={() => setDeleteModuleConfirm(null)}
-      />
-      <ConfirmModal
-        isOpen={!!deleteLessonConfirm}
-        title="Delete Lesson"
-        message="Are you sure you want to delete this lesson?"
-        onConfirm={handleDeleteLesson}
-        onCancel={() => setDeleteLessonConfirm(null)}
-      />
+      {/* Score Entry Modal */}
+      {showScoreModal && scoringExam && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Enter Scores</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {scoringExam.title} • Max: {scoringExam.totalPoints} points
+                </p>
+              </div>
+              <button onClick={() => setShowScoreModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {scoreEntries.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No students enrolled in this Program</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {scoreEntries.map((entry) => (
+                    <div
+                      key={entry.studentId}
+                      className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="w-10 h-10 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                        {entry.studentName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{entry.studentName}</p>
+                        <p className="text-xs text-gray-500 truncate">{entry.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={entry.score}
+                          onChange={(e) => handleScoreChange(entry.studentId, e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
+                          placeholder="0"
+                          min="0"
+                          max={scoringExam.totalPoints}
+                        />
+                        <span className="text-sm text-gray-500">/ {scoringExam.totalPoints}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowScoreModal(false)}
+                disabled={scoreSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveScores}
+                disabled={scoreSaving || scoreEntries.length === 0}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {scoreSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {scoreSaving ? 'Saving...' : 'Save Scores'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Material Modal */}
+      {showMaterialModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Add Material</h3>
+              <button onClick={() => setShowMaterialModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Material Name *</label>
+                <input
+                  type="text"
+                  value={materialForm.name}
+                  onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
+                  placeholder="e.g., Chapter 5 Notes.pdf"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Google Drive Link *</label>
+                <input
+                  type="url"
+                  value={materialForm.driveUrl}
+                  onChange={(e) => setMaterialForm({ ...materialForm, driveUrl: e.target.value })}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use "Get Link" in Google Drive and set sharing to "Anyone with the link can view"
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowMaterialModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveMaterial}
+                disabled={materialSaving || !materialForm.name || !materialForm.driveUrl}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {materialSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {materialSaving ? 'Adding...' : 'Add Material'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Module Confirmation Modal */}
+      {deleteModuleConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Module</h3>
+              <p className="text-gray-500 text-center mb-4">
+                Are you sure you want to delete this module? All classes inside will also be deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteModuleConfirm(null)}
+                  disabled={deletingModule}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteModule}
+                  disabled={deletingModule}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deletingModule ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Lesson Confirmation Modal */}
+      {deleteLessonConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Class</h3>
+              <p className="text-gray-500 text-center mb-4">
+                Are you sure you want to delete this class?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteLessonConfirm(null)}
+                  disabled={deletingLesson}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteLesson}
+                  disabled={deletingLesson}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deletingLesson ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Exam Confirmation Modal */}
       <ConfirmModal
         isOpen={!!deleteExamConfirm}
-        title="Delete Exam"
-        message="Are you sure you want to delete this exam? All questions and student attempts will be lost."
+        onClose={() => !deletingExam && setDeleteExamConfirm(null)}
         onConfirm={handleDeleteExam}
-        onCancel={() => setDeleteExamConfirm(null)}
+        title="Delete Exam"
+        message="Are you sure you want to delete this exam? All student scores for this exam will also be deleted."
+        confirmText="Delete"
+        confirmStyle="danger"
+        loading={deletingExam}
       />
+
+      {/* Delete Session Confirmation Modal */}
       <ConfirmModal
         isOpen={!!deleteSessionConfirm}
-        title="Delete Session"
-        message="Are you sure you want to delete this session?"
+        onClose={() => !deletingSession && setDeleteSessionConfirm(null)}
         onConfirm={handleDeleteSession}
-        onCancel={() => setDeleteSessionConfirm(null)}
+        title="Delete Session"
+        message="Are you sure you want to delete this session? This action cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+        loading={deletingSession}
+      />
+
+      {/* Delete Program Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Program</h3>
+              <p className="text-gray-500 text-center mb-6">
+                Are you sure you want to delete <span className="font-medium text-gray-900">"{program?.name}"</span>? 
+                This action cannot be undone and all content will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteProgram}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete Program</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Student Confirmation Modal */}
+      {removeStudentConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Remove Student</h3>
+              <p className="text-gray-500 text-center mb-6">
+                Are you sure you want to remove <span className="font-medium text-gray-900">"{removeStudentConfirm.name}"</span> from this Program?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRemoveStudentConfirm(null)}
+                  disabled={removingStudent}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRemoveStudent}
+                  disabled={removingStudent}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {removingStudent ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Removing...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Remove</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Material Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteMaterialConfirm}
+        onClose={() => setDeleteMaterialConfirm(null)}
+        onConfirm={handleDeleteMaterial}
+        title="Delete Material"
+        message="Are you sure you want to delete this material?"
+        confirmText="Delete"
+        confirmStyle="danger"
       />
     </div>
   )

@@ -310,6 +310,153 @@ router.put('/exam/:examId/questions/reorder', async (req, res) => {
   }
 })
 
+// PUT /api/admin/program-exams/exam/:examId/questions/batch - Batch save all questions
+router.put('/exam/:examId/questions/batch', async (req, res) => {
+  try {
+    const { examId } = req.params
+    const { questions, deletedQuestionIds } = req.body
+
+    // Verify exam exists
+    const exam = await prisma.programExam.findUnique({
+      where: { id: examId }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    // Delete removed questions
+    if (deletedQuestionIds && deletedQuestionIds.length > 0) {
+      await prisma.programExamQuestion.deleteMany({
+        where: { id: { in: deletedQuestionIds } }
+      })
+    }
+
+    // Process each question
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i]
+      
+      if (q.id) {
+        // Update existing question
+        // First delete old choices
+        await prisma.programExamChoice.deleteMany({
+          where: { questionId: q.id }
+        })
+        
+        // Update question and create new choices
+        await prisma.programExamQuestion.update({
+          where: { id: q.id },
+          data: {
+            question: q.question,
+            points: q.points,
+            order: i + 1,
+            choices: {
+              create: q.choices.map((c, idx) => ({
+                text: c.text,
+                isCorrect: c.isCorrect,
+                order: idx + 1
+              }))
+            }
+          }
+        })
+      } else {
+        // Create new question
+        await prisma.programExamQuestion.create({
+          data: {
+            examId,
+            question: q.question,
+            points: q.points,
+            order: i + 1,
+            choices: {
+              create: q.choices.map((c, idx) => ({
+                text: c.text,
+                isCorrect: c.isCorrect,
+                order: idx + 1
+              }))
+            }
+          }
+        })
+      }
+    }
+
+    // Update exam total points
+    await updateExamTotalPoints(examId)
+
+    // Return updated exam
+    const updatedExam = await prisma.programExam.findUnique({
+      where: { id: examId },
+      include: {
+        questions: {
+          include: { choices: { orderBy: { order: 'asc' } } },
+          orderBy: { order: 'asc' }
+        }
+      }
+    })
+
+    res.json(updatedExam)
+  } catch (error) {
+    console.error('Batch save questions error:', error)
+    res.status(500).json({ error: 'Failed to save questions' })
+  }
+})
+
+// POST /api/admin/program-exams/exam/:examId/scores - Save scores for students
+router.post('/exam/:examId/scores', async (req, res) => {
+  try {
+    const { examId } = req.params
+    const { scores } = req.body // Array of { studentId, score, notes }
+
+    // Verify exam exists
+    const exam = await prisma.programExam.findUnique({
+      where: { id: examId },
+      include: { program: true }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    // Process each score
+    for (const scoreData of scores) {
+      // Check if attempt exists
+      const existingAttempt = await prisma.programExamAttempt.findFirst({
+        where: {
+          examId,
+          studentId: scoreData.studentId
+        }
+      })
+
+      if (existingAttempt) {
+        // Update existing attempt
+        await prisma.programExamAttempt.update({
+          where: { id: existingAttempt.id },
+          data: {
+            score: scoreData.score,
+            status: 'SUBMITTED',
+            submittedAt: new Date()
+          }
+        })
+      } else {
+        // Create new attempt with score
+        await prisma.programExamAttempt.create({
+          data: {
+            examId,
+            studentId: scoreData.studentId,
+            score: scoreData.score,
+            status: 'SUBMITTED',
+            submittedAt: new Date()
+          }
+        })
+      }
+    }
+
+    res.json({ message: 'Scores saved successfully' })
+  } catch (error) {
+    console.error('Save scores error:', error)
+    res.status(500).json({ error: 'Failed to save scores' })
+  }
+})
+
 // ============ GRADES ============
 
 // GET /api/admin/program-exams/:programId/grades - Get all grades for program
