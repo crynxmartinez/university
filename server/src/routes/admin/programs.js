@@ -112,11 +112,7 @@ router.get('/:id', async (req, res) => {
         enrollments: {
           include: {
             student: {
-              include: {
-                user: {
-                  include: { profile: true }
-                }
-              }
+              include: { profile: true }
             }
           }
         }
