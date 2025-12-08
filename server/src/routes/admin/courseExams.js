@@ -336,6 +336,65 @@ router.put('/exam/:examId/questions/reorder', async (req, res) => {
   }
 })
 
+// ============ SCORES ============
+
+// POST /api/admin/course-exams/exam/:examId/scores - Save scores for students
+router.post('/exam/:examId/scores', async (req, res) => {
+  try {
+    const { examId } = req.params
+    const { scores } = req.body // Array of { studentId, score, notes }
+
+    if (!scores || !Array.isArray(scores)) {
+      return res.status(400).json({ error: 'Scores array is required' })
+    }
+
+    const exam = await prisma.exam.findUnique({
+      where: { id: examId }
+    })
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' })
+    }
+
+    // Upsert each score as an exam attempt
+    const results = await Promise.all(
+      scores.map(async ({ studentId, score, notes }) => {
+        // Check if attempt exists
+        const existing = await prisma.examAttempt.findFirst({
+          where: { examId, studentId }
+        })
+
+        if (existing) {
+          return prisma.examAttempt.update({
+            where: { id: existing.id },
+            data: { 
+              score: parseFloat(score),
+              status: 'SUBMITTED',
+              submittedAt: new Date()
+            }
+          })
+        } else {
+          return prisma.examAttempt.create({
+            data: {
+              examId,
+              studentId,
+              score: parseFloat(score),
+              status: 'SUBMITTED',
+              startedAt: new Date(),
+              submittedAt: new Date()
+            }
+          })
+        }
+      })
+    )
+
+    res.json({ message: 'Scores saved successfully', count: results.length })
+  } catch (error) {
+    console.error('Save scores error:', error)
+    res.status(500).json({ error: 'Failed to save scores' })
+  }
+})
+
 // ============ GRADES ============
 
 // GET /api/admin/course-exams/:courseId/grades - Get all student grades for a course

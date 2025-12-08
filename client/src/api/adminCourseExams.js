@@ -59,10 +59,15 @@ export const reorderCourseExamQuestions = async (examId, questionIds) => {
   return res.data
 }
 
-// ============ GRADES ============
+// ============ GRADES / SCORES ============
 
 export const getCourseGrades = async (courseId) => {
   const res = await axios.get(`${API_URL}/admin/course-exams/${courseId}/grades`, getAuthHeaders())
+  return res.data
+}
+
+export const saveCourseExamScores = async (examId, scores) => {
+  const res = await axios.post(`${API_URL}/admin/course-exams/exam/${examId}/scores`, { scores }, getAuthHeaders())
   return res.data
 }
 
