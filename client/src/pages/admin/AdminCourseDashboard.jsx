@@ -98,7 +98,6 @@ function SortableModule({ module, index, expanded, onToggle, onEdit, onDelete, o
           <button onClick={onToggle} className="flex items-center gap-2 flex-1 text-left">
             <span className="font-medium text-gray-900">{module.name}</span>
             <span className="text-sm text-gray-500">({module.lessons?.length || 0} classes)</span>
-            {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -108,11 +107,18 @@ function SortableModule({ module, index, expanded, onToggle, onEdit, onDelete, o
           <button onClick={onDelete} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition opacity-0 group-hover:opacity-100" title="Delete module">
             <Trash2 className="w-4 h-4" />
           </button>
+          <button onClick={onToggle} className="p-1">
+            {expanded ? (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
         </div>
       </div>
       
       {expanded && (
-        <div className="border-t bg-gray-50">
+        <div className="border-t">
           {module.lessons?.length > 0 ? (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onLessonDragEnd}>
               <SortableContext items={module.lessons.map(l => l.id)} strategy={verticalListSortingStrategy}>
@@ -124,11 +130,16 @@ function SortableModule({ module, index, expanded, onToggle, onEdit, onDelete, o
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="p-4 text-center text-gray-500 text-sm">No classes in this module</div>
+            <div className="p-4 text-center">
+              <p className="text-gray-500 text-sm mb-3">No classes in this module</p>
+              <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Class</button>
+            </div>
           )}
-          <div className="p-3 border-t">
-            <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Class</button>
-          </div>
+          {module.lessons?.length > 0 && (
+            <div className="p-4">
+              <button onClick={onAddLesson} className="text-[#f7941d] hover:underline text-sm font-medium">+ Add Class</button>
+            </div>
+          )}
         </div>
       )}
     </div>
