@@ -38,8 +38,17 @@ router.get('/course/:courseId', authenticate, async (req, res) => {
   try {
     const { courseId } = req.params
 
+    // Support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+
     const sessions = await prisma.scheduledSession.findMany({
-      where: { courseId },
+      where: { courseId: course.id },
       include: {
         materials: true,
         lesson: true,  // Include the class template
@@ -103,8 +112,11 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Exam ID is required for EXAM sessions' })
     }
 
-    // Verify teacher owns this course
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify teacher owns this course - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course || course.teacherId !== req.user.teacher.id) {
       return res.status(403).json({ error: 'Not authorized to add sessions to this course' })
     }
@@ -115,7 +127,7 @@ router.post('/', authenticate, async (req, res) => {
         where: { id: lessonId },
         include: { module: true }
       })
-      if (!lesson || lesson.module.courseId !== courseId) {
+      if (!lesson || lesson.module.courseId !== course.id) {
         return res.status(400).json({ error: 'Invalid lesson for this course' })
       }
     }
@@ -123,7 +135,7 @@ router.post('/', authenticate, async (req, res) => {
     // Verify exam exists, belongs to this course, and is published (for EXAM type)
     if (sessionType === 'EXAM' && examId) {
       const exam = await prisma.exam.findUnique({ where: { id: examId } })
-      if (!exam || exam.courseId !== courseId) {
+      if (!exam || exam.courseId !== course.id) {
         return res.status(400).json({ error: 'Invalid exam for this course' })
       }
       if (!exam.isPublished) {
@@ -136,7 +148,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const session = await prisma.scheduledSession.create({
       data: {
-        courseId,
+        courseId: course.id,
         lessonId: sessionType === 'CLASS' ? lessonId : null,
         examId: sessionType === 'EXAM' ? examId : null,
         date: sessionDate,

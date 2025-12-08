@@ -72,22 +72,25 @@ router.post('/', authenticate, async (req, res) => {
 
     const { courseId, title, description, totalPoints } = req.body
 
-    // Verify teacher owns this course
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify teacher owns this course - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course || course.teacherId !== req.user.teacher.id) {
       return res.status(403).json({ error: 'Not authorized to add exams to this course' })
     }
 
     // Get the next order number
     const lastExam = await prisma.exam.findFirst({
-      where: { courseId },
+      where: { courseId: course.id },
       orderBy: { order: 'desc' }
     })
     const nextOrder = (lastExam?.order ?? -1) + 1
 
     const exam = await prisma.exam.create({
       data: {
-        courseId,
+        courseId: course.id,
         title,
         description,
         totalPoints: totalPoints || 100,
@@ -183,8 +186,11 @@ router.put('/reorder', authenticate, async (req, res) => {
 
     const { courseId, examIds } = req.body
 
-    // Verify teacher owns this course
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify teacher owns this course - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course || course.teacherId !== req.user.teacher.id) {
       return res.status(403).json({ error: 'Not authorized' })
     }
@@ -266,8 +272,8 @@ router.get('/grades/:courseId', authenticate, async (req, res) => {
   try {
     const { courseId } = req.params
 
-    // Get course with exams and enrolled students
-    const course = await prisma.course.findUnique({
+    // Get course with exams and enrolled students - support both id and slug
+    let course = await prisma.course.findUnique({
       where: { id: courseId },
       include: {
         exams: {
@@ -289,6 +295,30 @@ router.get('/grades/:courseId', authenticate, async (req, res) => {
         }
       }
     })
+    if (!course) {
+      course = await prisma.course.findUnique({
+        where: { slug: courseId },
+        include: {
+          exams: {
+            orderBy: { order: 'asc' },
+            include: {
+              scores: true
+            }
+          },
+          enrollments: {
+            include: {
+              student: {
+                include: {
+                  user: {
+                    include: { profile: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      })
+    }
 
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
@@ -358,8 +388,8 @@ router.get('/student-grade/:courseId', authenticate, async (req, res) => {
     const { courseId } = req.params
     const studentId = req.user.student.id
 
-    // Get course with exams and attempts
-    const course = await prisma.course.findUnique({
+    // Get course with exams and attempts - support both id and slug
+    let course = await prisma.course.findUnique({
       where: { id: courseId },
       include: {
         exams: {
@@ -377,6 +407,26 @@ router.get('/student-grade/:courseId', authenticate, async (req, res) => {
         }
       }
     })
+    if (!course) {
+      course = await prisma.course.findUnique({
+        where: { slug: courseId },
+        include: {
+          exams: {
+            where: { isPublished: true },
+            orderBy: { order: 'asc' },
+            include: {
+              scores: {
+                where: { studentId }
+              },
+              attempts: {
+                where: { studentId, status: 'SUBMITTED' },
+                orderBy: { submittedAt: 'desc' }
+              }
+            }
+          }
+        }
+      })
+    }
 
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })

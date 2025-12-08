@@ -213,9 +213,18 @@ router.get('/student/:courseId', authenticate, async (req, res) => {
 
     const { courseId } = req.params
 
+    // Support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' })
+    }
+
     // Get all sessions for this course with student's attendance
     const sessions = await prisma.scheduledSession.findMany({
-      where: { courseId },
+      where: { courseId: course.id },
       include: {
         lesson: true,
         attendance: {

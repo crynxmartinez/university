@@ -76,8 +76,11 @@ router.get('/course/:courseId/students', authenticate, async (req, res) => {
   try {
     const { courseId } = req.params
 
-    // Verify teacher owns this course
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify teacher owns this course - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -89,13 +92,13 @@ router.get('/course/:courseId/students', authenticate, async (req, res) => {
     const now = new Date()
     const totalSessions = await prisma.scheduledSession.count({
       where: { 
-        courseId,
+        courseId: course.id,
         date: { lte: now }
       }
     })
 
     const enrollments = await prisma.enrollment.findMany({
-      where: { courseId },
+      where: { courseId: course.id },
       include: {
         student: {
           include: {
@@ -104,7 +107,7 @@ router.get('/course/:courseId/students', authenticate, async (req, res) => {
             },
             attendance: {
               where: {
-                session: { courseId },
+                session: { courseId: course.id },
                 status: 'PRESENT'
               }
             }
@@ -142,8 +145,11 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Student ID and Course ID are required' })
     }
 
-    // Verify teacher owns this course
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify teacher owns this course - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -160,7 +166,7 @@ router.post('/', authenticate, async (req, res) => {
     // Check if already enrolled
     const existing = await prisma.enrollment.findUnique({
       where: {
-        studentId_courseId: { studentId, courseId }
+        studentId_courseId: { studentId, courseId: course.id }
       }
     })
     if (existing) {
@@ -168,7 +174,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const enrollment = await prisma.enrollment.create({
-      data: { studentId, courseId },
+      data: { studentId, courseId: course.id },
       include: {
         student: {
           include: {
@@ -225,8 +231,11 @@ router.post('/self', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Course ID is required' })
     }
 
-    // Check if course exists and is active
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Check if course exists and is active - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -237,7 +246,7 @@ router.post('/self', authenticate, async (req, res) => {
     // Check if already enrolled
     const existing = await prisma.enrollment.findUnique({
       where: {
-        studentId_courseId: { studentId: req.user.student.id, courseId }
+        studentId_courseId: { studentId: req.user.student.id, courseId: course.id }
       }
     })
     if (existing) {
@@ -247,7 +256,7 @@ router.post('/self', authenticate, async (req, res) => {
     const enrollment = await prisma.enrollment.create({
       data: { 
         studentId: req.user.student.id, 
-        courseId 
+        courseId: course.id 
       },
       include: {
         course: {

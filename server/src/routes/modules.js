@@ -40,8 +40,12 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Module name and course ID are required' })
     }
 
-    // Verify course ownership
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify course ownership - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      // Try finding by slug
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
     }
@@ -49,9 +53,9 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' })
     }
 
-    // Get next order number
+    // Get next order number - use actual course.id
     const lastModule = await prisma.module.findFirst({
-      where: { courseId },
+      where: { courseId: course.id },
       orderBy: { order: 'desc' }
     })
     const order = (lastModule?.order || 0) + 1
@@ -59,7 +63,7 @@ router.post('/', authenticate, async (req, res) => {
     const module = await prisma.module.create({
       data: {
         name,
-        courseId,
+        courseId: course.id,
         order
       },
       include: { lessons: true }
@@ -82,8 +86,11 @@ router.put('/reorder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Course ID and module IDs array are required' })
     }
 
-    // Verify course ownership
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
+    // Verify course ownership - support both id and slug
+    let course = await prisma.course.findUnique({ where: { id: courseId } })
+    if (!course) {
+      course = await prisma.course.findUnique({ where: { slug: courseId } })
+    }
     if (!course) {
       return res.status(404).json({ error: 'Course not found' })
     }
