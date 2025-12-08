@@ -1164,6 +1164,15 @@ export default function StudentCourseView() {
                 const inProgress = isExamInProgress(examId)
                 const attempt = getExamAttempt(examId)
                 
+                // Debug logging
+                console.log('EXAM BANNER DEBUG:', {
+                  examId,
+                  completed,
+                  inProgress,
+                  attempt,
+                  availableExams: availableExams.map(e => ({ id: e.id, attempt: e.attempt }))
+                })
+                
                 return (
                 <div className={`rounded-xl p-6 mb-6 text-white ${
                   completed
