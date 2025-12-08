@@ -1312,23 +1312,26 @@ router.get('/attempt/:attemptId/result', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Exam not yet submitted' })
     }
 
-    // Build result with correct answers shown
+    // Build result - DON'T reveal correct answers (exam can be retaken)
     const questions = attempt.exam.questions.map(q => {
       const answer = attempt.answers.find(a => a.questionId === q.id)
-      const correctChoice = q.choices.find(c => c.isCorrect)
       
       return {
         id: q.id,
         question: q.question,
         points: q.points,
-        choices: q.choices.map(c => ({
-          id: c.id,
-          text: c.text,
-          isCorrect: c.isCorrect,
-          isSelected: answer?.choiceId === c.id
-        })),
+        choices: q.choices.map(c => {
+          const isSelected = answer?.choiceId === c.id
+          return {
+            id: c.id,
+            text: c.text,
+            isSelected,
+            // Only reveal if THIS choice was correct IF it was selected
+            isCorrect: isSelected ? c.isCorrect : undefined
+          }
+        }),
         selectedChoiceId: answer?.choiceId,
-        correctChoiceId: correctChoice?.id,
+        // Don't reveal correctChoiceId - exam can be retaken!
         isCorrect: answer?.isCorrect || false,
         earnedPoints: answer?.isCorrect ? q.points : 0
       }

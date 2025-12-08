@@ -300,15 +300,15 @@ export default function StudentExam() {
                       <div
                         key={choice.id}
                         className={`p-2 rounded-lg text-sm ${
-                          choice.isCorrect
+                          choice.isSelected && choice.isCorrect
                             ? 'bg-green-200 text-green-800 font-medium'
                             : choice.isSelected && !choice.isCorrect
-                            ? 'bg-red-200 text-red-800'
+                            ? 'bg-red-200 text-red-800 font-medium'
                             : 'bg-white text-gray-600'
                         }`}
                       >
                         {choice.text}
-                        {choice.isCorrect && ' ✓'}
+                        {choice.isSelected && choice.isCorrect && ' ✓'}
                         {choice.isSelected && !choice.isCorrect && ' ✗'}
                       </div>
                     ))}
