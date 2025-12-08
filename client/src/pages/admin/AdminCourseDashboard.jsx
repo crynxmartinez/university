@@ -1024,48 +1024,74 @@ export default function AdminCourseDashboard() {
 
           {/* Schedule Tab (LIVE courses only) */}
           {activeTab === 'schedule' && course.type === 'LIVE' && (
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* Calendar */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Calendar - takes 2 columns */}
+              <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+                {/* Calendar Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
-                    <button onClick={() => setCurrentMonth(new Date())} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition">Today</button>
+                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                      <ChevronLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button onClick={() => { setCurrentMonth(new Date()); setSelectedDate(new Date()) }} className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm font-medium rounded-lg transition">
+                      Today
+                    </button>
+                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                      <ChevronRight className="w-5 h-5 text-gray-600" />
+                    </button>
                   </div>
-                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))} className="p-2 hover:bg-gray-100 rounded-lg transition">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-1">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">{day}</div>
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 mb-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+                    <div key={day} className={`text-center text-sm font-medium py-3 ${idx === 0 || idx === 6 ? 'text-red-500' : 'text-gray-600'}`}>
+                      {day}
+                    </div>
                   ))}
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7">
                   {getDaysInMonth(currentMonth).map((date, index) => {
                     const daySessions = date ? getSessionsForDate(date) : []
                     const isToday = date?.toDateString() === new Date().toDateString()
                     const isSelected = date && selectedDate && formatDate(date) === formatDate(selectedDate)
+                    const isWeekend = date && (date.getDay() === 0 || date.getDay() === 6)
                     
                     return (
                       <div
                         key={index}
-                        onClick={() => date && handleDateClick(date)}
+                        onClick={() => date && setSelectedDate(date)}
                         onContextMenu={(e) => { e.preventDefault(); if (date && copiedSession) handlePasteSession(date) }}
-                        className={`min-h-[70px] p-1.5 border rounded-lg cursor-pointer transition text-center ${
-                          !date ? 'bg-gray-50 cursor-default' : 'hover:bg-gray-50'
-                        } ${isToday ? 'border-[#f7941d] border-2' : 'border-gray-200'} ${isSelected ? 'bg-blue-50 border-blue-300' : ''}`}
+                        className={`min-h-[100px] p-2 border-t border-l cursor-pointer transition ${
+                          index % 7 === 6 ? 'border-r' : ''
+                        } ${Math.floor(index / 7) === Math.floor((getDaysInMonth(currentMonth).length - 1) / 7) ? 'border-b' : ''} ${
+                          !date ? 'bg-gray-50/50 cursor-default' : 'hover:bg-blue-50/50'
+                        } ${isSelected ? 'bg-blue-50' : ''}`}
                       >
                         {date && (
                           <>
-                            <span className={`text-sm ${isToday ? 'font-bold text-[#f7941d]' : 'text-gray-700'}`}>{date.getDate()}</span>
-                            <div className="mt-1 space-y-0.5">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-sm font-medium ${isWeekend ? 'text-red-500' : 'text-gray-700'} ${isToday ? 'bg-[#1e3a5f] text-white w-7 h-7 rounded-full flex items-center justify-center' : ''}`}>
+                                {date.getDate()}
+                              </span>
+                              {daySessions.length > 0 && (
+                                <span className="text-xs text-gray-400">{daySessions.length > 2 ? `+${daySessions.length - 2}` : ''}</span>
+                              )}
+                            </div>
+                            <div className="space-y-1">
                               {daySessions.slice(0, 2).map(session => (
-                                <div key={session.id} className={`w-full h-1.5 rounded-full ${getSessionTypeColor(session.type)}`}></div>
+                                <div 
+                                  key={session.id} 
+                                  className={`text-xs px-1.5 py-0.5 rounded truncate ${
+                                    session.type === 'EXAM' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                  }`}
+                                >
+                                  {formatTime12h(session.startTime)}
+                                </div>
                               ))}
-                              {daySessions.length > 2 && <div className="text-xs text-gray-400">+{daySessions.length - 2}</div>}
                             </div>
                           </>
                         )}
@@ -1075,10 +1101,12 @@ export default function AdminCourseDashboard() {
                 </div>
 
                 {/* Legend */}
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t text-xs text-gray-500">
-                  <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Class</div>
-                  <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-red-500"></div> Exam</div>
-                  {copiedSession && <div className="flex items-center gap-1 ml-auto text-green-600"><Clipboard className="w-3 h-3" /> Right-click to paste</div>}
+                <div className="flex items-center gap-6 mt-4 pt-4 text-sm text-gray-600">
+                  <span className="text-gray-500">Legend:</span>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-blue-500"></div> Class</div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-500"></div> Exam</div>
+                  <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-500"></div> Review</div>
+                  {copiedSession && <div className="flex items-center gap-1.5 ml-auto text-green-600"><Clipboard className="w-4 h-4" /> Right-click to paste</div>}
                 </div>
               </div>
 
@@ -1086,12 +1114,12 @@ export default function AdminCourseDashboard() {
               <div className="bg-white rounded-xl shadow-sm p-6">
                 {selectedDate ? (
                   <>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-                        <p className="text-sm text-gray-500">{getSessionsForDate(selectedDate).length} session(s)</p>
-                      </div>
-                      <button onClick={() => { setEditingSession(null); setSessionForm({ type: 'CLASS', lessonId: '', examId: '', startTime: '19:00', endTime: '21:00', meetingLink: '', notes: '' }); setShowSessionModal(true) }} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition">
+                    <div className="mb-6">
+                      <h3 className="text-lg font-bold text-gray-900">{selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</h3>
+                      <p className="text-sm text-gray-500 mt-1">{getSessionsForDate(selectedDate).length} session(s)</p>
+                    </div>
+                    <div className="flex items-center justify-end mb-4">
+                      <button onClick={() => { setEditingSession(null); setSessionForm({ type: 'CLASS', lessonId: '', examId: '', startTime: '19:00', endTime: '21:00', meetingLink: '', notes: '' }); setShowSessionModal(true) }} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition text-sm">
                         <Plus className="w-4 h-4" />Add Session
                       </button>
                     </div>
@@ -1157,10 +1185,12 @@ export default function AdminCourseDashboard() {
                     )}
                   </>
                 ) : (
-                  <div className="text-center py-16">
-                    <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Date</h3>
-                    <p className="text-gray-500">Click on a date in the calendar to view or add sessions</p>
+                  <div className="h-full flex flex-col">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Select a date</h3>
+                    <div className="flex-1 flex flex-col items-center justify-center text-center">
+                      <Calendar className="w-16 h-16 text-gray-300 mb-4" />
+                      <p className="text-gray-500">Click on a date to view or add sessions</p>
+                    </div>
                   </div>
                 )}
               </div>
