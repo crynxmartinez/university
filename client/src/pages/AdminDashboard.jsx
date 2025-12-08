@@ -142,6 +142,8 @@ export default function AdminDashboard() {
       const data = await getAdminCourses()
       console.log('Courses data:', data)
       console.log('First course teacher:', data[0]?.teacher)
+      console.log('First course teacher.user:', data[0]?.teacher?.user)
+      console.log('First course teacher.user.profile:', data[0]?.teacher?.user?.profile)
       setCourses(data)
     } catch (err) {
       console.error('Failed to fetch courses:', err)
