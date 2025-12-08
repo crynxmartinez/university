@@ -824,9 +824,9 @@ export default function CourseDashboard() {
 
   const getSessionTypeBgColor = (type) => {
     switch (type) {
-      case 'CLASS': return 'bg-blue-50 border-blue-200'
-      case 'EXAM': return 'bg-red-50 border-red-200'
-      default: return 'bg-gray-50 border-gray-200'
+      case 'CLASS': return 'bg-blue-50 border-l-4 border-l-blue-500 border-y border-r border-blue-200'
+      case 'EXAM': return 'bg-red-50 border-l-4 border-l-red-500 border-y border-r border-red-200'
+      default: return 'bg-gray-50 border-l-4 border-l-gray-400 border-y border-r border-gray-200'
     }
   }
 
@@ -1437,12 +1437,12 @@ export default function CourseDashboard() {
                     ) : (
                       <div className="space-y-3">
                         {getSessionsForDate(selectedDate).map(session => (
-                          <div key={session.id} className={`border rounded-lg p-3 ${!session.meetingLink ? 'border-red-300 bg-red-50' : getSessionTypeBgColor(session.type)}`}>
-                            {/* No meeting link warning */}
+                          <div key={session.id} className={`rounded-xl p-4 ${getSessionTypeBgColor(session.type)}`}>
+                            {/* No meeting link warning banner */}
                             {!session.meetingLink && (
-                              <div className="flex items-center gap-2 text-amber-600 text-xs mb-2 bg-amber-50 px-2 py-1 rounded">
-                                <AlertTriangle className="w-3 h-3" />
-                                <span>No meeting link</span>
+                              <div className="flex items-center gap-2 text-amber-600 text-xs mb-3 bg-amber-50 px-2 py-1.5 rounded border border-amber-200">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span className="font-medium">No meeting link</span>
                               </div>
                             )}
                             <div className="flex items-start justify-between mb-2">
@@ -1459,14 +1459,14 @@ export default function CourseDashboard() {
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => handleCopySession(session)}
-                                  className="p-1 hover:bg-white/50 rounded"
+                                  className="p-1.5 hover:bg-white/50 rounded"
                                   title="Copy session"
                                 >
                                   <Copy className="w-4 h-4 text-gray-500" />
                                 </button>
                                 <button
                                   onClick={() => handleEditSession(session)}
-                                  className="p-1 hover:bg-white/50 rounded"
+                                  className="p-1.5 hover:bg-white/50 rounded"
                                   title="Edit session"
                                 >
                                   <Edit3 className="w-4 h-4 text-gray-500" />

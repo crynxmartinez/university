@@ -596,9 +596,9 @@ export default function AdminCourseDashboard() {
 
   const getSessionTypeBgColor = (type) => {
     switch (type) {
-      case 'CLASS': return 'bg-blue-50 border-blue-200'
-      case 'EXAM': return 'bg-red-50 border-red-200'
-      default: return 'bg-gray-50 border-gray-200'
+      case 'CLASS': return 'bg-blue-50 border-l-4 border-l-blue-500 border-y border-r border-blue-200'
+      case 'EXAM': return 'bg-red-50 border-l-4 border-l-red-500 border-y border-r border-red-200'
+      default: return 'bg-gray-50 border-l-4 border-l-gray-400 border-y border-r border-gray-200'
     }
   }
 
@@ -1191,7 +1191,14 @@ export default function AdminCourseDashboard() {
                     ) : (
                       <div className="space-y-3">
                         {getSessionsForDate(selectedDate).map(session => (
-                          <div key={session.id} className={`border rounded-xl p-4 ${getSessionTypeBgColor(session.type)}`}>
+                          <div key={session.id} className={`rounded-xl p-4 ${getSessionTypeBgColor(session.type)}`}>
+                            {/* No meeting link warning banner */}
+                            {!session.meetingLink && (
+                              <div className="flex items-center gap-2 text-amber-600 text-xs mb-3 bg-amber-50 px-2 py-1.5 rounded border border-amber-200">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span className="font-medium">No meeting link</span>
+                              </div>
+                            )}
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
@@ -1200,12 +1207,10 @@ export default function AdminCourseDashboard() {
                                 </div>
                                 {session.lesson && <p className="text-sm font-medium text-gray-900">{session.lesson.name}</p>}
                                 {session.exam && <p className="text-sm font-medium text-gray-900">{session.exam.title}</p>}
-                                {session.meetingLink ? (
+                                {session.meetingLink && (
                                   <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
                                     <LinkIcon className="w-3 h-3" />{session.meetingLink.includes('zoom') ? 'Zoom Meeting' : session.meetingLink.includes('meet') ? 'Google Meet' : 'Meeting Link'}
                                   </a>
-                                ) : (
-                                  <p className="text-sm text-amber-600 flex items-center gap-1 mt-1"><AlertTriangle className="w-3 h-3" />No meeting link</p>
                                 )}
                               </div>
                               <div className="flex items-center gap-1">
