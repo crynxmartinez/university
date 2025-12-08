@@ -1147,6 +1147,7 @@ export default function CourseDashboard() {
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">Exam Title</th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">Description</th>
                         <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Total Points</th>
+                        <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Status</th>
                         <th className="text-right px-6 py-4 text-sm font-semibold text-gray-900">Actions</th>
                       </tr>
                     </thead>
@@ -1164,6 +1165,17 @@ export default function CourseDashboard() {
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                               {exam.totalPoints} pts
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {exam.isPublished ? (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Published
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                Draft
+                              </span>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
