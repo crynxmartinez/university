@@ -23,6 +23,8 @@ import ExamBuilder from './pages/teacher/ExamBuilder'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentCourseView from './pages/student/StudentCourseView'
 import StudentExam from './pages/student/StudentExam'
+import StudentProgramView from './pages/student/StudentProgramView'
+import StudentProgramExam from './pages/student/StudentProgramExam'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -62,6 +64,8 @@ function App() {
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/student/courses/:id" element={<StudentCourseView />} />
         <Route path="/student/courses/:id/exam/:examId" element={<StudentExam />} />
+        <Route path="/student/programs/:id" element={<StudentProgramView />} />
+        <Route path="/student/programs/:id/exam/:examId" element={<StudentProgramExam />} />
       </Routes>
     </ToastProvider>
   )
