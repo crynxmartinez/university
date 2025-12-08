@@ -559,9 +559,7 @@ router.get('/sessions/:sessionId/attendance', async (req, res) => {
               where: { status: 'ACTIVE' },
               include: {
                 student: {
-                  include: {
-                    user: { include: { profile: true } }
-                  }
+                  include: { profile: true }
                 }
               }
             }
@@ -576,11 +574,12 @@ router.get('/sessions/:sessionId/attendance', async (req, res) => {
     }
     
     // Map enrollments to attendance status
+    // Note: ProgramEnrollment.student is a User, not a Student
     const attendanceList = session.program.enrollments.map(enrollment => {
-      const record = session.attendance.find(a => a.studentId === enrollment.student?.user?.student?.id)
+      const record = session.attendance.find(a => a.studentId === enrollment.studentId)
       return {
         odId: enrollment.studentId,
-        name: enrollment.student?.user?.profile?.fullName || 'Unknown',
+        name: enrollment.student?.profile?.fullName || 'Unknown',
         status: record?.status || 'ABSENT',
         joinedAt: record?.joinedAt
       }
@@ -651,9 +650,7 @@ router.get('/:programId/students', async (req, res) => {
       where: { programId: req.params.programId },
       include: {
         student: {
-          include: {
-            user: { include: { profile: true } }
-          }
+          include: { profile: true }
         }
       }
     })
@@ -688,9 +685,7 @@ router.post('/:programId/students', async (req, res) => {
       },
       include: {
         student: {
-          include: {
-            user: { include: { profile: true } }
-          }
+          include: { profile: true }
         }
       }
     })
