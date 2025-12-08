@@ -150,8 +150,10 @@ export default function AdminCourseDashboard() {
   const [moduleForm, setModuleForm] = useState({ name: '' })
   const [showLessonModal, setShowLessonModal] = useState(false)
   const [editingLesson, setEditingLesson] = useState(null)
-  const [lessonForm, setLessonForm] = useState({ name: '', description: '', materials: '', videoUrl: '' })
+  const [lessonForm, setLessonForm] = useState({ name: '', description: '', videoUrl: '' })
+  const [lessonMaterialUrls, setLessonMaterialUrls] = useState([''])
   const [selectedModuleId, setSelectedModuleId] = useState(null)
+  const [savingLesson, setSavingLesson] = useState(false)
   
   // Exam state
   const [exams, setExams] = useState([])
@@ -218,6 +220,7 @@ export default function AdminCourseDashboard() {
   const [attendanceSession, setAttendanceSession] = useState(null)
   const [attendanceList, setAttendanceList] = useState([])
   const [attendanceSaving, setAttendanceSaving] = useState(false)
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
   
   // Confirm modals
   const [deleteModuleConfirm, setDeleteModuleConfirm] = useState(null)
@@ -230,6 +233,8 @@ export default function AdminCourseDashboard() {
   
   // Loading states
   const [saving, setSaving] = useState(false)
+  const [deletingModule, setDeletingModule] = useState(false)
+  const [deletingLesson, setDeletingLesson] = useState(false)
   
   // DnD sensors
   const sensors = useSensors(
@@ -356,6 +361,8 @@ export default function AdminCourseDashboard() {
   }
 
   const handleDeleteModule = async () => {
+    if (!deleteModuleConfirm) return
+    setDeletingModule(true)
     try {
       await deleteCourseModule(deleteModuleConfirm)
       toast.success('Module deleted')
@@ -363,6 +370,8 @@ export default function AdminCourseDashboard() {
       fetchCourse()
     } catch (error) {
       toast.error('Failed to delete module')
+    } finally {
+      setDeletingModule(false)
     }
   }
 
@@ -383,40 +392,56 @@ export default function AdminCourseDashboard() {
 
   // Lesson handlers
   const openEditLesson = (lesson) => {
+    const urls = lesson.materials ? lesson.materials.split('\n').filter(u => u.trim()) : ['']
+    setLessonMaterialUrls(urls.length > 0 ? urls : [''])
     setEditingLesson(lesson)
-    setLessonForm({ name: lesson.name, description: lesson.description || '', materials: lesson.materials || '', videoUrl: lesson.videoUrl || '' })
+    setLessonForm({ name: lesson.name, description: lesson.description || '', videoUrl: lesson.videoUrl || '' })
     setShowLessonModal(true)
   }
 
+  const addLessonMaterialUrl = () => setLessonMaterialUrls([...lessonMaterialUrls, ''])
+  const removeLessonMaterialUrl = (index) => setLessonMaterialUrls(lessonMaterialUrls.filter((_, i) => i !== index))
+  const updateLessonMaterialUrl = (index, value) => {
+    const updated = [...lessonMaterialUrls]
+    updated[index] = value
+    setLessonMaterialUrls(updated)
+  }
+
   const handleSaveLesson = async () => {
-    setSaving(true)
+    setSavingLesson(true)
+    const materials = lessonMaterialUrls.filter(u => u.trim()).join('\n')
     try {
       if (editingLesson) {
-        await updateCourseLesson(editingLesson.id, lessonForm)
+        await updateCourseLesson(editingLesson.id, { ...lessonForm, materials })
         toast.success('Lesson updated')
       } else {
-        await createCourseLesson(selectedModuleId, lessonForm)
+        await createCourseLesson(selectedModuleId, { ...lessonForm, materials })
         toast.success('Lesson created')
       }
       setShowLessonModal(false)
       setEditingLesson(null)
-      setLessonForm({ name: '', description: '', materials: '', videoUrl: '' })
+      setLessonForm({ name: '', description: '', videoUrl: '' })
+      setLessonMaterialUrls([''])
       fetchCourse()
     } catch (error) {
       toast.error('Failed to save lesson')
     } finally {
-      setSaving(false)
+      setSavingLesson(false)
     }
   }
 
   const handleDeleteLesson = async () => {
+    if (!deleteLessonConfirm) return
+    setDeletingLesson(true)
     try {
       await deleteCourseLesson(deleteLessonConfirm)
-      toast.success('Lesson deleted')
+      toast.success('Class deleted')
       setDeleteLessonConfirm(null)
       fetchCourse()
     } catch (error) {
-      toast.error('Failed to delete lesson')
+      toast.error('Failed to delete class')
+    } finally {
+      setDeletingLesson(false)
     }
   }
 
@@ -687,23 +712,43 @@ export default function AdminCourseDashboard() {
   // Attendance handlers
   const openAttendanceModal = async (session) => {
     setAttendanceSession(session)
+    setShowAttendanceModal(true)
+    setLoadingAttendance(true)
     try {
       const data = await getCourseAttendance(session.id)
       setAttendanceList(data)
-      setShowAttendanceModal(true)
     } catch (error) {
       toast.error('Failed to load attendance')
+      setShowAttendanceModal(false)
+    } finally {
+      setLoadingAttendance(false)
     }
   }
 
-  const handleAttendanceChange = (studentId, status) => {
-    setAttendanceList(prev => prev.map(a => a.studentId === studentId ? { ...a, status } : a))
+  const toggleAttendance = (studentId) => {
+    setAttendanceList(prev => prev.map(item => 
+      item.studentId === studentId 
+        ? { ...item, status: item.status === 'PRESENT' ? 'ABSENT' : 'PRESENT' }
+        : item
+    ))
+  }
+
+  const markAllPresent = () => {
+    setAttendanceList(prev => prev.map(item => ({ ...item, status: 'PRESENT' })))
+  }
+
+  const markAllAbsent = () => {
+    setAttendanceList(prev => prev.map(item => ({ ...item, status: 'ABSENT' })))
   }
 
   const handleSaveAttendance = async () => {
     setAttendanceSaving(true)
     try {
-      await updateCourseAttendance(attendanceSession.id, attendanceList)
+      const attendance = attendanceList.map(item => ({
+        studentId: item.studentId,
+        status: item.status
+      }))
+      await updateCourseAttendance(attendanceSession.id, attendance)
       toast.success('Attendance saved')
       setShowAttendanceModal(false)
     } catch (error) {
@@ -921,7 +966,7 @@ export default function AdminCourseDashboard() {
                           onToggle={() => toggleModule(module.id)}
                           onEdit={() => openEditModule(module)}
                           onDelete={() => setDeleteModuleConfirm(module.id)}
-                          onAddLesson={() => { setSelectedModuleId(module.id); setEditingLesson(null); setLessonForm({ name: '', description: '', materials: '', videoUrl: '' }); setShowLessonModal(true) }}
+                          onAddLesson={() => { setSelectedModuleId(module.id); setEditingLesson(null); setLessonForm({ name: '', description: '', videoUrl: '' }); setLessonMaterialUrls(['']); setShowLessonModal(true) }}
                           onEditLesson={openEditLesson}
                           onDeleteLesson={(lessonId) => setDeleteLessonConfirm(lessonId)}
                           onLessonDragEnd={(event) => handleLessonDragEnd(module.id, event)}
@@ -1456,28 +1501,38 @@ export default function AdminCourseDashboard() {
 
       {/* Module Modal */}
       {showModuleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">{editingModule ? 'Edit Module' : 'Add Module'}</h2>
-            <input
-              type="text"
-              value={moduleForm.name}
-              onChange={(e) => setModuleForm({ name: e.target.value })}
-              placeholder="Module name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-            />
-            <div className="flex gap-2">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{editingModule ? 'Edit Module' : 'Add Module'}</h3>
+              <button onClick={() => setShowModuleModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Module Name *</label>
+              <input
+                type="text"
+                value={moduleForm.name}
+                onChange={(e) => setModuleForm({ name: e.target.value })}
+                placeholder="e.g., Introduction to Programming"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+              />
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
               <button
                 onClick={() => setShowModuleModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={saving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveModule}
-                disabled={saving || !moduleForm.name}
-                className="flex-1 px-4 py-2 bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f] disabled:opacity-50"
+                disabled={saving || !moduleForm.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
               >
+                {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
@@ -1487,54 +1542,101 @@ export default function AdminCourseDashboard() {
 
       {/* Lesson Modal */}
       {showLessonModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">{editingLesson ? 'Edit Lesson' : 'Add Lesson'}</h2>
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={lessonForm.name}
-                onChange={(e) => setLessonForm({ ...lessonForm, name: e.target.value })}
-                placeholder="Lesson name"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
-              <textarea
-                value={lessonForm.description}
-                onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
-                placeholder="Description (optional)"
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
-              {course.type === 'RECORDED' && (
-                <input
-                  type="url"
-                  value={lessonForm.videoUrl}
-                  onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
-                  placeholder="YouTube video URL"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-                />
-              )}
-              <input
-                type="url"
-                value={lessonForm.materials}
-                onChange={(e) => setLessonForm({ ...lessonForm, materials: e.target.value })}
-                placeholder="Materials link (Google Drive)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{editingLesson ? 'Edit Class' : 'Add Class'}</h3>
+              <button onClick={() => setShowLessonModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex gap-2 mt-4">
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class Name *</label>
+                <input
+                  type="text"
+                  value={lessonForm.name}
+                  onChange={(e) => setLessonForm({ ...lessonForm, name: e.target.value })}
+                  placeholder="e.g., Introduction to Variables"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={lessonForm.description}
+                  onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
+                  placeholder="Optional description for this class"
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Materials (URLs)</label>
+                <div className="space-y-2">
+                  {lessonMaterialUrls.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => updateLessonMaterialUrl(index, e.target.value)}
+                        placeholder="https://drive.google.com/..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      />
+                      {lessonMaterialUrls.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeLessonMaterialUrl(index)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addLessonMaterialUrl}
+                  className="mt-2 flex items-center gap-1 text-sm text-[#1e3a5f] hover:text-[#2d5a87] font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Material
+                </button>
+              </div>
+              {course.type === 'RECORDED' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center gap-2">
+                      <Video className="w-4 h-4 text-blue-600" />
+                      Video URL (YouTube)
+                    </div>
+                  </label>
+                  <input
+                    type="url"
+                    value={lessonForm.videoUrl}
+                    onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
               <button
                 onClick={() => setShowLessonModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={savingLesson}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveLesson}
-                disabled={saving || !lessonForm.name}
-                className="flex-1 px-4 py-2 bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f] disabled:opacity-50"
+                disabled={savingLesson || !lessonForm.name.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
               >
-                {saving ? 'Saving...' : 'Save'}
+                {savingLesson && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {savingLesson ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -1543,38 +1645,62 @@ export default function AdminCourseDashboard() {
 
       {/* Exam Modal */}
       {showExamModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">{editingExam ? 'Edit Exam' : 'Create Exam'}</h2>
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={examForm.title}
-                onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
-                placeholder="Exam title"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
-              <textarea
-                value={examForm.description}
-                onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
-                placeholder="Description (optional)"
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] outline-none"
-              />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{editingExam ? 'Edit Exam' : 'Create Exam'}</h3>
+              <button onClick={() => setShowExamModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex gap-2 mt-4">
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Title *</label>
+                <input
+                  type="text"
+                  value={examForm.title}
+                  onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
+                  placeholder="e.g., Quiz 1, Midterm, Final Exam"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={examForm.description}
+                  onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
+                  placeholder="Optional description for this exam"
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Points *</label>
+                <input
+                  type="number"
+                  value={examForm.totalPoints}
+                  onChange={(e) => setExamForm({ ...examForm, totalPoints: parseInt(e.target.value) || 0 })}
+                  placeholder="100"
+                  min="1"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t flex justify-end gap-3">
               <button
                 onClick={() => setShowExamModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={examSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveExam}
-                disabled={saving || !examForm.title}
-                className="flex-1 px-4 py-2 bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f] disabled:opacity-50"
+                disabled={examSaving || !examForm.title.trim()}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
               >
-                {saving ? 'Saving...' : 'Save'}
+                {examSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {examSaving ? 'Saving...' : (editingExam ? 'Update Exam' : 'Create Exam')}
               </button>
             </div>
           </div>
@@ -1582,30 +1708,38 @@ export default function AdminCourseDashboard() {
       )}
 
       {/* Session Modal */}
-      {showSessionModal && (
+      {showSessionModal && (() => {
+        const publishedExams = exams.filter(e => e.isPublished)
+        const selectedExamId = sessionForm.examId
+        const existingExamSessions = sessions.filter(s => s.examId === selectedExamId)
+        const isRetakeSession = selectedExamId && existingExamSessions.length > 0
+        const isFormValid = sessionForm.startTime && sessionForm.endTime && 
+          ((sessionForm.type === 'CLASS' && sessionForm.lessonId) || (sessionForm.type === 'EXAM' && sessionForm.examId))
+
+        return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">
-                {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : (editingSession ? 'Edit Session' : 'Add Session')}
-              </h2>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {selectedDate ? selectedDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric' }) : (editingSession ? 'Edit Session' : 'Add Session')}
+              </h3>
               <button onClick={() => setShowSessionModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-4">
               {/* Session Type Toggle */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
-                <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setSessionForm({ ...sessionForm, type: 'CLASS', examId: '' })}
-                    className={`flex-1 py-2.5 text-sm font-medium transition ${
-                      sessionForm.type === 'CLASS' ? 'bg-[#1e3a5f] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                      sessionForm.type === 'CLASS' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     CLASS
@@ -1613,8 +1747,8 @@ export default function AdminCourseDashboard() {
                   <button
                     type="button"
                     onClick={() => setSessionForm({ ...sessionForm, type: 'EXAM', lessonId: '' })}
-                    className={`flex-1 py-2.5 text-sm font-medium transition ${
-                      sessionForm.type === 'EXAM' ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                      sessionForm.type === 'EXAM' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     EXAM
@@ -1626,35 +1760,65 @@ export default function AdminCourseDashboard() {
               {sessionForm.type === 'CLASS' ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Class Template *</label>
-                  <select
-                    value={sessionForm.lessonId}
-                    onChange={(e) => setSessionForm({ ...sessionForm, lessonId: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  >
-                    <option value="">Select a class template...</option>
-                    {getAllLessons().map(lesson => (
-                      <option key={lesson.id} value={lesson.id}>{lesson.moduleName} - {lesson.name}</option>
-                    ))}
-                  </select>
+                  {getAllLessons().length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      No class templates available. Create classes in the "Class" tab first.
+                    </div>
+                  ) : (
+                    <select
+                      value={sessionForm.lessonId}
+                      onChange={(e) => setSessionForm({ ...sessionForm, lessonId: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                    >
+                      <option value="">Select a class template...</option>
+                      {getAllLessons().map(lesson => (
+                        <option key={lesson.id} value={lesson.id}>{lesson.moduleName} → {lesson.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Exam *</label>
-                  <select
-                    value={sessionForm.examId}
-                    onChange={(e) => setSessionForm({ ...sessionForm, examId: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                  >
-                    <option value="">Select an exam...</option>
-                    {exams.map(exam => (
-                      <option key={exam.id} value={exam.id}>{exam.title}</option>
-                    ))}
-                  </select>
-                  {sessionForm.examId && exams.find(e => e.id === sessionForm.examId) && (
-                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      Students who already took this exam won't be able to retake it
-                    </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Exam *</label>
+                  {publishedExams.length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      No published exams available. Create and publish exams in the "Exam" tab first.
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={sessionForm.examId}
+                        onChange={(e) => setSessionForm({ ...sessionForm, examId: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                      >
+                        <option value="">Select an exam...</option>
+                        {publishedExams.map(exam => {
+                          const scheduledCount = sessions.filter(s => s.examId === exam.id).length
+                          return (
+                            <option key={exam.id} value={exam.id}>
+                              {exam.title} ({exam.totalPoints} pts){scheduledCount > 0 ? ` - ${scheduledCount} session(s)` : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                      
+                      {/* Retake Warning */}
+                      {isRetakeSession && (
+                        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-orange-800">Retake Session</p>
+                              <p className="text-xs text-orange-700 mt-1">
+                                This exam has been scheduled {existingExamSessions.length} time(s) before. 
+                                Creating this session will allow students to <strong>retake the exam</strong>. 
+                                Their latest score will be used for grading.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -1667,7 +1831,7 @@ export default function AdminCourseDashboard() {
                     type="time"
                     value={sessionForm.startTime}
                     onChange={(e) => setSessionForm({ ...sessionForm, startTime: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                   />
                 </div>
                 <div>
@@ -1676,7 +1840,7 @@ export default function AdminCourseDashboard() {
                     type="time"
                     value={sessionForm.endTime}
                     onChange={(e) => setSessionForm({ ...sessionForm, endTime: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                   />
                 </div>
               </div>
@@ -1689,7 +1853,7 @@ export default function AdminCourseDashboard() {
                   value={sessionForm.meetingLink}
                   onChange={(e) => setSessionForm({ ...sessionForm, meetingLink: e.target.value })}
                   placeholder="https://zoom.us/j/..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                 />
               </div>
 
@@ -1701,75 +1865,145 @@ export default function AdminCourseDashboard() {
                   onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })}
                   placeholder="Instructions or notes for students..."
                   rows={3}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none resize-none"
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-              <button
-                onClick={() => setShowSessionModal(false)}
-                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveSession}
-                disabled={sessionSaving}
-                className="px-5 py-2.5 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
-              >
-                {sessionSaving ? 'Saving...' : (editingSession ? 'Update' : 'Create')}
-              </button>
+            <div className="p-6 border-t flex items-center justify-between">
+              <div>
+                {editingSession && (
+                  <button
+                    onClick={() => setDeleteSessionConfirm(editingSession.id)}
+                    className="text-red-600 hover:text-red-700 font-medium"
+                  >
+                    Delete Session
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowSessionModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSession}
+                  disabled={sessionSaving || !isFormValid}
+                  className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {sessionSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                  {sessionSaving ? 'Saving...' : (editingSession ? 'Update' : 'Create')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Attendance Modal */}
       {showAttendanceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Attendance</h2>
-            <div className="max-h-96 overflow-y-auto">
-              {attendanceList.map((student, index) => (
-                <div key={student.studentId} className="flex items-center justify-between py-3 border-b">
-                  <span>{student.name}</span>
-                  <select
-                    value={student.status}
-                    onChange={(e) => {
-                      const updated = [...attendanceList]
-                      updated[index].status = e.target.value
-                      setAttendanceList(updated)
-                    }}
-                    className={`px-3 py-1 rounded-lg text-sm ${
-                      student.status === 'PRESENT' ? 'bg-green-100 text-green-700' :
-                      student.status === 'LATE' ? 'bg-yellow-100 text-yellow-700' :
-                      student.status === 'EXCUSED' ? 'bg-blue-100 text-blue-700' :
-                      'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    <option value="PRESENT">Present</option>
-                    <option value="LATE">Late</option>
-                    <option value="EXCUSED">Excused</option>
-                    <option value="ABSENT">Absent</option>
-                  </select>
-                </div>
-              ))}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Session Attendance</h3>
+                {attendanceSession && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    {attendanceSession.lesson?.name || attendanceSession.exam?.title} • {new Date(attendanceSession.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setShowAttendanceModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex gap-2 mt-4">
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingAttendance ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading attendance...</p>
+                </div>
+              ) : attendanceList.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No students enrolled in this course</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-gray-600">
+                      {attendanceList.filter(a => a.status === 'PRESENT').length} / {attendanceList.length} present
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={markAllPresent}
+                        className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition"
+                      >
+                        Mark All Present
+                      </button>
+                      <button
+                        onClick={markAllAbsent}
+                        className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition"
+                      >
+                        Mark All Absent
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {attendanceList.map((item) => (
+                      <div
+                        key={item.studentId}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${
+                          item.status === 'PRESENT' 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-red-50 border-red-200'
+                        }`}
+                        onClick={() => toggleAttendance(item.studentId)}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold ${
+                          item.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-400'
+                        }`}>
+                          {(item.studentName || item.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{item.studentName || item.name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500 truncate">{item.email}</p>
+                        </div>
+                        <div className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
+                          item.status === 'PRESENT' 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-red-400 text-white'
+                        }`}>
+                          {item.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="p-6 border-t flex justify-end gap-3">
               <button
                 onClick={() => setShowAttendanceModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={attendanceSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveAttendance}
-                disabled={saving}
-                className="flex-1 px-4 py-2 bg-[#f7941d] text-white rounded-lg hover:bg-[#e8850f] disabled:opacity-50"
+                disabled={attendanceSaving || loadingAttendance}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
               >
-                {saving ? 'Saving...' : 'Save'}
+                {attendanceSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                {attendanceSaving ? 'Saving...' : 'Save Attendance'}
               </button>
             </div>
           </div>
@@ -1780,48 +2014,68 @@ export default function AdminCourseDashboard() {
       {showScoreModal && scoringExam && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Enter Scores - {scoringExam.title}</h2>
-              <p className="text-sm text-gray-500 mt-1">Total Points: {scoringExam.totalPoints}</p>
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Enter Scores</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {scoringExam.title} • Max: {scoringExam.totalPoints} points
+                </p>
+              </div>
+              <button onClick={() => setShowScoreModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               {scoreEntries.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No students enrolled in this course</p>
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No students enrolled in this course</p>
+                </div>
               ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 text-sm font-semibold text-gray-900">Student</th>
-                      <th className="text-right py-3 text-sm font-semibold text-gray-900 w-32">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {scoreEntries.map((entry) => (
-                      <tr key={entry.studentId}>
-                        <td className="py-3">
-                          <p className="font-medium text-gray-900">{entry.studentName}</p>
-                          <p className="text-sm text-gray-500">{entry.email}</p>
-                        </td>
-                        <td className="py-3">
-                          <input
-                            type="number"
-                            min="0"
-                            max={scoringExam.totalPoints}
-                            value={entry.score}
-                            onChange={(e) => handleScoreChange(entry.studentId, e.target.value)}
-                            placeholder="--"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-right focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="space-y-3">
+                  {scoreEntries.map((entry) => (
+                    <div
+                      key={entry.studentId}
+                      className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="w-10 h-10 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                        {entry.studentName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{entry.studentName}</p>
+                        <p className="text-xs text-gray-500 truncate">{entry.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={entry.score}
+                          onChange={(e) => handleScoreChange(entry.studentId, e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
+                          placeholder="0"
+                          min="0"
+                          max={scoringExam.totalPoints}
+                        />
+                        <span className="text-sm text-gray-500">/ {scoringExam.totalPoints}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            <div className="p-6 border-t bg-gray-50 flex gap-3">
-              <button onClick={() => setShowScoreModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition">Cancel</button>
-              <button onClick={handleSaveScores} disabled={scoreSaving} className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50">
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowScoreModal(false)}
+                disabled={scoreSaving}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveScores}
+                disabled={scoreSaving || scoreEntries.length === 0}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {scoreSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 {scoreSaving ? 'Saving...' : 'Save Scores'}
               </button>
             </div>
@@ -1832,21 +2086,28 @@ export default function AdminCourseDashboard() {
       {/* Material Modal */}
       {showMaterialModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Add Material</h2>
-            <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Add Material</h3>
+              <button onClick={() => setShowMaterialModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Material Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Material Name *</label>
                 <input
                   type="text"
                   value={materialForm.name}
                   onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
-                  placeholder="e.g., Lecture Slides"
+                  placeholder="e.g., Chapter 5 Notes.pdf"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Google Drive URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Google Drive Link *</label>
                 <input
                   type="url"
                   value={materialForm.driveUrl}
@@ -1854,11 +2115,25 @@ export default function AdminCourseDashboard() {
                   placeholder="https://drive.google.com/..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use "Get Link" in Google Drive and set sharing to "Anyone with the link can view"
+                </p>
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowMaterialModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">Cancel</button>
-              <button onClick={handleSaveMaterial} disabled={materialSaving || !materialForm.name || !materialForm.driveUrl} className="flex-1 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50">
+
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowMaterialModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveMaterial}
+                disabled={materialSaving || !materialForm.name || !materialForm.driveUrl}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {materialSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 {materialSaving ? 'Adding...' : 'Add Material'}
               </button>
             </div>
@@ -1866,55 +2141,188 @@ export default function AdminCourseDashboard() {
         </div>
       )}
 
-      {/* Confirm Modals */}
-      <ConfirmModal
-        isOpen={!!deleteModuleConfirm}
-        title="Delete Module"
-        message="Are you sure you want to delete this module? All lessons inside will also be deleted."
-        onConfirm={handleDeleteModule}
-        onCancel={() => setDeleteModuleConfirm(null)}
-      />
-      <ConfirmModal
-        isOpen={!!deleteLessonConfirm}
-        title="Delete Lesson"
-        message="Are you sure you want to delete this lesson?"
-        onConfirm={handleDeleteLesson}
-        onCancel={() => setDeleteLessonConfirm(null)}
-      />
+      {/* Delete Module Confirmation Modal */}
+      {deleteModuleConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Module</h3>
+              <p className="text-gray-500 text-center mb-4">
+                Are you sure you want to delete this module? All classes inside will also be deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteModuleConfirm(null)}
+                  disabled={deletingModule}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteModule}
+                  disabled={deletingModule}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deletingModule ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Lesson Confirmation Modal */}
+      {deleteLessonConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Class</h3>
+              <p className="text-gray-500 text-center mb-4">
+                Are you sure you want to delete this class?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteLessonConfirm(null)}
+                  disabled={deletingLesson}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteLesson}
+                  disabled={deletingLesson}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deletingLesson ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Exam Confirmation Modal */}
       <ConfirmModal
         isOpen={!!deleteExamConfirm}
-        title="Delete Exam"
-        message="Are you sure you want to delete this exam? All questions and student attempts will be lost."
+        onClose={() => !deletingExam && setDeleteExamConfirm(null)}
         onConfirm={handleDeleteExam}
-        onCancel={() => setDeleteExamConfirm(null)}
+        title="Delete Exam"
+        message="Are you sure you want to delete this exam? All student scores for this exam will also be deleted."
+        confirmText="Delete"
+        confirmStyle="danger"
+        loading={deletingExam}
       />
+
+      {/* Delete Session Confirmation Modal */}
       <ConfirmModal
         isOpen={!!deleteSessionConfirm}
-        title="Delete Session"
-        message="Are you sure you want to delete this session?"
+        onClose={() => !deletingSession && setDeleteSessionConfirm(null)}
         onConfirm={handleDeleteSession}
-        onCancel={() => setDeleteSessionConfirm(null)}
+        title="Delete Session"
+        message="Are you sure you want to delete this session? This action cannot be undone."
+        confirmText="Delete"
+        confirmStyle="danger"
+        loading={deletingSession}
       />
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        title="Delete Course"
-        message="Are you sure you want to delete this course? All data will be permanently lost."
-        onConfirm={handleDeleteCourse}
-        onCancel={() => setShowDeleteModal(false)}
-      />
-      <ConfirmModal
-        isOpen={!!removeStudentConfirm}
-        title="Remove Student"
-        message={`Are you sure you want to remove ${removeStudentConfirm?.name || 'this student'} from this course?`}
-        onConfirm={handleRemoveStudent}
-        onCancel={() => setRemoveStudentConfirm(null)}
-      />
+
+      {/* Delete Course Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Course</h3>
+              <p className="text-gray-500 text-center mb-6">
+                Are you sure you want to delete <span className="font-medium text-gray-900">"{course?.name}"</span>? 
+                This action cannot be undone and all content will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteCourse}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Deleting...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete Course</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Student Confirmation Modal */}
+      {removeStudentConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Remove Student</h3>
+              <p className="text-gray-500 text-center mb-6">
+                Are you sure you want to remove <span className="font-medium text-gray-900">"{removeStudentConfirm.name}"</span> from this course?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRemoveStudentConfirm(null)}
+                  disabled={removingStudent}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRemoveStudent}
+                  disabled={removingStudent}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {removingStudent ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Removing...</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Remove</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Material Confirmation Modal */}
       <ConfirmModal
         isOpen={!!deleteMaterialConfirm}
+        onClose={() => setDeleteMaterialConfirm(null)}
+        onConfirm={handleDeleteMaterial}
         title="Delete Material"
         message="Are you sure you want to delete this material?"
-        onConfirm={handleDeleteMaterial}
-        onCancel={() => setDeleteMaterialConfirm(null)}
+        confirmText="Delete"
+        confirmStyle="danger"
       />
     </div>
   )
