@@ -52,7 +52,11 @@ router.get('/course/:courseId', authenticate, async (req, res) => {
       include: {
         materials: true,
         lesson: true,  // Include the class template
-        exam: true     // Include the exam if EXAM type
+        exam: {
+          include: {
+            _count: { select: { questions: true } }
+          }
+        }
       },
       orderBy: { date: 'asc' }
     })
@@ -74,7 +78,11 @@ router.get('/:id', authenticate, async (req, res) => {
       include: {
         materials: true,
         lesson: true,
-        exam: true,
+        exam: {
+          include: {
+            _count: { select: { questions: true } }
+          }
+        },
         course: true
       }
     })
@@ -426,7 +434,11 @@ router.get('/student/all', authenticate, async (req, res) => {
       include: {
         materials: true,
         lesson: true,
-        exam: true,
+        exam: {
+          include: {
+            _count: { select: { questions: true } }
+          }
+        },
         course: {
           select: { id: true, name: true, slug: true, type: true }
         }

@@ -103,13 +103,20 @@ router.get('/:programId', authenticate, async (req, res) => {
         sessions: {
           include: {
             lesson: true,
-            exam: true,
+            exam: {
+              include: {
+                _count: { select: { questions: true } }
+              }
+            },
             materials: true
           },
           orderBy: { date: 'asc' }
         },
         exams: {
           where: { isPublished: true },
+          include: {
+            _count: { select: { questions: true } }
+          },
           orderBy: { order: 'asc' }
         }
       }
@@ -131,7 +138,11 @@ router.get('/:programId/sessions', authenticate, async (req, res) => {
       where: { programId },
       include: {
         lesson: true,
-        exam: true,
+        exam: {
+          include: {
+            _count: { select: { questions: true } }
+          }
+        },
         materials: true
       },
       orderBy: { date: 'asc' }
@@ -626,7 +637,11 @@ router.get('/sessions/upcoming', authenticate, async (req, res) => {
       include: {
         materials: true,
         lesson: true,
-        exam: true,
+        exam: {
+          include: {
+            _count: { select: { questions: true } }
+          }
+        },
         program: {
           select: { id: true, name: true, programType: true }
         }
@@ -672,7 +687,11 @@ router.get('/sessions/all', authenticate, async (req, res) => {
       include: {
         materials: true,
         lesson: true,
-        exam: true,
+        exam: {
+          include: {
+            _count: { select: { questions: true } }
+          }
+        },
         program: {
           select: { id: true, name: true, programType: true }
         }

@@ -1036,7 +1036,7 @@ export default function StudentProgramView() {
                     <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <p className="text-white/60 text-xs">Questions</p>
-                        <p className="text-white font-medium">{selectedSession.exam?.questions?.length || selectedSession.exam?.questionCount || '?'}</p>
+                        <p className="text-white font-medium">{selectedSession.exam?._count?.questions || selectedSession.exam?.questions?.length || selectedSession.exam?.questionCount || '?'}</p>
                       </div>
                       <div>
                         <p className="text-white/60 text-xs">Total Points</p>
