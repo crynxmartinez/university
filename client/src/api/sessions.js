@@ -51,6 +51,11 @@ export const getUpcomingSessions = async () => {
   return response.data
 }
 
+export const getAllCourseSessions = async () => {
+  const response = await axios.get(`${API_URL}/sessions/student/all`, getAuthHeader())
+  return response.data
+}
+
 // ============ TEACHER APIS ============
 
 export const getTeacherSchedule = async () => {

@@ -76,3 +76,9 @@ export const getUpcomingProgramSessions = async () => {
   const res = await axios.get(`${API_URL}/student-programs/sessions/upcoming`, getAuthHeaders())
   return res.data
 }
+
+// Get ALL sessions (past + upcoming) for enrolled programs - for calendar view
+export const getAllProgramSessions = async () => {
+  const res = await axios.get(`${API_URL}/student-programs/sessions/all`, getAuthHeaders())
+  return res.data
+}

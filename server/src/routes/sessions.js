@@ -403,6 +403,44 @@ router.get('/student/upcoming', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/sessions/student/all - Get ALL sessions (past + upcoming) for enrolled courses
+router.get('/student/all', authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== 'STUDENT' || !req.user.student) {
+      return res.status(403).json({ error: 'Only students can access this' })
+    }
+
+    // Get all courses the student is enrolled in
+    const enrollments = await prisma.enrollment.findMany({
+      where: { studentId: req.user.student.id },
+      select: { courseId: true }
+    })
+
+    const courseIds = enrollments.map(e => e.courseId)
+
+    // Get ALL sessions for those courses (past and upcoming)
+    const sessions = await prisma.scheduledSession.findMany({
+      where: {
+        courseId: { in: courseIds }
+      },
+      include: {
+        materials: true,
+        lesson: true,
+        exam: true,
+        course: {
+          select: { id: true, name: true, slug: true, type: true }
+        }
+      },
+      orderBy: { date: 'asc' }
+    })
+
+    res.json(sessions)
+  } catch (error) {
+    console.error('Get all sessions error:', error)
+    res.status(500).json({ error: 'Failed to get sessions' })
+  }
+})
+
 // GET /api/sessions/teacher/schedule - Get all sessions for teacher's courses (for teacher dashboard)
 router.get('/teacher/schedule', authenticate, async (req, res) => {
   try {
