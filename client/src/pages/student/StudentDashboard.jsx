@@ -800,79 +800,53 @@ export default function StudentDashboard() {
                       </button>
                     </div>
                   ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {myCourseEnrollments.map((course) => {
-                        const totalLessons = course.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0
-                        return (
-                          <Link
-                            key={course.id}
-                            to={`/student/courses/${course.slug || course.id}`}
-                            className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition group"
-                          >
-                            {/* Card Header with Gradient */}
-                            <div className={`h-24 relative ${
-                              course.type === 'LIVE' 
-                                ? 'bg-gradient-to-r from-purple-600 to-purple-400' 
-                                : 'bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87]'
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {myCourseEnrollments.map((course) => (
+                        <div 
+                          key={course.id} 
+                          className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-[#f7941d] transition flex flex-col"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-medium text-gray-900">{course.name}</h3>
+                            <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0 ${
+                              course.type === 'RECORDED' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                             }`}>
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center">
-                                  {course.type === 'RECORDED' ? (
-                                    <Video className="w-7 h-7 text-white" />
-                                  ) : (
-                                    <Radio className="w-7 h-7 text-white" />
-                                  )}
-                                </div>
-                              </div>
-                              {/* Type Badge */}
-                              <span className={`absolute top-3 right-3 text-xs px-2 py-1 rounded-full font-medium ${
-                                course.type === 'RECORDED' 
-                                  ? 'bg-white/20 text-white' 
-                                  : 'bg-white/20 text-white'
-                              }`}>
-                                {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                              </span>
-                            </div>
-
-                            {/* Card Body */}
-                            <div className="p-5">
-                              <h3 className="font-semibold text-gray-900 text-lg mb-1 group-hover:text-[#f7941d] transition">
-                                {course.name}
-                              </h3>
-                              
-                              {/* Teacher */}
-                              <p className="text-sm text-gray-500 mb-3">
-                                By Sheikh {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}
-                              </p>
-
-                              {/* Description */}
-                              <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                                {course.description || 'No description'}
-                              </p>
-
-                              {/* Stats */}
-                              <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t">
-                                <span className="flex items-center gap-1">
-                                  <Folder className="w-4 h-4" />
-                                  {course.modules?.length || 0} modules
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <BookOpen className="w-4 h-4" />
-                                  {totalLessons} lessons
-                                </span>
-                              </div>
-
-                              {/* Continue Button */}
-                              <div className="mt-4">
-                                <span className="w-full flex items-center justify-center gap-2 bg-[#f7941d] group-hover:bg-[#e8850f] text-white py-2.5 rounded-lg font-medium transition">
-                                  <ExternalLink className="w-4 h-4" />
-                                  Continue Learning
-                                </span>
-                              </div>
-                            </div>
-                          </Link>
-                        )
-                      })}
+                              {course.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
+                            </span>
+                          </div>
+                          
+                          {/* Enrolled Badge */}
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" /> Enrolled
+                            </span>
+                          </div>
+                          
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">
+                            {course.description || 'No description available'}
+                          </p>
+                          
+                          <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                            <span>{course.modules?.length || 0} modules</span>
+                            <span>By Sheikh {course.teacher?.user?.profile?.firstName} {course.teacher?.user?.profile?.lastName}</span>
+                          </div>
+                          
+                          <div className="flex gap-2 mt-auto">
+                            <Link
+                              to={`/student/courses/${course.slug || course.id}`}
+                              className="flex-1 py-2 bg-[#f7941d] text-white text-sm rounded-lg hover:bg-[#e8850f] font-medium text-center"
+                            >
+                              View Course
+                            </Link>
+                            <button
+                              onClick={() => setSelectedCourse(course)}
+                              className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
+                            >
+                              Info
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </>
