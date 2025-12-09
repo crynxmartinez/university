@@ -979,85 +979,103 @@ export default function StudentDashboard() {
       {selectedProgram && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header with Image */}
-            {selectedProgram.image ? (
-              <div className="h-48 relative flex-shrink-0">
-                <img src={selectedProgram.image} alt={selectedProgram.name} className="w-full h-full object-cover" />
-                <button 
-                  onClick={() => setSelectedProgram(null)}
-                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+            {/* Modal Header */}
+            <div className="p-6 border-b flex items-start justify-between flex-shrink-0">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedProgram.name}</h2>
+                  <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
+                    selectedProgram.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                    selectedProgram.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                    selectedProgram.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                    selectedProgram.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedProgram.programType === 'WEBINAR' ? 'Webinar' :
+                     selectedProgram.programType === 'IN_PERSON' ? 'In-Person' :
+                     selectedProgram.programType === 'EVENT' ? 'Event' :
+                     selectedProgram.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                  </span>
+                </div>
+                <p className="text-gray-500">
+                  {!selectedProgram.price || selectedProgram.price === 0 
+                    ? <span className="text-green-600 font-medium">FREE</span>
+                    : <span className="text-[#1e3a5f] font-medium">₱{selectedProgram.price?.toLocaleString()}{selectedProgram.priceType === 'MONTHLY' ? '/month' : selectedProgram.priceType === 'YEARLY' ? '/year' : ''}</span>
+                  }
+                </p>
               </div>
-            ) : (
-              <div className="h-48 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center relative flex-shrink-0">
-                <Folder className="w-20 h-20 text-white/50" />
-                <button 
-                  onClick={() => setSelectedProgram(null)}
-                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            )}
+              <button 
+                onClick={() => setSelectedProgram(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
             
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto flex-1">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">{selectedProgram.name}</h2>
-                <span className={`text-xs px-3 py-1 rounded-full flex-shrink-0 ${
-                  selectedProgram.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
-                  selectedProgram.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
-                  selectedProgram.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
-                  selectedProgram.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {selectedProgram.programType === 'WEBINAR' ? 'Webinar' :
-                   selectedProgram.programType === 'IN_PERSON' ? 'In-Person' :
-                   selectedProgram.programType === 'EVENT' ? 'Event' :
-                   selectedProgram.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
-                </span>
-              </div>
-
-              {/* Schedule & Location */}
-              {(selectedProgram.schedule || selectedProgram.location) && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
-                  {selectedProgram.schedule && (
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Calendar className="w-4 h-4 text-[#1e3a5f]" />
-                      <span>{selectedProgram.schedule}</span>
-                    </div>
-                  )}
-                  {selectedProgram.location && (
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <MapPin className="w-4 h-4 text-[#1e3a5f]" />
-                      <span>{selectedProgram.location}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Full Description */}
-              <div 
-                className="prose prose-sm max-w-none text-gray-600 mb-6"
-                dangerouslySetInnerHTML={{ __html: selectedProgram.description || 'No description available.' }}
-              />
-
-              {/* Price */}
-              <div className={`rounded-lg p-4 mb-6 ${!selectedProgram.price || selectedProgram.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-                <p className={`text-sm font-medium ${!selectedProgram.price || selectedProgram.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
-                {!selectedProgram.price || selectedProgram.price === 0 ? (
-                  <p className="text-3xl font-bold text-green-600">FREE</p>
-                ) : (
-                  <p className="text-3xl font-bold text-[#1e3a5f]">
-                    ₱{selectedProgram.price?.toLocaleString()}
-                    <span className="text-base font-normal text-gray-500 ml-1">
-                      {selectedProgram.priceType === 'MONTHLY' ? '/month' : selectedProgram.priceType === 'YEARLY' ? '/year' : ''}
-                    </span>
-                  </p>
+              {/* Program Status Badges */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedProgram.enrollmentEnd && (
+                  <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">
+                    Enroll by {new Date(selectedProgram.enrollmentEnd).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}
+                  </span>
                 )}
               </div>
+
+              {/* Program Info */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Folder className="w-4 h-4 text-[#1e3a5f]" />
+                  <span>{selectedProgram.modules?.length || 0} modules</span>
+                </div>
+                {selectedProgram.startDate && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Calendar className="w-4 h-4 text-[#1e3a5f]" />
+                    <span>Starts: {new Date(selectedProgram.startDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</span>
+                  </div>
+                )}
+                {selectedProgram.endDate && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Clock className="w-4 h-4 text-[#1e3a5f]" />
+                    <span>Ends: {new Date(selectedProgram.endDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</span>
+                  </div>
+                )}
+                {selectedProgram.location && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <MapPin className="w-4 h-4 text-[#1e3a5f]" />
+                    <span>{selectedProgram.location}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Full Description */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 mb-2">About this program</h3>
+                <div 
+                  className="text-gray-600"
+                  dangerouslySetInnerHTML={{ __html: selectedProgram.description || 'No description available.' }}
+                />
+              </div>
+
+              {/* Modules Preview */}
+              {selectedProgram.modules && selectedProgram.modules.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Program Content</h3>
+                  <div className="space-y-2">
+                    {selectedProgram.modules.slice(0, 5).map((module, idx) => (
+                      <div key={module.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span className="w-6 h-6 bg-[#1e3a5f] text-white rounded-full flex items-center justify-center text-xs font-medium">{idx + 1}</span>
+                        <span className="text-gray-700">{module.name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{module.lessons?.length || 0} lessons</span>
+                      </div>
+                    ))}
+                    {selectedProgram.modules.length > 5 && (
+                      <p className="text-sm text-gray-500 text-center py-2">+ {selectedProgram.modules.length - 5} more modules</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
