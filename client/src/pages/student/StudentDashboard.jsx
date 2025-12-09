@@ -26,6 +26,7 @@ export default function StudentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [enrollingId, setEnrollingId] = useState(null)
   const [selectedProgram, setSelectedProgram] = useState(null) // For browse modal
+  const [selectedCourse, setSelectedCourse] = useState(null) // For course browse modal
   const [selectedEnrolledProgram, setSelectedEnrolledProgram] = useState(null) // For enrolled modal
   const [showCalendarModal, setShowCalendarModal] = useState(false) // For course schedule calendar
   const [upcomingSessions, setUpcomingSessions] = useState([]) // Upcoming sessions from enrolled courses
@@ -548,86 +549,60 @@ export default function StudentDashboard() {
                       <p className="text-gray-500">Programs will appear here once they are created.</p>
                     </div>
                   ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {allPrograms.map((program) => (
-                        <div key={program.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition group flex flex-col">
-                          {program.image ? (
-                            <div className="h-40 overflow-hidden flex-shrink-0">
-                              <img src={program.image} alt={program.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                            </div>
-                          ) : (
-                            <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center flex-shrink-0">
-                              <Folder className="w-16 h-16 text-white/50" />
-                            </div>
-                          )}
-                          <div className="p-5 flex flex-col flex-1">
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
-                              <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-                                program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
-                                program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
-                                program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
-                                program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {program.programType === 'WEBINAR' ? 'Webinar' :
-                                 program.programType === 'IN_PERSON' ? 'In-Person' :
-                                 program.programType === 'EVENT' ? 'Event' :
-                                 program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
-                              </span>
-                            </div>
-                            
-                            {(program.schedule || program.location) && (
-                              <div className="text-xs text-gray-500 mb-3 space-y-1">
-                                {program.schedule && (
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    <span>{program.schedule}</span>
-                                  </div>
-                                )}
-                                {program.location && (
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    <span>{program.location}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            
-                            <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
-                              {program.description?.replace(/<[^>]*>/g, '') || 'No description available'}
-                            </p>
-                            
-                            <div className="mt-auto">
-                              <div className={`rounded-lg p-3 mb-4 ${!program.price || program.price === 0 ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-                                <p className={`text-xs font-medium ${!program.price || program.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>Program Fee</p>
-                                {!program.price || program.price === 0 ? (
-                                  <p className="text-2xl font-bold text-green-600">FREE</p>
-                                ) : (
-                                  <p className="text-2xl font-bold text-[#1e3a5f]">
-                                    ₱{program.price?.toLocaleString()}
-                                    <span className="text-sm font-normal text-gray-500 ml-1">
-                                      {program.priceType === 'MONTHLY' ? '/month' : program.priceType === 'YEARLY' ? '/year' : ''}
-                                    </span>
-                                  </p>
-                                )}
-                              </div>
-                              
-                              {isEnrolledInProgram(program.id) ? (
-                                <button disabled className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
-                                  <CheckCircle className="w-4 h-4" />
-                                  Enrolled
-                                </button>
-                              ) : (
-                                <button 
-                                  onClick={() => setSelectedProgram(program)}
-                                  className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition"
-                                >
-                                  Learn More
-                                </button>
-                              )}
-                            </div>
+                        <div key={program.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition flex flex-col">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-medium text-gray-900">{program.name}</h3>
+                            <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
+                              program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                              program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                              program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                              program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {program.programType === 'WEBINAR' ? 'Webinar' :
+                               program.programType === 'IN_PERSON' ? 'In-Person' :
+                               program.programType === 'EVENT' ? 'Event' :
+                               program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                            </span>
                           </div>
+                          
+                          {/* Program Status Badges */}
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {program.enrollmentEnd && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                Enroll by {new Date(program.enrollmentEnd).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">
+                            {program.description?.replace(/<[^>]*>/g, '') || 'No description available'}
+                          </p>
+                          
+                          <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                            <span>{program.modules?.length || 0} modules</span>
+                            <span className={`font-medium ${!program.price || program.price === 0 ? 'text-green-600' : 'text-[#1e3a5f]'}`}>
+                              {!program.price || program.price === 0 ? 'FREE' : `₱${program.price?.toLocaleString()}`}
+                            </span>
+                          </div>
+                          
+                          {isEnrolledInProgram(program.id) ? (
+                            <button 
+                              disabled
+                              className="w-full bg-green-100 text-green-700 py-2 rounded-lg font-semibold mt-auto flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle className="w-4 h-4" /> Enrolled
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => setSelectedProgram(program)}
+                              className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition mt-auto"
+                            >
+                              Learn More
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -692,24 +667,12 @@ export default function StudentDashboard() {
                             >
                               <CheckCircle className="w-4 h-4" /> Enrolled
                             </button>
-                          ) : !course.enrollmentOpen ? (
-                            <button 
-                              disabled
-                              className="w-full bg-gray-100 text-gray-500 py-2 rounded-lg font-semibold mt-auto cursor-not-allowed"
-                            >
-                              Enrollment Closed
-                            </button>
                           ) : (
                             <button 
-                              onClick={() => handleEnrollCourse(course.id)}
-                              disabled={enrollingId === course.id}
-                              className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition mt-auto disabled:opacity-50 flex items-center justify-center gap-2"
+                              onClick={() => setSelectedCourse(course)}
+                              className="w-full bg-[#f7941d] hover:bg-[#e8850f] text-white py-2 rounded-lg font-semibold transition mt-auto"
                             >
-                              {enrollingId === course.id ? (
-                                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Enrolling...</>
-                              ) : (
-                                'Enroll Now'
-                              )}
+                              Learn More
                             </button>
                           )}
                         </div>
@@ -745,74 +708,59 @@ export default function StudentDashboard() {
                       </button>
                     </div>
                   ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {myProgramEnrollments.map((enrollment) => {
                         const program = enrollment.program
                         return (
                           <div 
                             key={enrollment.id} 
-                            onClick={() => setSelectedEnrolledProgram(program)}
-                            className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#f7941d] transition group cursor-pointer flex flex-col"
+                            className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-[#f7941d] transition flex flex-col"
                           >
-                            {program.image ? (
-                              <div className="h-40 overflow-hidden flex-shrink-0">
-                                <img src={program.image} alt={program.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                              </div>
-                            ) : (
-                              <div className="h-40 bg-gradient-to-r from-[#1e3a5f] to-[#2d5a87] flex items-center justify-center flex-shrink-0">
-                                <Folder className="w-16 h-16 text-white/50" />
-                              </div>
-                            )}
-                            <div className="p-5 flex flex-col flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">{program.name}</h3>
-                                <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-                                  program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
-                                  program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
-                                  program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
-                                  program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {program.programType === 'WEBINAR' ? 'Webinar' :
-                                   program.programType === 'IN_PERSON' ? 'In-Person' :
-                                   program.programType === 'EVENT' ? 'Event' :
-                                   program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
-                                </span>
-                              </div>
-                              
-                              <div className="flex-1">
-                                {(program.schedule || program.location) && (
-                                  <div className="text-xs text-gray-500 space-y-1">
-                                    {program.schedule && (
-                                      <div className="flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        <span>{program.schedule}</span>
-                                      </div>
-                                    )}
-                                    {program.location && (
-                                      <div className="flex items-center gap-1">
-                                        <MapPin className="w-3 h-3" />
-                                        <span>{program.location}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="flex gap-2 mt-3">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); navigate(`/student/programs/${program.id}`) }}
-                                  className="flex-1 py-2 bg-[#f7941d] text-white text-sm rounded-lg hover:bg-[#e8850f]"
-                                >
-                                  View Program
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedEnrolledProgram(program) }}
-                                  className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
-                                >
-                                  Info
-                                </button>
-                              </div>
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="font-medium text-gray-900">{program.name}</h3>
+                              <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
+                                program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                                program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                                program.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                                program.programType === 'HYBRID' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {program.programType === 'WEBINAR' ? 'Webinar' :
+                                 program.programType === 'IN_PERSON' ? 'In-Person' :
+                                 program.programType === 'EVENT' ? 'Event' :
+                                 program.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                              </span>
+                            </div>
+                            
+                            {/* Enrolled Badge */}
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" /> Enrolled
+                              </span>
+                            </div>
+                            
+                            <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">
+                              {program.description?.replace(/<[^>]*>/g, '') || 'No description available'}
+                            </p>
+                            
+                            <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                              <span>{program.modules?.length || 0} modules</span>
+                              {program.schedule && <span>{program.schedule}</span>}
+                            </div>
+                            
+                            <div className="flex gap-2 mt-auto">
+                              <button
+                                onClick={() => navigate(`/student/programs/${program.id}`)}
+                                className="flex-1 py-2 bg-[#f7941d] text-white text-sm rounded-lg hover:bg-[#e8850f] font-medium"
+                              >
+                                View Program
+                              </button>
+                              <button
+                                onClick={() => setSelectedEnrolledProgram(program)}
+                                className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
+                              >
+                                Info
+                              </button>
                             </div>
                           </div>
                         )
@@ -1130,6 +1078,132 @@ export default function StudentDashboard() {
               >
                 {enrollingId === selectedProgram.id ? 'Enrolling...' : 'Enroll Now'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Browse Course Modal - Learn More & Enroll */}
+      {selectedCourse && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b flex items-start justify-between flex-shrink-0">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedCourse.name}</h2>
+                  <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0 ${
+                    selectedCourse.type === 'RECORDED' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {selectedCourse.type === 'RECORDED' ? <><Video className="w-3 h-3" /> Recorded</> : <><Radio className="w-3 h-3" /> Live</>}
+                  </span>
+                </div>
+                {selectedCourse.teacher && (
+                  <p className="text-gray-500">By Sheikh {selectedCourse.teacher?.user?.profile?.firstName} {selectedCourse.teacher?.user?.profile?.lastName}</p>
+                )}
+              </div>
+              <button 
+                onClick={() => setSelectedCourse(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Course Status Badges */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedCourse.isUpcoming && (
+                  <span className="text-xs px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                    Starts {new Date(selectedCourse.startDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}
+                  </span>
+                )}
+                {selectedCourse.enrollmentEnd && (
+                  <span className={`text-xs px-3 py-1 rounded-full ${
+                    selectedCourse.enrollmentOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {selectedCourse.enrollmentOpen 
+                      ? `Enroll by ${new Date(selectedCourse.enrollmentEnd).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}`
+                      : 'Enrollment Closed'
+                    }
+                  </span>
+                )}
+              </div>
+
+              {/* Course Info */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
+                  <span>{selectedCourse.modules?.length || 0} modules</span>
+                </div>
+                {selectedCourse.startDate && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Calendar className="w-4 h-4 text-[#1e3a5f]" />
+                    <span>Starts: {new Date(selectedCourse.startDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</span>
+                  </div>
+                )}
+                {selectedCourse.endDate && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Clock className="w-4 h-4 text-[#1e3a5f]" />
+                    <span>Ends: {new Date(selectedCourse.endDate).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Full Description */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-900 mb-2">About this course</h3>
+                <p className="text-gray-600">{selectedCourse.description || 'No description available.'}</p>
+              </div>
+
+              {/* Modules Preview */}
+              {selectedCourse.modules && selectedCourse.modules.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Course Content</h3>
+                  <div className="space-y-2">
+                    {selectedCourse.modules.slice(0, 5).map((module, idx) => (
+                      <div key={module.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <span className="w-6 h-6 bg-[#1e3a5f] text-white rounded-full flex items-center justify-center text-xs font-medium">{idx + 1}</span>
+                        <span className="text-gray-700">{module.name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{module.lessons?.length || 0} lessons</span>
+                      </div>
+                    ))}
+                    {selectedCourse.modules.length > 5 && (
+                      <p className="text-sm text-gray-500 text-center py-2">+ {selectedCourse.modules.length - 5} more modules</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t flex gap-3 flex-shrink-0">
+              <button 
+                onClick={() => setSelectedCourse(null)}
+                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+              {!selectedCourse.enrollmentOpen ? (
+                <button 
+                  disabled
+                  className="flex-1 bg-gray-100 text-gray-500 py-3 rounded-lg font-semibold cursor-not-allowed"
+                >
+                  Enrollment Closed
+                </button>
+              ) : (
+                <button 
+                  onClick={async () => {
+                    await handleEnrollCourse(selectedCourse.id)
+                    setSelectedCourse(null)
+                  }}
+                  disabled={enrollingId === selectedCourse.id}
+                  className="flex-1 bg-[#f7941d] hover:bg-[#e8850f] text-white py-3 rounded-lg font-semibold transition disabled:opacity-50"
+                >
+                  {enrollingId === selectedCourse.id ? 'Enrolling...' : 'Enroll Now'}
+                </button>
+              )}
             </div>
           </div>
         </div>
