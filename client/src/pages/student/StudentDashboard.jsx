@@ -163,8 +163,6 @@ export default function StudentDashboard() {
       // Refresh enrollments
       const myCourses = await getMyCourses()
       setMyCourseEnrollments(myCourses)
-      // Remove from browse list
-      setAllCourses(prev => prev.filter(c => c.id !== courseId))
       toast.success('Successfully enrolled in course!')
     } catch (error) {
       console.error('Failed to enroll:', error)
