@@ -595,6 +595,53 @@ router.get('/:programId/grade', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/student-programs/sessions/upcoming - Get all upcoming sessions for enrolled programs
+router.get('/sessions/upcoming', authenticate, async (req, res) => {
+  try {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user.id }
+    })
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' })
+    }
+
+    // Get all programs the student is enrolled in
+    const enrollments = await prisma.programEnrollment.findMany({
+      where: { 
+        studentId: req.user.id,
+        status: 'ACTIVE'
+      },
+      select: { programId: true }
+    })
+
+    const programIds = enrollments.map(e => e.programId)
+
+    // Get upcoming sessions for those programs
+    const sessions = await prisma.programSession.findMany({
+      where: {
+        programId: { in: programIds },
+        date: { gte: new Date() }
+      },
+      include: {
+        materials: true,
+        lesson: true,
+        exam: true,
+        program: {
+          select: { id: true, name: true, programType: true }
+        }
+      },
+      orderBy: { date: 'asc' },
+      take: 20
+    })
+
+    res.json(sessions)
+  } catch (error) {
+    console.error('Get upcoming program sessions error:', error)
+    res.status(500).json({ error: 'Failed to get upcoming sessions' })
+  }
+})
+
 // POST /api/student-programs/sessions/:sessionId/join - Mark attendance
 router.post('/sessions/:sessionId/join', authenticate, async (req, res) => {
   try {

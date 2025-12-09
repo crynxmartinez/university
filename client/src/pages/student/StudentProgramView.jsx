@@ -859,6 +859,13 @@ export default function StudentProgramView() {
                 <FileText className="w-3 h-3 inline mr-1" /> Exam
               </span>
             )}
+            <button
+              onClick={() => setViewMode('sessions')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+            >
+              <Calendar className="w-4 h-4" />
+              View Schedule
+            </button>
             <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
               program.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
               program.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :

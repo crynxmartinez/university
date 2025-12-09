@@ -5,6 +5,7 @@ import { getMyCourses, selfEnrollInCourse } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
 import { getUpcomingSessions } from '../../api/sessions'
+import { getUpcomingProgramSessions, joinProgramSession } from '../../api/studentPrograms'
 import { getMyNotes, saveNote, deleteNote } from '../../api/notes'
 import { markJoinAttendance } from '../../api/attendance'
 import { useToast, ConfirmModal } from '../../components/Toast'
@@ -30,6 +31,8 @@ export default function StudentDashboard() {
   const [selectedEnrolledProgram, setSelectedEnrolledProgram] = useState(null) // For enrolled modal
   const [showCalendarModal, setShowCalendarModal] = useState(false) // For course schedule calendar
   const [upcomingSessions, setUpcomingSessions] = useState([]) // Upcoming sessions from enrolled courses
+  const [showProgramCalendarModal, setShowProgramCalendarModal] = useState(false) // For program schedule calendar
+  const [upcomingProgramSessions, setUpcomingProgramSessions] = useState([]) // Upcoming sessions from enrolled programs
   const [selectedSession, setSelectedSession] = useState(null) // For viewing session materials
   const [myNotes, setMyNotes] = useState([]) // Student's personal notes
   const [notesSearchTerm, setNotesSearchTerm] = useState('')
@@ -103,6 +106,14 @@ export default function StudentDashboard() {
         }
       } catch (e) {
         console.error('Failed to fetch sessions:', e)
+      }
+
+      // Fetch upcoming program sessions for enrolled programs
+      try {
+        const programSessions = await getUpcomingProgramSessions()
+        setUpcomingProgramSessions(programSessions)
+      } catch (e) {
+        console.error('Failed to fetch program sessions:', e)
       }
 
       // Fetch student's notes
@@ -688,6 +699,17 @@ export default function StudentDashboard() {
               {/* My Enrolled Programs */}
               {enrollmentsTab === 'programs' && (
                 <>
+                  {/* Calendar Button - Always visible */}
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => setShowProgramCalendarModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      View Schedule
+                    </button>
+                  </div>
+
                   {loading ? (
                     <div className="text-center py-12">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f] mx-auto"></div>
@@ -1493,6 +1515,211 @@ export default function StudentDashboard() {
             <div className="p-6 border-t flex-shrink-0">
               <button 
                 onClick={() => setShowCalendarModal(false)}
+                className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Program Schedule Calendar Modal */}
+      {showProgramCalendarModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Program Schedule</h2>
+                  <p className="text-sm text-gray-500">Your upcoming program sessions</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowProgramCalendarModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {upcomingProgramSessions.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming sessions</h3>
+                  <p className="text-gray-500">You don't have any scheduled program sessions yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {upcomingProgramSessions.map((session) => {
+                    const sessionDate = new Date(session.date)
+                    const isToday = sessionDate.toDateString() === new Date().toDateString()
+                    const isTomorrow = sessionDate.toDateString() === new Date(Date.now() + 86400000).toDateString()
+                    
+                    // Link visibility logic: 1 hour before start → 1 hour after end
+                    const now = new Date()
+                    const [startHour, startMin] = (session.startTime || '00:00').split(':').map(Number)
+                    const [endHour, endMin] = (session.endTime || '23:59').split(':').map(Number)
+                    
+                    const sessionStart = new Date(sessionDate)
+                    sessionStart.setHours(startHour, startMin, 0, 0)
+                    const sessionEnd = new Date(sessionDate)
+                    sessionEnd.setHours(endHour, endMin, 0, 0)
+                    
+                    const oneHourBefore = new Date(sessionStart.getTime() - 60 * 60 * 1000)
+                    const oneHourAfter = new Date(sessionEnd.getTime() + 60 * 60 * 1000)
+                    
+                    const isLinkVisible = now >= oneHourBefore && now <= oneHourAfter
+                    const isClassEnded = now > oneHourAfter
+                    
+                    return (
+                      <div 
+                        key={session.id} 
+                        className={`border rounded-lg p-4 ${
+                          isClassEnded ? 'border-gray-200 bg-gray-50' :
+                          session.type === 'EXAM' ? 'border-red-200 bg-red-50' :
+                          'border-green-200 bg-green-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            {/* Program Name & Session Type */}
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full text-white ${
+                                isClassEnded ? 'bg-gray-400' :
+                                session.type === 'EXAM' ? 'bg-red-500' :
+                                'bg-green-500'
+                              }`}>
+                                {isClassEnded ? 'ENDED' : session.type}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                session.program?.programType === 'WEBINAR' ? 'bg-purple-100 text-purple-700' :
+                                session.program?.programType === 'IN_PERSON' ? 'bg-green-100 text-green-700' :
+                                session.program?.programType === 'EVENT' ? 'bg-orange-100 text-orange-700' :
+                                'bg-blue-100 text-blue-700'
+                              }`}>
+                                {session.program?.programType === 'WEBINAR' ? 'Webinar' :
+                                 session.program?.programType === 'IN_PERSON' ? 'In-Person' :
+                                 session.program?.programType === 'EVENT' ? 'Event' :
+                                 session.program?.programType === 'HYBRID' ? 'Hybrid' : 'Online'}
+                              </span>
+                              {!isClassEnded && isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white">TODAY</span>}
+                              {!isClassEnded && isTomorrow && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500 text-white">TOMORROW</span>}
+                            </div>
+                            
+                            <h3 className="font-semibold text-gray-900">{session.program?.name}</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {session.lesson?.name || session.exam?.title || 'Session'}
+                            </p>
+                            
+                            {/* Date & Time */}
+                            <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                {sessionDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric' })}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                {session.startTime}{session.endTime && ` - ${session.endTime}`}
+                              </div>
+                            </div>
+                            
+                            {/* Notes */}
+                            {session.notes && (
+                              <p className="text-sm text-gray-500 mt-2 italic">{session.notes}</p>
+                            )}
+                            
+                            {/* Lesson Materials */}
+                            {session.lesson?.materials && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Lesson Materials</p>
+                                <p className="text-xs text-gray-600">{session.lesson.materials}</p>
+                              </div>
+                            )}
+                            
+                            {/* Session Materials */}
+                            {session.materials?.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 mb-2">Session Materials ({session.materials.length})</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {session.materials.map(material => (
+                                    <a
+                                      key={material.id}
+                                      href={material.driveUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-xs px-2 py-1 bg-white border rounded hover:bg-gray-50 text-gray-700"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {material.name}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Join Button - with visibility logic */}
+                          <div className="ml-4 flex-shrink-0">
+                            {isClassEnded ? (
+                              <span className="text-xs text-gray-500 bg-gray-200 px-3 py-2 rounded-lg">
+                                Session ended
+                              </span>
+                            ) : session.type === 'EXAM' ? (
+                              isLinkVisible ? (
+                                <button 
+                                  onClick={() => navigate(`/student/programs/${session.program?.id}/exam/${session.examId}?sessionId=${session.id}`)}
+                                  className="flex items-center gap-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg font-medium transition"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  Take Exam
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg block text-center">
+                                  Opens at<br/>scheduled time
+                                </span>
+                              )
+                            ) : session.meetingLink ? (
+                              isLinkVisible ? (
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await joinProgramSession(session.id)
+                                    } catch (error) {
+                                      console.error('Failed to mark attendance:', error)
+                                    }
+                                    window.open(session.meetingLink, '_blank')
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white text-sm rounded-lg font-medium transition"
+                                >
+                                  <Video className="w-4 h-4" />
+                                  Join
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg block text-center">
+                                  Link available<br/>1hr before session
+                                </span>
+                              )
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t flex-shrink-0">
+              <button 
+                onClick={() => setShowProgramCalendarModal(false)}
                 className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
               >
                 Close

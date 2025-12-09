@@ -70,3 +70,9 @@ export const joinProgramSession = async (sessionId) => {
   const res = await axios.post(`${API_URL}/student-programs/sessions/${sessionId}/join`, {}, getAuthHeaders())
   return res.data
 }
+
+// Get all upcoming sessions for enrolled programs
+export const getUpcomingProgramSessions = async () => {
+  const res = await axios.get(`${API_URL}/student-programs/sessions/upcoming`, getAuthHeaders())
+  return res.data
+}
