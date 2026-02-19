@@ -1,7 +1,7 @@
 import express from 'express'
 import { PrismaClient } from '@prisma/client'
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js'
-import { generateCertificateNumber, generateCertificatePDF } from '../utils/certificateGenerator.js'
+import { generateCertificateNumber } from '../utils/certificateGenerator.js'
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -9,11 +9,15 @@ const prisma = new PrismaClient()
 // Issue a certificate (Teacher/Admin only)
 router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const { studentId, courseId, programId, completionDate, grade, gpa } = req.body
+    const { studentId, courseId, programId, completionDate, grade, gpa, certificateUrl } = req.body
 
     // Validate input
     if (!studentId || (!courseId && !programId)) {
       return res.status(400).json({ error: 'Student ID and either Course ID or Program ID are required' })
+    }
+
+    if (!certificateUrl) {
+      return res.status(400).json({ error: 'Certificate download URL is required' })
     }
 
     // Check if certificate already exists
@@ -82,30 +86,7 @@ router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN
       ? `${issuer.profile.firstName} ${issuer.profile.lastName}`
       : issuer.email
 
-    const studentName = student.user.profile
-      ? `${student.user.profile.firstName} ${student.user.profile.lastName}`
-      : student.user.email
-
-    // Generate verification URL
-    const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-certificate/${certificateNumber}`
-
-    // Generate PDF buffer
-    const pdfResult = await generateCertificatePDF({
-      certificateNumber,
-      studentName,
-      courseName,
-      programName,
-      completionDate: completionDate || new Date(),
-      grade,
-      gpa,
-      issuedBy: issuerName,
-      verificationUrl
-    })
-
-    // Store PDF as base64 in database (Vercel serverless compatible)
-    const pdfBase64 = pdfResult.buffer.toString('base64')
-
-    // Create certificate record
+    // Create certificate record with provided download URL
     const certificate = await prisma.certificate.create({
       data: {
         certificateNumber,
@@ -115,7 +96,7 @@ router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN
         completionDate: completionDate ? new Date(completionDate) : new Date(),
         grade: grade || null,
         gpa: gpa || null,
-        certificateUrl: `data:application/pdf;base64,${pdfBase64}`, // Store as data URL
+        certificateUrl, // Store the external download URL provided by teacher
         issuedById: req.user.userId,
         status: 'ACTIVE'
       },

@@ -1102,6 +1102,12 @@ export default function TeacherDashboard() {
                                   {student.grade && student.grade.finalGrade >= 70 ? (
                                     <button
                                       onClick={async () => {
+                                        const certificateUrl = prompt('Enter the certificate download URL (e.g., Google Drive link, Dropbox link, etc.):')
+                                        if (!certificateUrl) {
+                                          toast.error('Certificate URL is required')
+                                          return
+                                        }
+                                        
                                         setIssuingCertificate(student.studentId)
                                         try {
                                           await issueCertificate({
@@ -1109,7 +1115,8 @@ export default function TeacherDashboard() {
                                             courseId: selectedGradeCourse.id,
                                             completionDate: new Date().toISOString(),
                                             grade: student.grade.letterGrade,
-                                            gpa: student.grade.gpa
+                                            gpa: student.grade.gpa,
+                                            certificateUrl
                                           })
                                           toast.success('Certificate issued successfully!')
                                         } catch (error) {
