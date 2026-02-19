@@ -17,6 +17,7 @@ import adminRoutes from './routes/admin/index.js'
 import studentProgramRoutes from './routes/studentPrograms.js'
 import gradesRoutes from './routes/grades.js'
 import certificatesRoutes from './routes/certificates.js'
+import analyticsRoutes from './routes/analytics.js'
 
 dotenv.config()
 
@@ -53,6 +54,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/student-programs', studentProgramRoutes)
 app.use('/api/grades', gradesRoutes)
 app.use('/api/certificates', certificatesRoutes)
+app.use('/api/analytics', analyticsRoutes)
 
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))

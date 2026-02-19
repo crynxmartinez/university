@@ -97,6 +97,7 @@ model User {
   notifications Notification[]
   coursesCreated Course[] @relation("CoursesCreated")
   certificatesIssued Certificate[] @relation("CertificatesIssued")
+  analyticsEvents AnalyticsEvent[]
 }
 
 // Profile - personal information
@@ -736,4 +737,34 @@ enum CertificateStatus {
   ACTIVE
   REVOKED
   EXPIRED
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  eventType EventType
+  userId    String?
+  metadata  Json?    // Flexible field for event-specific data
+  createdAt DateTime @default(now())
+  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([eventType])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum EventType {
+  LOGIN
+  LOGOUT
+  COURSE_VIEW
+  PROGRAM_VIEW
+  COURSE_ENROLL
+  PROGRAM_ENROLL
+  SESSION_JOIN
+  EXAM_START
+  EXAM_SUBMIT
+  LESSON_COMPLETE
+  CERTIFICATE_ISSUED
+  GRADE_CALCULATED
+  ATTENDANCE_MARKED
 }
