@@ -57,7 +57,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST create master course (admin only)
 router.post('/', authenticateToken, authorizeRoles(['SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const { code, title, description, syllabus, credits } = req.body
+    const { code, title, description, syllabus } = req.body
     if (!code || !title) return res.status(400).json({ error: 'Code and title are required' })
 
     const existing = await prisma.masterCourse.findUnique({ where: { code } })
@@ -69,7 +69,6 @@ router.post('/', authenticateToken, authorizeRoles(['SUPER_ADMIN', 'REGISTRAR'])
         title,
         description,
         syllabus,
-        credits: credits ? parseInt(credits) : 0,
         createdById: req.user.id
       },
       include: { createdBy: { include: { profile: true } } }
@@ -83,15 +82,10 @@ router.post('/', authenticateToken, authorizeRoles(['SUPER_ADMIN', 'REGISTRAR'])
 // PUT update master course (admin only)
 router.put('/:id', authenticateToken, authorizeRoles(['SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const { title, description, syllabus, credits } = req.body
+    const { title, description, syllabus } = req.body
     const masterCourse = await prisma.masterCourse.update({
       where: { id: req.params.id },
-      data: {
-        title,
-        description,
-        syllabus,
-        credits: credits ? parseInt(credits) : undefined
-      }
+      data: { title, description, syllabus }
     })
     res.json(masterCourse)
   } catch (error) {

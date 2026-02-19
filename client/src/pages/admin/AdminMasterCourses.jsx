@@ -14,7 +14,7 @@ export default function AdminMasterCourses({ onViewOfferings }) {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingCourse, setEditingCourse] = useState(null)
-  const [form, setForm] = useState({ code: '', title: '', description: '', syllabus: '', credits: '' })
+  const [form, setForm] = useState({ code: '', title: '', description: '', syllabus: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -33,14 +33,14 @@ export default function AdminMasterCourses({ onViewOfferings }) {
 
   const openCreate = () => {
     setEditingCourse(null)
-    setForm({ code: '', title: '', description: '', syllabus: '', credits: '' })
+    setForm({ code: '', title: '', description: '', syllabus: '' })
     setError('')
     setShowModal(true)
   }
 
   const openEdit = (course) => {
     setEditingCourse(course)
-    setForm({ code: course.code, title: course.title, description: course.description || '', syllabus: course.syllabus || '', credits: course.credits || '' })
+    setForm({ code: course.code, title: course.title, description: course.description || '', syllabus: course.syllabus || '' })
     setError('')
     setShowModal(true)
   }
@@ -135,9 +135,6 @@ export default function AdminMasterCourses({ onViewOfferings }) {
                     <div className="flex items-center gap-3 mb-2">
                       <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded">{course.code}</span>
                       <h3 className="text-lg font-semibold text-gray-900">{course.title}</h3>
-                      {course.credits > 0 && (
-                        <span className="text-xs text-gray-500">{course.credits} credits</span>
-                      )}
                     </div>
                     {course.description && (
                       <p className="text-gray-500 text-sm mb-3 line-clamp-2">{course.description}</p>
@@ -188,8 +185,7 @@ export default function AdminMasterCourses({ onViewOfferings }) {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">{error}</div>}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course Code *</label>
                   <input
                     type="text"
@@ -200,18 +196,6 @@ export default function AdminMasterCourses({ onViewOfferings }) {
                     required
                     disabled={!!editingCourse}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
-                  <input
-                    type="number"
-                    value={form.credits}
-                    onChange={e => setForm({ ...form, credits: e.target.value })}
-                    placeholder="0"
-                    min="0"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Course Title *</label>
