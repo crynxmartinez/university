@@ -26,17 +26,19 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// CORS middleware - must be first
+// CORS middleware - must be first, before any other middleware
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  // Set CORS headers for all requests
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept')
   
-  // Handle preflight requests
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+    res.status(200).json({ message: 'OK' })
+    return
   }
+  
   next()
 })
 
