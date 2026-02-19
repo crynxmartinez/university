@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, FileText, StickyNote, Edit3, Trash2, MessageSquare } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, Globe, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, FileText, StickyNote, Edit3, Trash2, MessageSquare, Download, Shield } from 'lucide-react'
 import { getMyCourses, selfEnrollInCourse } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
@@ -9,6 +9,7 @@ import { getUpcomingProgramSessions, getAllProgramSessions, joinProgramSession }
 import { getMyNotes, saveNote, deleteNote } from '../../api/notes'
 import { markJoinAttendance } from '../../api/attendance'
 import { getStudentGrades, calculateAllGrades } from '../../api/grades'
+import { getStudentCertificates, getCertificateDownloadUrl } from '../../api/certificates'
 import { useToast, ConfirmModal } from '../../components/Toast'
 import SessionCalendar from '../../components/SessionCalendar'
 import axios from 'axios'
@@ -46,6 +47,8 @@ export default function StudentDashboard() {
   const [gradesData, setGradesData] = useState(null)
   const [loadingGrades, setLoadingGrades] = useState(false)
   const [calculatingGrades, setCalculatingGrades] = useState(false)
+  const [certificates, setCertificates] = useState([])
+  const [loadingCertificates, setLoadingCertificates] = useState(false)
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -218,6 +221,7 @@ export default function StudentDashboard() {
     { id: 'enrollments', label: 'My Enrollments', icon: CheckCircle, hasDropdown: true },
     { id: 'notes', label: 'My Notes', icon: StickyNote },
     { id: 'grades', label: 'Grades', icon: Award },
+    { id: 'certificates', label: 'Certificates', icon: Shield },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
@@ -1124,6 +1128,131 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'certificates' && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">My Certificates</h2>
+                  <p className="text-sm text-gray-500">View and download your earned certificates</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setLoadingCertificates(true)
+                    try {
+                      const studentData = JSON.parse(localStorage.getItem('user'))
+                      const student = await axios.get(`${API_URL}/users/me`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                      })
+                      const certs = await getStudentCertificates(student.data.student.id)
+                      setCertificates(certs)
+                    } catch (error) {
+                      console.error('Error fetching certificates:', error)
+                      toast.error('Failed to load certificates')
+                    } finally {
+                      setLoadingCertificates(false)
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+                >
+                  <Shield className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+
+              {loadingCertificates ? (
+                <div className="py-12 text-center">
+                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading certificates...</p>
+                </div>
+              ) : certificates.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-2">No certificates yet</p>
+                  <p className="text-sm text-gray-400">Complete courses and programs to earn certificates</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {certificates.map(cert => (
+                    <div key={cert.id} className="border-2 border-[#f7941d] rounded-xl p-6 hover:shadow-lg transition">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Shield className="w-5 h-5 text-[#f7941d]" />
+                            <span className="text-xs font-semibold text-[#f7941d] uppercase tracking-wide">
+                              Certificate
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-lg text-gray-900 mb-1">
+                            {cert.course?.name || cert.program?.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {cert.course ? 'Course Certificate' : 'Program Certificate'}
+                          </p>
+                        </div>
+                        {cert.grade && (
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-[#1e3a5f]">{cert.grade}</div>
+                            {cert.gpa && (
+                              <div className="text-xs text-gray-500">GPA: {cert.gpa.toFixed(2)}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 mb-4 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Certificate No:</span>
+                          <span className="font-mono font-semibold text-gray-900">{cert.certificateNumber}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Issued:</span>
+                          <span className="text-gray-900">
+                            {new Date(cert.issuedDate).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Completed:</span>
+                          <span className="text-gray-900">
+                            {new Date(cert.completionDate).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t flex items-center gap-3">
+                        <a
+                          href={getCertificateDownloadUrl(cert.certificateUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download PDF
+                        </a>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(cert.certificateNumber)
+                            toast.success('Certificate number copied!')
+                          }}
+                          className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition"
+                        >
+                          Copy #
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

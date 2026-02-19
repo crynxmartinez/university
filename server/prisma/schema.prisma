@@ -96,6 +96,7 @@ model User {
   programEnrollments ProgramEnrollment[]
   notifications Notification[]
   coursesCreated Course[] @relation("CoursesCreated")
+  certificatesIssued Certificate[] @relation("CertificatesIssued")
 }
 
 // Profile - personal information
@@ -132,6 +133,7 @@ model Student {
   examScores   ExamScore[]         // Exam scores for grading
   examAttempts ExamAttempt[]       // Exam attempts
   gradeCalculations GradeCalculation[] // Calculated grades
+  certificates Certificate[]       // Earned certificates
   
   // Program relations
   programAttendance    ProgramAttendance[]    // Attendance for program sessions
@@ -203,6 +205,7 @@ model Program {
   sessions    ProgramSession[]
   exams       ProgramExam[]
   gradeCalculations GradeCalculation[]
+  certificates Certificate[]
 }
 
 // ProgramModule - sections within a program (like Module for Course)
@@ -432,6 +435,7 @@ model Course {
   sessions    ScheduledSession[]
   exams       Exam[]
   gradeCalculations GradeCalculation[]
+  certificates Certificate[]
 }
 
 // ScheduledSession - class/exam attached to calendar for LIVE courses
@@ -697,4 +701,39 @@ model GradeCalculation {
   
   @@unique([studentId, courseId])
   @@unique([studentId, programId])
+}
+
+model Certificate {
+  id                String   @id @default(cuid())
+  certificateNumber String   @unique // e.g., "CERT-2025-001234"
+  studentId         String
+  courseId          String?
+  programId         String?
+  issuedDate        DateTime @default(now())
+  completionDate    DateTime
+  grade             String?  // Letter grade or percentage
+  gpa               Float?   // GPA if applicable
+  certificateUrl    String?  // URL to generated PDF
+  issuedById        String   // Teacher or Admin who issued
+  status            CertificateStatus @default(ACTIVE)
+  revokedAt         DateTime?
+  revokedReason     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  program   Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  issuedBy  User     @relation("CertificatesIssued", fields: [issuedById], references: [id], onDelete: Restrict)
+  
+  @@index([studentId])
+  @@index([courseId])
+  @@index([programId])
+  @@index([certificateNumber])
+}
+
+enum CertificateStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
 }

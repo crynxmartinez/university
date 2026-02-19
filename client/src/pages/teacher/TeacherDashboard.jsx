@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, ChevronLeft, ChevronRight, X, Clock, Info } from 'lucide-react'
+import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, ChevronLeft, ChevronRight, X, Clock, Info, Shield, Award } from 'lucide-react'
 import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
 import { getCourseGrades } from '../../api/exams'
 import { getCourseStudentGrades } from '../../api/grades'
+import { issueCertificate } from '../../api/certificates'
+import { useToast } from '../../components/Toast'
 import SessionCalendar from '../../components/SessionCalendar'
 
 export default function TeacherDashboard() {
@@ -41,6 +43,8 @@ export default function TeacherDashboard() {
   const [selectedGradeCourse, setSelectedGradeCourse] = useState(null)
   const [gradesData, setGradesData] = useState(null)
   const [loadingGrades, setLoadingGrades] = useState(false)
+  const [issuingCertificate, setIssuingCertificate] = useState(null)
+  const toast = useToast()
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -1028,6 +1032,7 @@ export default function TeacherDashboard() {
                               <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Final Grade</th>
                               <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Letter</th>
                               <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">GPA</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y">
@@ -1091,6 +1096,52 @@ export default function TeacherDashboard() {
                                     <span className="font-semibold text-[#1e3a5f]">{student.grade.gpa.toFixed(2)}</span>
                                   ) : (
                                     <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {student.grade && student.grade.finalGrade >= 70 ? (
+                                    <button
+                                      onClick={async () => {
+                                        setIssuingCertificate(student.studentId)
+                                        try {
+                                          await issueCertificate({
+                                            studentId: student.studentId,
+                                            courseId: selectedGradeCourse.id,
+                                            completionDate: new Date().toISOString(),
+                                            grade: student.grade.letterGrade,
+                                            gpa: student.grade.gpa
+                                          })
+                                          toast.success('Certificate issued successfully!')
+                                        } catch (error) {
+                                          console.error('Error issuing certificate:', error)
+                                          if (error.response?.data?.error?.includes('already issued')) {
+                                            toast.error('Certificate already issued')
+                                          } else {
+                                            toast.error('Failed to issue certificate')
+                                          }
+                                        } finally {
+                                          setIssuingCertificate(null)
+                                        }
+                                      }}
+                                      disabled={issuingCertificate === student.studentId}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#f7941d] hover:bg-[#e88a1a] text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+                                    >
+                                      {issuingCertificate === student.studentId ? (
+                                        <>
+                                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                          Issuing...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Shield className="w-4 h-4" />
+                                          Issue Certificate
+                                        </>
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">
+                                      {student.grade ? 'Below passing grade' : 'No grade'}
+                                    </span>
                                   )}
                                 </td>
                               </tr>
