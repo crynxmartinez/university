@@ -216,8 +216,10 @@ export default function AdminDashboard() {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Manage Users', icon: Users },
-    { id: 'programs', label: 'Programs', icon: BookOpen },
-    { id: 'courses', label: 'Courses', icon: GraduationCap },
+    { id: 'master-courses', label: 'Master Courses', icon: BookOpen },
+    { id: 'master-programs', label: 'Master Programs', icon: GraduationCap },
+    { id: 'programs', label: 'Programs (Legacy)', icon: BookOpen },
+    { id: 'courses', label: 'Courses (Legacy)', icon: GraduationCap },
     { id: 'students', label: 'Students', icon: Users },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'grades', label: 'Grades', icon: Award },
@@ -409,6 +411,34 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </>
+          )}
+
+          {activeTab === 'master-courses' && (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <BookOpen size={48} className="text-emerald-600 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Master Courses</h2>
+              <p className="text-gray-500 mb-6">Manage permanent course templates. Teachers create offerings from these.</p>
+              <button
+                onClick={() => navigate('/admin/master-courses')}
+                className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition font-medium"
+              >
+                Go to Master Courses →
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'master-programs' && (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <GraduationCap size={48} className="text-purple-600 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Master Programs</h2>
+              <p className="text-gray-500 mb-6">Manage permanent program templates. Teachers create offerings from these.</p>
+              <button
+                onClick={() => navigate('/admin/master-programs')}
+                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-medium"
+              >
+                Go to Master Programs →
+              </button>
+            </div>
           )}
 
           {activeTab === 'users' && (

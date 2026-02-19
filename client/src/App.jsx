@@ -16,9 +16,15 @@ import AdminProgramExamBuilder from './pages/admin/AdminProgramExamBuilder'
 import AdminCreateCourse from './pages/admin/AdminCreateCourse'
 import AdminCourseDashboard from './pages/admin/AdminCourseDashboard'
 import AdminCourseExamBuilder from './pages/admin/AdminCourseExamBuilder'
+import AdminMasterCourses from './pages/admin/AdminMasterCourses'
+import AdminMasterCourseDetail from './pages/admin/AdminMasterCourseDetail'
+import AdminMasterPrograms from './pages/admin/AdminMasterPrograms'
+import AdminMasterProgramDetail from './pages/admin/AdminMasterProgramDetail'
 import RegistrarDashboard from './pages/RegistrarDashboard'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import CreateCourse from './pages/teacher/CreateCourse'
+import CreateCourseOffering from './pages/teacher/CreateCourseOffering'
+import CreateProgramOffering from './pages/teacher/CreateProgramOffering'
 import CreateModule from './pages/teacher/CreateModule'
 import CreateLesson from './pages/teacher/CreateLesson'
 import EnrollStudents from './pages/teacher/EnrollStudents'
@@ -60,9 +66,15 @@ function App() {
         <Route path="/admin/courses/create" element={<AdminCreateCourse />} />
         <Route path="/admin/courses/:id" element={<AdminCourseDashboard />} />
         <Route path="/admin/courses/:id/exam/:examId" element={<AdminCourseExamBuilder />} />
+        <Route path="/admin/master-courses" element={<AdminMasterCourses />} />
+        <Route path="/admin/master-courses/:id" element={<AdminMasterCourseDetail />} />
+        <Route path="/admin/master-programs" element={<AdminMasterPrograms />} />
+        <Route path="/admin/master-programs/:id" element={<AdminMasterProgramDetail />} />
         <Route path="/registrar" element={<RegistrarDashboard />} />
         <Route path="/teacher" element={<TeacherDashboard />} />
         <Route path="/teacher/courses/create" element={<CreateCourse />} />
+        <Route path="/teacher/course-offerings/create" element={<CreateCourseOffering />} />
+        <Route path="/teacher/program-offerings/create" element={<CreateProgramOffering />} />
         <Route path="/teacher/courses/:id/dashboard" element={<CourseDashboard />} />
         <Route path="/teacher/courses/:id" element={<CourseDashboard />} />
         <Route path="/teacher/courses/:id/modules/create" element={<CreateModule />} />
