@@ -224,8 +224,6 @@ export default function AdminDashboard() {
     { id: 'users', label: 'Manage Users', icon: Users },
     { id: 'master-courses', label: 'Master Courses', icon: BookOpen },
     { id: 'master-programs', label: 'Master Programs', icon: GraduationCap },
-    { id: 'programs', label: 'Programs (Legacy)', icon: BookOpen },
-    { id: 'courses', label: 'Courses (Legacy)', icon: GraduationCap },
     { id: 'students', label: 'Students', icon: Users },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'grades', label: 'Grades', icon: Award },
