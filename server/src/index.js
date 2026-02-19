@@ -16,7 +16,7 @@ import examRoutes from './routes/exams.js'
 import adminRoutes from './routes/admin/index.js'
 import studentProgramRoutes from './routes/studentPrograms.js'
 import gradesRoutes from './routes/grades.js'
-import certificatesRoutes from './routes/certificates.js'
+// import certificatesRoutes from './routes/certificates.js' // DISABLED: File system writes not supported in Vercel serverless
 import analyticsRoutes from './routes/analytics.js'
 import messagesRoutes from './routes/messages.js'
 import announcementsRoutes from './routes/announcements.js'
@@ -60,7 +60,7 @@ app.use('/api/exams', examRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/student-programs', studentProgramRoutes)
 app.use('/api/grades', gradesRoutes)
-app.use('/api/certificates', certificatesRoutes)
+// app.use('/api/certificates', certificatesRoutes) // DISABLED: File system writes not supported in Vercel serverless
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/announcements', announcementsRoutes)
