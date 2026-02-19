@@ -16,10 +16,14 @@ import examRoutes from './routes/exams.js'
 import adminRoutes from './routes/admin/index.js'
 import studentProgramRoutes from './routes/studentPrograms.js'
 import gradesRoutes from './routes/grades.js'
-// import certificatesRoutes from './routes/certificates.js'
-// import analyticsRoutes from './routes/analytics.js'
-// import messagesRoutes from './routes/messages.js'
-// import announcementsRoutes from './routes/announcements.js'
+import certificatesRoutes from './routes/certificates.js'
+import analyticsRoutes from './routes/analytics.js'
+import messagesRoutes from './routes/messages.js'
+import announcementsRoutes from './routes/announcements.js'
+import masterCoursesRoutes from './routes/masterCourses.js'
+import masterProgramsRoutes from './routes/masterPrograms.js'
+import courseOfferingsRoutes from './routes/courseOfferings.js'
+import programOfferingsRoutes from './routes/programOfferings.js'
 
 dotenv.config()
 
@@ -60,10 +64,14 @@ app.use('/api/exams', examRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/student-programs', studentProgramRoutes)
 app.use('/api/grades', gradesRoutes)
-// app.use('/api/certificates', certificatesRoutes)
-// app.use('/api/analytics', analyticsRoutes)
-// app.use('/api/messages', messagesRoutes)
-// app.use('/api/announcements', announcementsRoutes)
+app.use('/api/certificates', certificatesRoutes)
+app.use('/api/analytics', analyticsRoutes)
+app.use('/api/messages', messagesRoutes)
+app.use('/api/announcements', announcementsRoutes)
+app.use('/api/master-courses', masterCoursesRoutes)
+app.use('/api/master-programs', masterProgramsRoutes)
+app.use('/api/course-offerings', courseOfferingsRoutes)
+app.use('/api/program-offerings', programOfferingsRoutes)
 
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))

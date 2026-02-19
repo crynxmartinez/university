@@ -100,6 +100,8 @@ model User {
   analyticsEvents AnalyticsEvent[]
   messagesSent Message[]
   announcements Announcement[]
+  masterCoursesCreated MasterCourse[] @relation("MasterCoursesCreated")
+  masterProgramsCreated MasterProgram[] @relation("MasterProgramsCreated")
 }
 
 // Profile - personal information
@@ -142,6 +144,16 @@ model Student {
   programAttendance    ProgramAttendance[]    // Attendance for program sessions
   programExamAttempts  ProgramExamAttempt[]   // Program exam attempts
   programNotes         ProgramStudentNote[]   // Notes for program content
+
+  // New offering relations
+  courseEnrollments          CourseEnrollment[]
+  programOfferingEnrollments ProgramOfferingEnrollment[]
+  courseOfferingAttendance   CourseOfferingAttendance[]
+  programOfferingAttendance  ProgramOfferingAttendance[]
+  courseOfferingExamAttempts CourseOfferingExamAttempt[]
+  programOfferingExamAttempts ProgramOfferingExamAttempt[]
+  courseGradeCalculations    CourseGradeCalculation[]
+  programGradeCalculations   ProgramGradeCalculation[]
 }
 
 // Teacher record
@@ -155,6 +167,8 @@ model Teacher {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   courses  Course[]
   programs Program[]
+  courseOfferings  CourseOffering[]
+  programOfferings ProgramOffering[]
 }
 
 // Registrar record
@@ -176,6 +190,39 @@ model IdSequence {
   lastNumber Int     @default(0)
   
   @@unique([type, year])
+}
+
+// ============ MASTER MODELS (Admin creates these - permanent templates) ============
+
+model MasterCourse {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g., "CS101"
+  title       String
+  description String?
+  syllabus    String?
+  credits     Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User           @relation("MasterCoursesCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  offerings CourseOffering[]
+}
+
+model MasterProgram {
+  id          String      @id @default(cuid())
+  code        String      @unique // e.g., "BCS001"
+  title       String
+  description String?
+  programType ProgramType @default(ONLINE)
+  duration    String?     // e.g., "6 months", "1 year"
+  credits     Int         @default(0)
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy User              @relation("MasterProgramsCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  offerings ProgramOffering[]
 }
 
 // ============ PROGRAM MODELS ============
@@ -544,6 +591,387 @@ model Enrollment {
   @@unique([studentId, courseId])
 }
 
+// CourseOffering - Teacher creates this, links to MasterCourse
+model CourseOffering {
+  id              String        @id @default(cuid())
+  masterCourseId  String
+  teacherId       String
+  term            String        // e.g., "Spring 2025"
+  startDate       DateTime
+  endDate         DateTime
+  enrollmentStart DateTime?
+  enrollmentEnd   DateTime?
+  maxStudents     Int?
+  price           Float         @default(0)
+  priceType       PriceType     @default(ONE_TIME)
+  meetingLink     String?
+  location        String?
+  image           String?
+  status          OfferingStatus @default(DRAFT)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  masterCourse      MasterCourse       @relation(fields: [masterCourseId], references: [id], onDelete: Restrict)
+  teacher           Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments       CourseEnrollment[]
+  sessions          CourseOfferingSession[]
+  exams             CourseOfferingExam[]
+  gradeCalculations CourseGradeCalculation[]
+  certificates      Certificate[]      @relation("CourseOfferingCertificates")
+  announcements     Announcement[]     @relation("CourseOfferingAnnouncements")
+}
+
+// ProgramOffering - Teacher creates this, links to MasterProgram
+model ProgramOffering {
+  id              String        @id @default(cuid())
+  masterProgramId String
+  teacherId       String
+  term            String        // e.g., "Spring 2025"
+  startDate       DateTime
+  endDate         DateTime
+  enrollmentStart DateTime?
+  enrollmentEnd   DateTime?
+  maxStudents     Int?
+  price           Float         @default(0)
+  priceType       PriceType     @default(ONE_TIME)
+  meetingLink     String?
+  location        String?
+  image           String?
+  status          OfferingStatus @default(DRAFT)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  masterProgram     MasterProgram      @relation(fields: [masterProgramId], references: [id], onDelete: Restrict)
+  teacher           Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments       ProgramOfferingEnrollment[]
+  sessions          ProgramOfferingSession[]
+  exams             ProgramOfferingExam[]
+  gradeCalculations ProgramGradeCalculation[]
+  certificates      Certificate[]      @relation("ProgramOfferingCertificates")
+  announcements     Announcement[]     @relation("ProgramOfferingAnnouncements")
+}
+
+// CourseEnrollment - student enrolled in a course offering
+model CourseEnrollment {
+  id               String         @id @default(cuid())
+  studentId        String
+  courseOfferingId String
+  enrolledAt       DateTime       @default(now())
+  status           EnrollmentStatus @default(ACTIVE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseOffering CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseOfferingId])
+}
+
+// ProgramOfferingEnrollment - student enrolled in a program offering
+model ProgramOfferingEnrollment {
+  id                String         @id @default(cuid())
+  studentId         String
+  programOfferingId String
+  enrolledAt        DateTime       @default(now())
+  status            EnrollmentStatus @default(ACTIVE)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programOffering ProgramOffering @relation(fields: [programOfferingId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, programOfferingId])
+}
+
+// CourseOfferingSession - sessions for a course offering
+model CourseOfferingSession {
+  id               String      @id @default(cuid())
+  courseOfferingId String
+  lessonId         String?
+  date             DateTime
+  startTime        String
+  endTime          String
+  type             SessionType @default(CLASS)
+  meetingLink      String?
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  courseOffering CourseOffering               @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  materials      CourseOfferingSessionMaterial[]
+  attendance     CourseOfferingAttendance[]
+}
+
+// CourseOfferingSessionMaterial
+model CourseOfferingSessionMaterial {
+  id        String   @id @default(cuid())
+  sessionId String
+  name      String
+  driveUrl  String
+  createdAt DateTime @default(now())
+
+  session CourseOfferingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// CourseOfferingAttendance
+model CourseOfferingAttendance {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus @default(PRESENT)
+  markedBy  String           @default("AUTO")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  session CourseOfferingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+}
+
+// ProgramOfferingSession - sessions for a program offering
+model ProgramOfferingSession {
+  id                String      @id @default(cuid())
+  programOfferingId String
+  date              DateTime
+  startTime         String
+  endTime           String
+  type              SessionType @default(CLASS)
+  meetingLink       String?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  programOffering ProgramOffering                @relation(fields: [programOfferingId], references: [id], onDelete: Cascade)
+  materials       ProgramOfferingSessionMaterial[]
+  attendance      ProgramOfferingAttendance[]
+}
+
+// ProgramOfferingSessionMaterial
+model ProgramOfferingSessionMaterial {
+  id        String   @id @default(cuid())
+  sessionId String
+  name      String
+  driveUrl  String
+  createdAt DateTime @default(now())
+
+  session ProgramOfferingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ProgramOfferingAttendance
+model ProgramOfferingAttendance {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus @default(PRESENT)
+  markedBy  String           @default("AUTO")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  session ProgramOfferingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+}
+
+// CourseOfferingExam
+model CourseOfferingExam {
+  id               String   @id @default(cuid())
+  courseOfferingId String
+  title            String
+  description      String?
+  totalPoints      Int      @default(100)
+  order            Int      @default(0)
+  timeLimit        Int?
+  maxTabSwitch     Int      @default(3)
+  isPublished      Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  courseOffering CourseOffering             @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  questions      CourseOfferingExamQuestion[]
+  attempts       CourseOfferingExamAttempt[]
+}
+
+// CourseOfferingExamQuestion
+model CourseOfferingExamQuestion {
+  id       String @id @default(cuid())
+  examId   String
+  question String
+  points   Int    @default(10)
+  order    Int    @default(0)
+
+  exam    CourseOfferingExam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  choices CourseOfferingExamChoice[]
+  answers CourseOfferingExamAnswer[]
+}
+
+// CourseOfferingExamChoice
+model CourseOfferingExamChoice {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question CourseOfferingExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  CourseOfferingExamAnswer[]
+}
+
+// CourseOfferingExamAttempt
+model CourseOfferingExamAttempt {
+  id             String            @id @default(cuid())
+  examId         String
+  studentId      String
+  attemptNumber  Int               @default(1)
+  startedAt      DateTime          @default(now())
+  submittedAt    DateTime?
+  tabSwitchCount Int               @default(0)
+  status         ExamAttemptStatus @default(IN_PROGRESS)
+  score          Float?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  exam    CourseOfferingExam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student                    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers CourseOfferingExamAnswer[]
+
+  @@unique([examId, studentId])
+}
+
+// CourseOfferingExamAnswer
+model CourseOfferingExamAnswer {
+  id         String  @id @default(cuid())
+  attemptId  String
+  questionId String
+  choiceId   String?
+  isCorrect  Boolean @default(false)
+
+  attempt  CourseOfferingExamAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question CourseOfferingExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  choice   CourseOfferingExamChoice?  @relation(fields: [choiceId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId])
+}
+
+// ProgramOfferingExam
+model ProgramOfferingExam {
+  id                String   @id @default(cuid())
+  programOfferingId String
+  title             String
+  description       String?
+  totalPoints       Int      @default(100)
+  order             Int      @default(0)
+  timeLimit         Int?
+  maxTabSwitch      Int      @default(3)
+  isPublished       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  programOffering ProgramOffering              @relation(fields: [programOfferingId], references: [id], onDelete: Cascade)
+  questions       ProgramOfferingExamQuestion[]
+  attempts        ProgramOfferingExamAttempt[]
+}
+
+// ProgramOfferingExamQuestion
+model ProgramOfferingExamQuestion {
+  id       String @id @default(cuid())
+  examId   String
+  question String
+  points   Int    @default(10)
+  order    Int    @default(0)
+
+  exam    ProgramOfferingExam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  choices ProgramOfferingExamChoice[]
+  answers ProgramOfferingExamAnswer[]
+}
+
+// ProgramOfferingExamChoice
+model ProgramOfferingExamChoice {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question ProgramOfferingExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  ProgramOfferingExamAnswer[]
+}
+
+// ProgramOfferingExamAttempt
+model ProgramOfferingExamAttempt {
+  id             String            @id @default(cuid())
+  examId         String
+  studentId      String
+  attemptNumber  Int               @default(1)
+  startedAt      DateTime          @default(now())
+  submittedAt    DateTime?
+  tabSwitchCount Int               @default(0)
+  status         ExamAttemptStatus @default(IN_PROGRESS)
+  score          Float?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  exam    ProgramOfferingExam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student                      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers ProgramOfferingExamAnswer[]
+
+  @@unique([examId, studentId])
+}
+
+// ProgramOfferingExamAnswer
+model ProgramOfferingExamAnswer {
+  id         String  @id @default(cuid())
+  attemptId  String
+  questionId String
+  choiceId   String?
+  isCorrect  Boolean @default(false)
+
+  attempt  ProgramOfferingExamAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question ProgramOfferingExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  choice   ProgramOfferingExamChoice?  @relation(fields: [choiceId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId])
+}
+
+// CourseGradeCalculation
+model CourseGradeCalculation {
+  id               String   @id @default(cuid())
+  studentId        String
+  courseOfferingId String
+  examScore        Float
+  attendanceScore  Float
+  finalGrade       Float
+  letterGrade      String
+  gpa              Float
+  calculatedAt     DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseOffering CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseOfferingId])
+}
+
+// ProgramGradeCalculation
+model ProgramGradeCalculation {
+  id                String   @id @default(cuid())
+  studentId         String
+  programOfferingId String
+  examScore         Float
+  attendanceScore   Float
+  finalGrade        Float
+  letterGrade       String
+  gpa               Float
+  calculatedAt      DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programOffering ProgramOffering @relation(fields: [programOfferingId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, programOfferingId])
+}
+
 // ============ NOTIFICATION MODELS ============
 
 // Notification - for student reminders
@@ -714,6 +1142,8 @@ model Certificate {
   studentId         String
   courseId          String?
   programId         String?
+  courseOfferingId  String?
+  programOfferingId String?
   issuedDate        DateTime @default(now())
   completionDate    DateTime
   grade             String?  // Letter grade or percentage
@@ -726,14 +1156,18 @@ model Certificate {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  program   Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
-  issuedBy  User     @relation("CertificatesIssued", fields: [issuedById], references: [id], onDelete: Restrict)
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course          Course?          @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  program         Program?         @relation(fields: [programId], references: [id], onDelete: SetNull)
+  courseOffering  CourseOffering?  @relation("CourseOfferingCertificates", fields: [courseOfferingId], references: [id], onDelete: SetNull)
+  programOffering ProgramOffering? @relation("ProgramOfferingCertificates", fields: [programOfferingId], references: [id], onDelete: SetNull)
+  issuedBy        User             @relation("CertificatesIssued", fields: [issuedById], references: [id], onDelete: Restrict)
   
   @@index([studentId])
   @@index([courseId])
   @@index([programId])
+  @@index([courseOfferingId])
+  @@index([programOfferingId])
   @@index([certificateNumber])
 }
 
@@ -741,6 +1175,13 @@ enum CertificateStatus {
   ACTIVE
   REVOKED
   EXPIRED
+}
+
+enum OfferingStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
 }
 
 model AnalyticsEvent {
@@ -804,25 +1245,31 @@ model Message {
 }
 
 model Announcement {
-  id             String   @id @default(cuid())
-  title          String
-  content        String   @db.Text
-  authorId       String
-  targetAudience AudienceType @default(ALL)
-  courseId       String?
-  programId      String?
-  priority       Priority @default(INFO)
-  expiresAt      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                String   @id @default(cuid())
+  title             String
+  content           String   @db.Text
+  authorId          String
+  targetAudience    AudienceType @default(ALL)
+  courseId          String?
+  programId         String?
+  courseOfferingId  String?
+  programOfferingId String?
+  priority          Priority @default(INFO)
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   
-  author  User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  course  Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  program Program? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  author          User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  course          Course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  program         Program?         @relation(fields: [programId], references: [id], onDelete: Cascade)
+  courseOffering  CourseOffering?  @relation("CourseOfferingAnnouncements", fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  programOffering ProgramOffering? @relation("ProgramOfferingAnnouncements", fields: [programOfferingId], references: [id], onDelete: Cascade)
   
   @@index([targetAudience])
   @@index([courseId])
   @@index([programId])
+  @@index([courseOfferingId])
+  @@index([programOfferingId])
   @@index([createdAt])
 }
 
