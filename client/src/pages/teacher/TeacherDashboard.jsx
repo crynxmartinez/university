@@ -5,6 +5,7 @@ import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
 import { getCourseGrades } from '../../api/exams'
+import SessionCalendar from '../../components/SessionCalendar'
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -32,6 +33,8 @@ export default function TeacherDashboard() {
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedSession, setSelectedSession] = useState(null)
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [calendarView, setCalendarView] = useState('list') // 'list' or 'calendar'
 
   // Grades state
   const [selectedGradeCourse, setSelectedGradeCourse] = useState(null)
@@ -796,8 +799,37 @@ export default function TeacherDashboard() {
                 </div>
               ) : (
                 <>
-                  {/* Calendar Header */}
+                  {/* Header with View Toggle */}
                   <div className="p-4 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-6 h-6 text-[#1e3a5f]" />
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Teaching Schedule</h2>
+                        <p className="text-sm text-gray-500">{schedule?.length || 0} upcoming sessions</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex bg-gray-100 rounded-lg p-0.5">
+                        <button
+                          onClick={() => setCalendarView('list')}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                            calendarView === 'list' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
+                          }`}
+                        >
+                          List View
+                        </button>
+                        <button
+                          onClick={() => setShowCalendarModal(true)}
+                          className="px-3 py-1.5 text-sm font-medium rounded-md transition text-gray-500 hover:text-gray-900"
+                        >
+                          Calendar View
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* List View */}
+                  <div className="p-4 border-b flex items-center justify-between" style={{display: 'none'}}>
                     <div className="flex items-center gap-2">
                       <button onClick={goToPrevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
                         <ChevronLeft className="w-5 h-5 text-gray-600" />
@@ -1350,6 +1382,22 @@ export default function TeacherDashboard() {
           </div>
         </div>
       )}
+
+      {/* SessionCalendar Modal */}
+      <SessionCalendar
+        sessions={schedule || []}
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        title="Teaching Schedule"
+        subtitle="Your upcoming sessions"
+        accentColor="purple"
+        type="course"
+        onJoinSession={(session) => {
+          if (session.meetingLink) {
+            window.open(session.meetingLink, '_blank')
+          }
+        }}
+      />
     </div>
   )
 }

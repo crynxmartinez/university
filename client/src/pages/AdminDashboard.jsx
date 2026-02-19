@@ -4,6 +4,8 @@ import { LogOut, Users, UserPlus, Settings, X, Copy, Check, LayoutDashboard, Gra
 import { createUser, getUsers, deleteUser, resetUserPassword } from '../api/users'
 import { getAdminPrograms, deleteAdminProgram } from '../api/adminPrograms'
 import { getAdminCourses, deleteAdminCourse } from '../api/adminCourses'
+import { getAdminSchedule } from '../api/admin'
+import SessionCalendar from '../components/SessionCalendar'
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
@@ -42,6 +44,12 @@ export default function AdminDashboard() {
   const [courses, setCourses] = useState([])
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [deleteCourseConfirm, setDeleteCourseConfirm] = useState(null)
+
+  // Schedule state
+  const [allSessions, setAllSessions] = useState([])
+  const [scheduleStats, setScheduleStats] = useState(null)
+  const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -790,13 +798,77 @@ export default function AdminDashboard() {
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Schedule</h2>
-              <p className="text-gray-500 mb-4">Coming Soon</p>
-              <p className="text-sm text-gray-400 max-w-md mx-auto">
-                View all scheduled sessions across programs and courses.
-              </p>
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">System Schedule</h2>
+                    <p className="text-gray-500">All sessions across courses and programs</p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setScheduleLoading(true)
+                    try {
+                      const data = await getAdminSchedule()
+                      const combined = [
+                        ...data.courseSessions.map(s => ({ ...s, type: s.type, source: 'course' })),
+                        ...data.programSessions.map(s => ({ ...s, type: s.type, source: 'program' }))
+                      ]
+                      setAllSessions(combined)
+                      setScheduleStats(data.stats)
+                      setShowCalendarModal(true)
+                    } catch (error) {
+                      console.error('Failed to fetch schedule:', error)
+                    } finally {
+                      setScheduleLoading(false)
+                    }
+                  }}
+                  disabled={scheduleLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition disabled:opacity-50"
+                >
+                  {scheduleLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4" />
+                      View Calendar
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              {scheduleStats ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="border rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Total Sessions</p>
+                    <p className="text-2xl font-bold text-gray-900">{scheduleStats.totalCourse + scheduleStats.totalProgram}</p>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Course Sessions</p>
+                    <p className="text-2xl font-bold text-purple-600">{scheduleStats.totalCourse}</p>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Program Sessions</p>
+                    <p className="text-2xl font-bold text-green-600">{scheduleStats.totalProgram}</p>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Exams</p>
+                    <p className="text-2xl font-bold text-red-600">{scheduleStats.totalExam}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Click "View Calendar" to see all scheduled sessions</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1089,6 +1161,17 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* SessionCalendar Modal */}
+      <SessionCalendar
+        sessions={allSessions}
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        title="System Schedule"
+        subtitle="All sessions across the platform"
+        accentColor="purple"
+        type="admin"
+      />
     </div>
   )
 }
