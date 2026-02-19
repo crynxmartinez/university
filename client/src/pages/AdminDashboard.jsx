@@ -6,11 +6,17 @@ import { getAdminPrograms, deleteAdminProgram } from '../api/adminPrograms'
 import { getAdminCourses, deleteAdminCourse } from '../api/adminCourses'
 import { getAdminSchedule } from '../api/admin'
 import SessionCalendar from '../components/SessionCalendar'
+import AdminMasterCourses from './admin/AdminMasterCourses'
+import AdminMasterCourseDetail from './admin/AdminMasterCourseDetail'
+import AdminMasterPrograms from './admin/AdminMasterPrograms'
+import AdminMasterProgramDetail from './admin/AdminMasterProgramDetail'
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [selectedMasterCourse, setSelectedMasterCourse] = useState(null)
+  const [selectedMasterProgram, setSelectedMasterProgram] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [createdUser, setCreatedUser] = useState(null)
@@ -259,7 +265,7 @@ export default function AdminDashboard() {
             {menuItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => { setActiveTab(item.id); setSelectedMasterCourse(null); setSelectedMasterProgram(null) }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                     activeTab === item.id 
                       ? 'bg-[#f7941d] text-white' 
@@ -414,30 +420,32 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === 'master-courses' && (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-              <BookOpen size={48} className="text-emerald-600 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Master Courses</h2>
-              <p className="text-gray-500 mb-6">Manage permanent course templates. Teachers create offerings from these.</p>
-              <button
-                onClick={() => navigate('/admin/master-courses')}
-                className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition font-medium"
-              >
-                Go to Master Courses →
-              </button>
+            <div>
+              {selectedMasterCourse ? (
+                <AdminMasterCourseDetail
+                  courseId={selectedMasterCourse.id}
+                  onBack={() => setSelectedMasterCourse(null)}
+                />
+              ) : (
+                <AdminMasterCourses
+                  onViewOfferings={(course) => setSelectedMasterCourse(course)}
+                />
+              )}
             </div>
           )}
 
           {activeTab === 'master-programs' && (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-              <GraduationCap size={48} className="text-purple-600 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Master Programs</h2>
-              <p className="text-gray-500 mb-6">Manage permanent program templates. Teachers create offerings from these.</p>
-              <button
-                onClick={() => navigate('/admin/master-programs')}
-                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-medium"
-              >
-                Go to Master Programs →
-              </button>
+            <div>
+              {selectedMasterProgram ? (
+                <AdminMasterProgramDetail
+                  programId={selectedMasterProgram.id}
+                  onBack={() => setSelectedMasterProgram(null)}
+                />
+              ) : (
+                <AdminMasterPrograms
+                  onViewOfferings={(program) => setSelectedMasterProgram(program)}
+                />
+              )}
             </div>
           )}
 

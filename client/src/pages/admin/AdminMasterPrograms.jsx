@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { GraduationCap, Plus, Edit2, Trash2, ChevronRight, Layers, X, Check } from 'lucide-react'
 import { getMasterPrograms, createMasterProgram, updateMasterProgram, deleteMasterProgram } from '../../api/masterPrograms'
 
@@ -12,7 +11,7 @@ const STATUS_COLORS = {
 
 const PROGRAM_TYPES = ['ONLINE', 'IN_PERSON', 'HYBRID', 'WEBINAR', 'EVENT']
 
-export default function AdminMasterPrograms() {
+export default function AdminMasterPrograms({ onViewOfferings }) {
   const [masterPrograms, setMasterPrograms] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -78,14 +77,13 @@ export default function AdminMasterPrograms() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center py-20">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -151,12 +149,12 @@ export default function AdminMasterPrograms() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    <Link
-                      to={`/admin/master-programs/${program.id}`}
+                    <button
+                      onClick={() => onViewOfferings && onViewOfferings(program)}
                       className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition"
                     >
                       View Offerings <ChevronRight size={14} />
-                    </Link>
+                    </button>
                     <button onClick={() => openEdit(program)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
                       <Edit2 size={16} />
                     </button>
@@ -169,7 +167,6 @@ export default function AdminMasterPrograms() {
             ))
           )}
         </div>
-      </div>
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

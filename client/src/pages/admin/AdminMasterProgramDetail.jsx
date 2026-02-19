@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, GraduationCap, CheckCircle, Archive, Trash2, Users, Calendar } from 'lucide-react'
 import { getMasterProgram } from '../../api/masterPrograms'
 import { activateProgramOffering, completeProgramOffering, archiveProgramOffering, deleteProgramOffering } from '../../api/programOfferings'
@@ -18,17 +17,16 @@ const STATUS_LABELS = {
   ARCHIVED: '📦 Archived'
 }
 
-export default function AdminMasterProgramDetail() {
-  const { id } = useParams()
+export default function AdminMasterProgramDetail({ programId, onBack }) {
   const [masterProgram, setMasterProgram] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
 
-  useEffect(() => { fetchData() }, [id])
+  useEffect(() => { fetchData() }, [programId])
 
   const fetchData = async () => {
     try {
-      const data = await getMasterProgram(id)
+      const data = await getMasterProgram(programId)
       setMasterProgram(data)
     } catch (err) {
       console.error(err)
@@ -69,7 +67,7 @@ export default function AdminMasterProgramDetail() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center py-20">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
     </div>
   )
@@ -82,11 +80,10 @@ export default function AdminMasterProgramDetail() {
   const archivedOfferings = masterProgram.offerings?.filter(o => o.status === 'ARCHIVED') || []
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        <Link to="/admin/master-programs" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
+    <div>
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
           <ArrowLeft size={16} /> Back to Master Programs
-        </Link>
+        </button>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-3 mb-2">
@@ -166,7 +163,6 @@ export default function AdminMasterProgramDetail() {
             <p className="text-gray-400 text-sm mt-1">Teachers will create offerings from this master program.</p>
           </div>
         )}
-      </div>
     </div>
   )
 }

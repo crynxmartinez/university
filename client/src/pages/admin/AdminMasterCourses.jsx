@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { BookOpen, Plus, Edit2, Trash2, ChevronRight, Layers, X, Check } from 'lucide-react'
 import { getMasterCourses, createMasterCourse, updateMasterCourse, deleteMasterCourse } from '../../api/masterCourses'
 
@@ -10,7 +9,7 @@ const STATUS_COLORS = {
   ARCHIVED: 'bg-gray-100 text-gray-700'
 }
 
-export default function AdminMasterCourses() {
+export default function AdminMasterCourses({ onViewOfferings }) {
   const [masterCourses, setMasterCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -76,14 +75,13 @@ export default function AdminMasterCourses() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center py-20">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -157,12 +155,12 @@ export default function AdminMasterCourses() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    <Link
-                      to={`/admin/master-courses/${course.id}`}
+                    <button
+                      onClick={() => onViewOfferings && onViewOfferings(course)}
                       className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition"
                     >
                       View Offerings <ChevronRight size={14} />
-                    </Link>
+                    </button>
                     <button onClick={() => openEdit(course)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
                       <Edit2 size={16} />
                     </button>
@@ -175,7 +173,6 @@ export default function AdminMasterCourses() {
             ))
           )}
         </div>
-      </div>
 
       {/* Modal */}
       {showModal && (

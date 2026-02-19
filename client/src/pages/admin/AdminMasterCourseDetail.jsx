@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, BookOpen, Plus, CheckCircle, Archive, XCircle, Trash2, Users, Calendar, Clock } from 'lucide-react'
+import { ArrowLeft, BookOpen, CheckCircle, Archive, Trash2, Users, Calendar } from 'lucide-react'
 import { getMasterCourse } from '../../api/masterCourses'
 import { activateCourseOffering, completeCourseOffering, archiveCourseOffering, deleteCourseOffering } from '../../api/courseOfferings'
 
@@ -18,17 +17,16 @@ const STATUS_LABELS = {
   ARCHIVED: '📦 Archived'
 }
 
-export default function AdminMasterCourseDetail() {
-  const { id } = useParams()
+export default function AdminMasterCourseDetail({ courseId, onBack }) {
   const [masterCourse, setMasterCourse] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
 
-  useEffect(() => { fetchData() }, [id])
+  useEffect(() => { fetchData() }, [courseId])
 
   const fetchData = async () => {
     try {
-      const data = await getMasterCourse(id)
+      const data = await getMasterCourse(courseId)
       setMasterCourse(data)
     } catch (err) {
       console.error(err)
@@ -92,12 +90,11 @@ export default function AdminMasterCourseDetail() {
   const archivedOfferings = masterCourse.offerings?.filter(o => o.status === 'ARCHIVED') || []
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
+    <div>
         {/* Back */}
-        <Link to="/admin/master-courses" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
           <ArrowLeft size={16} /> Back to Master Courses
-        </Link>
+        </button>
 
         {/* Header */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
@@ -217,7 +214,6 @@ export default function AdminMasterCourseDetail() {
             <p className="text-gray-400 text-sm mt-1">Teachers will create offerings from this master course.</p>
           </div>
         )}
-      </div>
     </div>
   )
 }
