@@ -14,7 +14,7 @@ export function generateCertificateNumber() {
   return `CERT-${year}-${random}`
 }
 
-// Generate certificate PDF
+// Generate certificate PDF (returns buffer for Vercel serverless compatibility)
 export async function generateCertificatePDF(certificateData) {
   const {
     certificateNumber,
@@ -30,15 +30,6 @@ export async function generateCertificatePDF(certificateData) {
 
   return new Promise(async (resolve, reject) => {
     try {
-      // Create certificates directory if it doesn't exist
-      const certificatesDir = path.join(__dirname, '../../certificates')
-      if (!fs.existsSync(certificatesDir)) {
-        fs.mkdirSync(certificatesDir, { recursive: true })
-      }
-
-      const filename = `${certificateNumber}.pdf`
-      const filepath = path.join(certificatesDir, filename)
-
       // Create PDF document
       const doc = new PDFDocument({
         size: 'A4',
@@ -46,9 +37,18 @@ export async function generateCertificatePDF(certificateData) {
         margins: { top: 50, bottom: 50, left: 72, right: 72 }
       })
 
-      // Pipe to file
-      const stream = fs.createWriteStream(filepath)
-      doc.pipe(stream)
+      // Collect PDF data in buffer instead of writing to file
+      const buffers = []
+      doc.on('data', buffers.push.bind(buffers))
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers)
+        resolve({
+          buffer: pdfBuffer,
+          filename: `${certificateNumber}.pdf`,
+          certificateNumber
+        })
+      })
+      doc.on('error', reject)
 
       // Certificate border
       doc.lineWidth(3)
@@ -182,35 +182,8 @@ export async function generateCertificatePDF(certificateData) {
       // Finalize PDF
       doc.end()
 
-      stream.on('finish', () => {
-        resolve({
-          filename,
-          filepath,
-          relativePath: `/certificates/${filename}`
-        })
-      })
-
-      stream.on('error', (error) => {
-        reject(error)
-      })
-
     } catch (error) {
       reject(error)
     }
   })
-}
-
-// Delete certificate file
-export function deleteCertificateFile(filename) {
-  try {
-    const filepath = path.join(__dirname, '../../certificates', filename)
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath)
-      return true
-    }
-    return false
-  } catch (error) {
-    console.error('Error deleting certificate file:', error)
-    return false
-  }
 }

@@ -1,7 +1,7 @@
 import express from 'express'
 import { PrismaClient } from '@prisma/client'
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js'
-import { generateCertificateNumber, generateCertificatePDF, deleteCertificateFile } from '../utils/certificateGenerator.js'
+import { generateCertificateNumber, generateCertificatePDF } from '../utils/certificateGenerator.js'
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -89,7 +89,7 @@ router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN
     // Generate verification URL
     const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-certificate/${certificateNumber}`
 
-    // Generate PDF
+    // Generate PDF buffer
     const pdfResult = await generateCertificatePDF({
       certificateNumber,
       studentName,
@@ -102,6 +102,9 @@ router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN
       verificationUrl
     })
 
+    // Store PDF as base64 in database (Vercel serverless compatible)
+    const pdfBase64 = pdfResult.buffer.toString('base64')
+
     // Create certificate record
     const certificate = await prisma.certificate.create({
       data: {
@@ -112,7 +115,7 @@ router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN
         completionDate: completionDate ? new Date(completionDate) : new Date(),
         grade: grade || null,
         gpa: gpa || null,
-        certificateUrl: pdfResult.relativePath,
+        certificateUrl: `data:application/pdf;base64,${pdfBase64}`, // Store as data URL
         issuedById: req.user.userId,
         status: 'ACTIVE'
       },
