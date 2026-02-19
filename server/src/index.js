@@ -15,6 +15,7 @@ import attendanceRoutes from './routes/attendance.js'
 import examRoutes from './routes/exams.js'
 import adminRoutes from './routes/admin/index.js'
 import studentProgramRoutes from './routes/studentPrograms.js'
+import gradesRoutes from './routes/grades.js'
 
 dotenv.config()
 
@@ -49,6 +50,7 @@ app.use('/api/attendance', attendanceRoutes)
 app.use('/api/exams', examRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/student-programs', studentProgramRoutes)
+app.use('/api/grades', gradesRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

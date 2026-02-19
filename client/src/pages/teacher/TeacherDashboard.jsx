@@ -5,6 +5,7 @@ import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
 import { getCourseGrades } from '../../api/exams'
+import { getCourseStudentGrades } from '../../api/grades'
 import SessionCalendar from '../../components/SessionCalendar'
 
 export default function TeacherDashboard() {
@@ -109,21 +110,17 @@ export default function TeacherDashboard() {
   }, [activeTab])
 
   // Fetch grades when a course is selected
-  const fetchGrades = async (courseId) => {
+  const handleSelectGradeCourse = async (course) => {
+    setSelectedGradeCourse(course)
     setLoadingGrades(true)
     try {
-      const data = await getCourseGrades(courseId)
-      setGradesData(data)
+      const students = await getCourseStudentGrades(course.id)
+      setGradesData({ students })
     } catch (error) {
-      console.error('Failed to fetch grades:', error)
+      console.error('Error fetching grades:', error)
     } finally {
       setLoadingGrades(false)
     }
-  }
-
-  const handleSelectGradeCourse = (course) => {
-    setSelectedGradeCourse(course)
-    fetchGrades(course.id)
   }
 
   const fetchSchedule = async () => {
@@ -1013,20 +1010,7 @@ export default function TeacherDashboard() {
                       <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                       <p className="text-gray-500">Loading grades...</p>
                     </div>
-                  ) : !gradesData || gradesData.exams?.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                      <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Exams Yet</h3>
-                      <p className="text-gray-500 mb-4">Create exams in the course dashboard to start grading</p>
-                      <Link
-                        to={`/teacher/courses/${selectedGradeCourse.slug || selectedGradeCourse.id}/dashboard`}
-                        className="inline-flex items-center gap-2 text-[#1e3a5f] hover:underline"
-                      >
-                        Go to Course Dashboard
-                        <ExternalLink className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  ) : gradesData.grades?.length === 0 ? (
+                  ) : !gradesData || gradesData.students?.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm p-12 text-center">
                       <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Enrolled</h3>
@@ -1038,60 +1022,73 @@ export default function TeacherDashboard() {
                         <table className="w-full">
                           <thead className="bg-gray-50 border-b">
                             <tr>
-                              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900 sticky left-0 bg-gray-50">Student</th>
-                              {gradesData.exams.map(exam => (
-                                <th key={exam.id} className="text-center px-4 py-4 text-sm font-semibold text-gray-900 min-w-[100px]">
-                                  <div>{exam.title}</div>
-                                  <div className="text-xs font-normal text-gray-500">{exam.totalPoints} pts</div>
-                                </th>
-                              ))}
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900 min-w-[120px]">Final Grade</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Status</th>
+                              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">Student</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Exam Score</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Attendance</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Final Grade</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Letter</th>
+                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">GPA</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y">
-                            {gradesData.grades.map(student => (
+                            {gradesData.students.map(student => (
                               <tr key={student.studentId} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 sticky left-0 bg-white">
+                                <td className="px-6 py-4">
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                      {student.studentName.charAt(0).toUpperCase()}
+                                      {student.name?.charAt(0).toUpperCase() || 'S'}
                                     </div>
                                     <div>
-                                      <p className="font-medium text-gray-900">{student.studentName}</p>
-                                      <p className="text-xs text-gray-500">{student.email}</p>
+                                      <p className="font-medium text-gray-900">{student.name || 'Unknown'}</p>
+                                      <p className="text-xs text-gray-500">{student.email || 'N/A'}</p>
                                     </div>
                                   </div>
                                 </td>
-                                {student.examScores.map(examScore => (
-                                  <td key={examScore.examId} className="px-4 py-4 text-center">
-                                    {examScore.score !== null ? (
-                                      <span className="font-medium text-gray-900">{examScore.score}</span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                ))}
                                 <td className="px-6 py-4 text-center">
-                                  {student.percentage !== null ? (
+                                  {student.grade ? (
+                                    <span className="font-medium text-gray-900">{student.grade.examScore.toFixed(1)}%</span>
+                                  ) : (
+                                    <span className="text-gray-400">Not calculated</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {student.grade ? (
+                                    <span className="font-medium text-gray-900">{student.grade.attendanceScore.toFixed(1)}%</span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {student.grade ? (
                                     <span className={`text-lg font-bold ${
-                                      student.percentage >= 75 ? 'text-green-600' : 'text-red-600'
+                                      student.grade.finalGrade >= 90 ? 'text-green-600' :
+                                      student.grade.finalGrade >= 80 ? 'text-blue-600' :
+                                      student.grade.finalGrade >= 70 ? 'text-yellow-600' :
+                                      'text-red-600'
                                     }`}>
-                                      {student.percentage}%
+                                      {student.grade.finalGrade.toFixed(1)}%
                                     </span>
                                   ) : (
                                     <span className="text-gray-400">-</span>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  {student.passed !== null ? (
-                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                      student.passed 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
+                                  {student.grade ? (
+                                    <span className={`text-xl font-bold ${
+                                      student.grade.letterGrade === 'A' || student.grade.letterGrade === 'A-' ? 'text-green-600' :
+                                      student.grade.letterGrade.startsWith('B') ? 'text-blue-600' :
+                                      student.grade.letterGrade.startsWith('C') ? 'text-yellow-600' :
+                                      'text-red-600'
                                     }`}>
-                                      {student.passed ? 'Passed' : 'Failed'}
+                                      {student.grade.letterGrade}
                                     </span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {student.grade ? (
+                                    <span className="font-semibold text-[#1e3a5f]">{student.grade.gpa.toFixed(2)}</span>
                                   ) : (
                                     <span className="text-gray-400">-</span>
                                   )}
@@ -1105,10 +1102,10 @@ export default function TeacherDashboard() {
                       {/* Summary */}
                       <div className="p-4 bg-gray-50 border-t flex items-center justify-between text-sm">
                         <span className="text-gray-600">
-                          Passing Grade: <span className="font-semibold">{gradesData.passingGrade}%</span>
+                          Total Students: <span className="font-semibold">{gradesData.students.length}</span>
                         </span>
                         <span className="text-gray-600">
-                          {gradesData.grades.filter(g => g.passed === true).length} of {gradesData.grades.length} students passed
+                          Graded: <span className="font-semibold">{gradesData.students.filter(s => s.grade).length}</span>
                         </span>
                       </div>
                     </div>

@@ -131,6 +131,7 @@ model Student {
   attendance   SessionAttendance[] // Attendance records for sessions
   examScores   ExamScore[]         // Exam scores for grading
   examAttempts ExamAttempt[]       // Exam attempts
+  gradeCalculations GradeCalculation[] // Calculated grades
   
   // Program relations
   programAttendance    ProgramAttendance[]    // Attendance for program sessions
@@ -201,6 +202,7 @@ model Program {
   modules     ProgramModule[]
   sessions    ProgramSession[]
   exams       ProgramExam[]
+  gradeCalculations GradeCalculation[]
 }
 
 // ProgramModule - sections within a program (like Module for Course)
@@ -429,6 +431,7 @@ model Course {
   enrollments Enrollment[]
   sessions    ScheduledSession[]
   exams       Exam[]
+  gradeCalculations GradeCalculation[]
 }
 
 // ScheduledSession - class/exam attached to calendar for LIVE courses
@@ -670,4 +673,28 @@ model StudentNote {
 
   @@unique([studentId, sessionId]) // One note per student per session
   @@unique([studentId, lessonId])  // One note per student per lesson
+}
+
+// ============ GRADES ============
+
+// GradeCalculation - Calculated grades for students
+model GradeCalculation {
+  id              String   @id @default(cuid())
+  studentId       String
+  courseId        String?
+  programId       String?
+  examScore       Float    // Average exam score (0-100)
+  attendanceScore Float    // Attendance percentage (0-100)
+  finalGrade      Float    // Weighted final grade (0-100)
+  letterGrade     String   // A, B+, B, C+, C, D, F
+  gpa             Float    // 4.0 scale
+  calculatedAt    DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  student Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  program Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  
+  @@unique([studentId, courseId])
+  @@unique([studentId, programId])
 }
