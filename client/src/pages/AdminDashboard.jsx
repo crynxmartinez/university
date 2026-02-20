@@ -10,6 +10,7 @@ import AdminMasterCourses from './admin/AdminMasterCourses'
 import AdminMasterCourseDetail from './admin/AdminMasterCourseDetail'
 import AdminMasterPrograms from './admin/AdminMasterPrograms'
 import AdminMasterProgramDetail from './admin/AdminMasterProgramDetail'
+import AdminSemesters from './admin/AdminSemesters'
 
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
@@ -17,6 +18,7 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedMasterCourse, setSelectedMasterCourse] = useState(null)
   const [selectedMasterProgram, setSelectedMasterProgram] = useState(null)
+  const [semestersKey, setSemestersKey] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [createdUser, setCreatedUser] = useState(null)
@@ -222,6 +224,7 @@ export default function AdminDashboard() {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Manage Users', icon: Users },
+    { id: 'semesters', label: 'Semesters', icon: Calendar },
     { id: 'master-courses', label: 'Master Courses', icon: BookOpen },
     { id: 'master-programs', label: 'Master Programs', icon: GraduationCap },
     { id: 'students', label: 'Students', icon: Users },
@@ -415,6 +418,10 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </>
+          )}
+
+          {activeTab === 'semesters' && (
+            <AdminSemesters key={semestersKey} />
           )}
 
           {activeTab === 'master-courses' && (

@@ -24,6 +24,7 @@ import masterCoursesRoutes from './routes/masterCourses.js'
 import masterProgramsRoutes from './routes/masterPrograms.js'
 import courseOfferingsRoutes from './routes/courseOfferings.js'
 import programOfferingsRoutes from './routes/programOfferings.js'
+import semestersRoutes from './routes/semesters.js'
 
 dotenv.config()
 
@@ -72,6 +73,7 @@ app.use('/api/master-courses', masterCoursesRoutes)
 app.use('/api/master-programs', masterProgramsRoutes)
 app.use('/api/course-offerings', courseOfferingsRoutes)
 app.use('/api/program-offerings', programOfferingsRoutes)
+app.use('/api/semesters', semestersRoutes)
 
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))

@@ -38,10 +38,11 @@ router.get('/', authenticateToken, async (req, res) => {
       where,
       include: {
         masterCourse: true,
+        semester: true,
         teacher: { include: { user: { include: { profile: true } } } },
         _count: { select: { enrollments: true, sessions: true } }
       },
-      orderBy: { startDate: 'desc' }
+      orderBy: { createdAt: 'desc' }
     })
     res.json(offerings)
   } catch (error) {
@@ -56,6 +57,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       where: { id: req.params.id },
       include: {
         masterCourse: true,
+        semester: true,
         teacher: { include: { user: { include: { profile: true } } } },
         enrollments: {
           include: { student: { include: { user: { include: { profile: true } } } } }
@@ -75,18 +77,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST create course offering (teacher or admin)
 router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const {
-      masterCourseId, term, startDate, endDate,
-      enrollmentStart, enrollmentEnd, maxStudents,
-      price, priceType, meetingLink, location, image
-    } = req.body
+    const { masterCourseId, semesterId, maxStudents, price, priceType, meetingLink, location, image } = req.body
 
-    if (!masterCourseId || !term || !startDate || !endDate) {
-      return res.status(400).json({ error: 'masterCourseId, term, startDate, endDate are required' })
+    if (!masterCourseId || !semesterId) {
+      return res.status(400).json({ error: 'masterCourseId and semesterId are required' })
     }
 
     const masterCourse = await prisma.masterCourse.findUnique({ where: { id: masterCourseId } })
     if (!masterCourse) return res.status(404).json({ error: 'Master course not found' })
+
+    const semester = await prisma.semester.findUnique({ where: { id: semesterId } })
+    if (!semester) return res.status(404).json({ error: 'Semester not found' })
 
     let teacherId
     if (req.user.role === 'TEACHER') {
@@ -94,7 +95,6 @@ router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'R
       if (!teacher) return res.status(404).json({ error: 'Teacher profile not found' })
       teacherId = teacher.id
     } else {
-      // Admin can specify teacherId or use their own
       teacherId = req.body.teacherId
       if (!teacherId) return res.status(400).json({ error: 'teacherId is required' })
     }
@@ -103,11 +103,7 @@ router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'R
       data: {
         masterCourseId,
         teacherId,
-        term,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        enrollmentStart: enrollmentStart ? new Date(enrollmentStart) : null,
-        enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : null,
+        semesterId,
         maxStudents: maxStudents ? parseInt(maxStudents) : null,
         price: price ? parseFloat(price) : 0,
         priceType: priceType || 'ONE_TIME',
@@ -118,6 +114,7 @@ router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'R
       },
       include: {
         masterCourse: true,
+        semester: true,
         teacher: { include: { user: { include: { profile: true } } } }
       }
     })
@@ -140,19 +137,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
       if (offering.status !== 'DRAFT') return res.status(403).json({ error: 'Can only edit DRAFT offerings' })
     }
 
-    const {
-      term, startDate, endDate, enrollmentStart, enrollmentEnd,
-      maxStudents, price, priceType, meetingLink, location, image
-    } = req.body
+    const { semesterId, maxStudents, price, priceType, meetingLink, location, image } = req.body
 
     const updated = await prisma.courseOffering.update({
       where: { id: req.params.id },
       data: {
-        term,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined,
-        enrollmentStart: enrollmentStart ? new Date(enrollmentStart) : undefined,
-        enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : undefined,
+        semesterId: semesterId || undefined,
         maxStudents: maxStudents ? parseInt(maxStudents) : undefined,
         price: price !== undefined ? parseFloat(price) : undefined,
         priceType,
@@ -160,7 +150,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         location,
         image
       },
-      include: { masterCourse: true, teacher: { include: { user: { include: { profile: true } } } } }
+      include: { masterCourse: true, semester: true, teacher: { include: { user: { include: { profile: true } } } } }
     })
     res.json(updated)
   } catch (error) {
@@ -228,11 +218,12 @@ router.post('/:id/enroll', authenticateToken, async (req, res) => {
     if (offering.status !== 'ACTIVE') return res.status(400).json({ error: 'Enrollment not open' })
 
     // Check enrollment period
+    const semester = await prisma.semester.findUnique({ where: { id: offering.semesterId } })
     const now = new Date()
-    if (offering.enrollmentEnd && now > offering.enrollmentEnd) {
+    if (semester?.enrollmentEnd && now > semester.enrollmentEnd) {
       return res.status(400).json({ error: 'Enrollment period has ended' })
     }
-    if (offering.enrollmentStart && now < offering.enrollmentStart) {
+    if (semester?.enrollmentStart && now < semester.enrollmentStart) {
       return res.status(400).json({ error: 'Enrollment period has not started' })
     }
 

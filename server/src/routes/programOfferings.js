@@ -38,10 +38,11 @@ router.get('/', authenticateToken, async (req, res) => {
       where,
       include: {
         masterProgram: true,
+        semester: true,
         teacher: { include: { user: { include: { profile: true } } } },
         _count: { select: { enrollments: true, sessions: true } }
       },
-      orderBy: { startDate: 'desc' }
+      orderBy: { createdAt: 'desc' }
     })
     res.json(offerings)
   } catch (error) {
@@ -56,6 +57,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       where: { id: req.params.id },
       include: {
         masterProgram: true,
+        semester: true,
         teacher: { include: { user: { include: { profile: true } } } },
         enrollments: {
           include: { student: { include: { user: { include: { profile: true } } } } }
@@ -75,18 +77,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST create program offering (teacher or admin)
 router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const {
-      masterProgramId, term, startDate, endDate,
-      enrollmentStart, enrollmentEnd, maxStudents,
-      price, priceType, meetingLink, location, image
-    } = req.body
+    const { masterProgramId, semesterId, maxStudents, price, priceType, meetingLink, location, image } = req.body
 
-    if (!masterProgramId || !term || !startDate || !endDate) {
-      return res.status(400).json({ error: 'masterProgramId, term, startDate, endDate are required' })
+    if (!masterProgramId || !semesterId) {
+      return res.status(400).json({ error: 'masterProgramId and semesterId are required' })
     }
 
     const masterProgram = await prisma.masterProgram.findUnique({ where: { id: masterProgramId } })
     if (!masterProgram) return res.status(404).json({ error: 'Master program not found' })
+
+    const semester = await prisma.semester.findUnique({ where: { id: semesterId } })
+    if (!semester) return res.status(404).json({ error: 'Semester not found' })
 
     let teacherId
     if (req.user.role === 'TEACHER') {
@@ -102,11 +103,7 @@ router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'R
       data: {
         masterProgramId,
         teacherId,
-        term,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        enrollmentStart: enrollmentStart ? new Date(enrollmentStart) : null,
-        enrollmentEnd: enrollmentEnd ? new Date(enrollmentEnd) : null,
+        semesterId,
         maxStudents: maxStudents ? parseInt(maxStudents) : null,
         price: price ? parseFloat(price) : 0,
         priceType: priceType || 'ONE_TIME',
@@ -117,6 +114,7 @@ router.post('/', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'R
       },
       include: {
         masterProgram: true,
+        semester: true,
         teacher: { include: { user: { include: { profile: true } } } }
       }
     })

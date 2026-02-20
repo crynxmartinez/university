@@ -66,6 +66,12 @@ enum EnrollmentStatus {
   CANCELLED
 }
 
+enum SemesterStatus {
+  UPCOMING
+  ACTIVE
+  CLOSED
+}
+
 enum NotificationType {
   CLASS_5HR
   CLASS_2HR
@@ -102,6 +108,7 @@ model User {
   announcements Announcement[]
   masterCoursesCreated MasterCourse[] @relation("MasterCoursesCreated")
   masterProgramsCreated MasterProgram[] @relation("MasterProgramsCreated")
+  semestersCreated     Semester[]     @relation("SemestersCreated")
 }
 
 // Profile - personal information
@@ -591,16 +598,30 @@ model Enrollment {
   @@unique([studentId, courseId])
 }
 
-// CourseOffering - Teacher creates this, links to MasterCourse
-model CourseOffering {
-  id              String        @id @default(cuid())
-  masterCourseId  String
-  teacherId       String
-  term            String        // e.g., "Spring 2025"
+// Semester - Admin creates and manages academic semesters/terms
+model Semester {
+  id              String         @id @default(cuid())
+  name            String         @unique // e.g. "Term 1 - 2026"
   startDate       DateTime
   endDate         DateTime
   enrollmentStart DateTime?
   enrollmentEnd   DateTime?
+  status          SemesterStatus @default(UPCOMING)
+  createdById     String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  createdBy        User              @relation("SemestersCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  courseOfferings  CourseOffering[]
+  programOfferings ProgramOffering[]
+}
+
+// CourseOffering - Teacher creates this, links to MasterCourse + Semester
+model CourseOffering {
+  id              String        @id @default(cuid())
+  masterCourseId  String
+  teacherId       String
+  semesterId      String
   maxStudents     Int?
   price           Float         @default(0)
   priceType       PriceType     @default(ONE_TIME)
@@ -613,6 +634,7 @@ model CourseOffering {
 
   masterCourse      MasterCourse       @relation(fields: [masterCourseId], references: [id], onDelete: Restrict)
   teacher           Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  semester          Semester           @relation(fields: [semesterId], references: [id], onDelete: Restrict)
   enrollments       CourseEnrollment[]
   sessions          CourseOfferingSession[]
   exams             CourseOfferingExam[]
@@ -621,16 +643,12 @@ model CourseOffering {
   announcements     Announcement[]     @relation("CourseOfferingAnnouncements")
 }
 
-// ProgramOffering - Teacher creates this, links to MasterProgram
+// ProgramOffering - Teacher creates this, links to MasterProgram + Semester
 model ProgramOffering {
   id              String        @id @default(cuid())
   masterProgramId String
   teacherId       String
-  term            String        // e.g., "Spring 2025"
-  startDate       DateTime
-  endDate         DateTime
-  enrollmentStart DateTime?
-  enrollmentEnd   DateTime?
+  semesterId      String
   maxStudents     Int?
   price           Float         @default(0)
   priceType       PriceType     @default(ONE_TIME)
@@ -643,6 +661,7 @@ model ProgramOffering {
 
   masterProgram     MasterProgram      @relation(fields: [masterProgramId], references: [id], onDelete: Restrict)
   teacher           Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  semester          Semester           @relation(fields: [semesterId], references: [id], onDelete: Restrict)
   enrollments       ProgramOfferingEnrollment[]
   sessions          ProgramOfferingSession[]
   exams             ProgramOfferingExam[]
