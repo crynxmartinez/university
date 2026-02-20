@@ -9,7 +9,7 @@ import { getUpcomingProgramSessions, getAllProgramSessions, joinProgramSession }
 import { getMyNotes, saveNote, deleteNote } from '../../api/notes'
 import { markJoinAttendance } from '../../api/attendance'
 import { getStudentGrades, calculateAllGrades } from '../../api/grades'
-import { getStudentCertificates, getCertificateDownloadUrl } from '../../api/certificates'
+import { getMyCertificates } from '../../api/certificates'
 import { useToast, ConfirmModal } from '../../components/Toast'
 import SessionCalendar from '../../components/SessionCalendar'
 import axios from 'axios'
@@ -155,6 +155,17 @@ export default function StudentDashboard() {
       setLoading(false)
     }
   }
+
+  // Auto-load certificates when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'certificates' && certificates.length === 0) {
+      setLoadingCertificates(true)
+      getMyCertificates()
+        .then(certs => setCertificates(certs))
+        .catch(err => console.error('Failed to load certificates:', err))
+        .finally(() => setLoadingCertificates(false))
+    }
+  }, [activeTab])
 
   const handleDeleteNote = async () => {
     if (!deleteNoteConfirm) return
@@ -1144,11 +1155,7 @@ export default function StudentDashboard() {
                   onClick={async () => {
                     setLoadingCertificates(true)
                     try {
-                      const studentData = JSON.parse(localStorage.getItem('user'))
-                      const student = await axios.get(`${API_URL}/users/me`, {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                      })
-                      const certs = await getStudentCertificates(student.data.student.id)
+                      const certs = await getMyCertificates()
                       setCertificates(certs)
                     } catch (error) {
                       console.error('Error fetching certificates:', error)
@@ -1188,10 +1195,13 @@ export default function StudentDashboard() {
                             </span>
                           </div>
                           <h3 className="font-bold text-lg text-gray-900 mb-1">
-                            {cert.course?.name || cert.program?.name}
+                            {cert.courseOffering?.masterCourse?.title || cert.programOffering?.masterProgram?.title || 'Certificate'}
                           </h3>
                           <p className="text-sm text-gray-500">
-                            {cert.course ? 'Course Certificate' : 'Program Certificate'}
+                            {cert.courseOffering ? 'Course Certificate' : 'Program Certificate'}
+                            {(cert.courseOffering?.semester || cert.programOffering?.semester) && (
+                              <span className="ml-1 text-gray-400">· {(cert.courseOffering?.semester || cert.programOffering?.semester)?.name}</span>
+                            )}
                           </p>
                         </div>
                         {cert.grade && (
@@ -1233,13 +1243,13 @@ export default function StudentDashboard() {
 
                       <div className="pt-4 border-t flex items-center gap-3">
                         <a
-                          href={getCertificateDownloadUrl(cert.certificateUrl)}
+                          href={cert.certificateUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white rounded-lg font-medium transition"
                         >
                           <Download className="w-4 h-4" />
-                          Download PDF
+                          Download / View
                         </a>
                         <button
                           onClick={() => {

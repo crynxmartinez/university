@@ -7,327 +7,169 @@ const router = express.Router()
 const prisma = new PrismaClient()
 
 // Issue a certificate (Teacher/Admin only)
+// Body: { studentId, courseOfferingId?, programOfferingId?, certificateUrl, completionDate? }
 router.post('/issue', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const { studentId, courseId, programId, completionDate, grade, gpa, certificateUrl } = req.body
+    const { studentId, courseOfferingId, programOfferingId, certificateUrl, completionDate } = req.body
 
-    // Validate input
-    if (!studentId || (!courseId && !programId)) {
-      return res.status(400).json({ error: 'Student ID and either Course ID or Program ID are required' })
+    if (!studentId || (!courseOfferingId && !programOfferingId)) {
+      return res.status(400).json({ error: 'studentId and either courseOfferingId or programOfferingId are required' })
     }
-
     if (!certificateUrl) {
-      return res.status(400).json({ error: 'Certificate download URL is required' })
+      return res.status(400).json({ error: 'certificateUrl (download link) is required' })
     }
 
-    // Check if certificate already exists
-    const existingCertificate = await prisma.certificate.findFirst({
+    // Check duplicate
+    const existing = await prisma.certificate.findFirst({
       where: {
         studentId,
-        ...(courseId ? { courseId } : { programId }),
+        ...(courseOfferingId ? { courseOfferingId } : { programOfferingId }),
         status: 'ACTIVE'
       }
     })
-
-    if (existingCertificate) {
-      return res.status(400).json({ error: 'Certificate already issued for this student and course/program' })
+    if (existing) {
+      return res.status(400).json({ error: 'Certificate already issued for this student and offering' })
     }
 
-    // Get student details
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      include: {
-        user: {
-          include: {
-            profile: true
-          }
-        }
-      }
-    })
+    const student = await prisma.student.findUnique({ where: { id: studentId } })
+    if (!student) return res.status(404).json({ error: 'Student not found' })
 
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found' })
-    }
-
-    // Get course or program details
-    let courseName = null
-    let programName = null
-
-    if (courseId) {
-      const course = await prisma.course.findUnique({
-        where: { id: courseId }
-      })
-      if (!course) {
-        return res.status(404).json({ error: 'Course not found' })
-      }
-      courseName = course.name
-    }
-
-    if (programId) {
-      const program = await prisma.program.findUnique({
-        where: { id: programId }
-      })
-      if (!program) {
-        return res.status(404).json({ error: 'Program not found' })
-      }
-      programName = program.name
-    }
-
-    // Generate certificate number
     const certificateNumber = generateCertificateNumber()
 
-    // Get issuer details
-    const issuer = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: { profile: true }
-    })
-
-    const issuerName = issuer.profile 
-      ? `${issuer.profile.firstName} ${issuer.profile.lastName}`
-      : issuer.email
-
-    // Create certificate record with provided download URL
     const certificate = await prisma.certificate.create({
       data: {
         certificateNumber,
         studentId,
-        courseId: courseId || null,
-        programId: programId || null,
+        courseOfferingId: courseOfferingId || null,
+        programOfferingId: programOfferingId || null,
         completionDate: completionDate ? new Date(completionDate) : new Date(),
-        grade: grade || null,
-        gpa: gpa || null,
-        certificateUrl, // Store the external download URL provided by teacher
-        issuedById: req.user.userId,
+        certificateUrl,
+        issuedById: req.user.id,
         status: 'ACTIVE'
       },
       include: {
-        student: {
-          include: {
-            user: {
-              include: {
-                profile: true
-              }
-            }
-          }
-        },
-        course: true,
-        program: true,
-        issuedBy: {
-          include: {
-            profile: true
-          }
-        }
+        student: { include: { user: { include: { profile: true } } } },
+        courseOffering: { include: { masterCourse: true, semester: true } },
+        programOffering: { include: { masterProgram: true, semester: true } },
+        issuedBy: { include: { profile: true } }
       }
     })
 
-    res.json({
-      message: 'Certificate issued successfully',
-      certificate
-    })
-
+    res.json({ message: 'Certificate issued successfully', certificate })
   } catch (error) {
     console.error('Error issuing certificate:', error)
-    res.status(500).json({ error: 'Failed to issue certificate' })
+    res.status(500).json({ error: error.message })
   }
 })
 
-// Get student's certificates
+// GET my certificates (student calls this for themselves)
+router.get('/mine', authenticateToken, async (req, res) => {
+  try {
+    const student = await prisma.student.findUnique({ where: { userId: req.user.id } })
+    if (!student) return res.status(404).json({ error: 'Student profile not found' })
+
+    const certificates = await prisma.certificate.findMany({
+      where: { studentId: student.id, status: 'ACTIVE' },
+      include: {
+        courseOffering: { include: { masterCourse: true, semester: true } },
+        programOffering: { include: { masterProgram: true, semester: true } },
+        issuedBy: { include: { profile: true } }
+      },
+      orderBy: { issuedDate: 'desc' }
+    })
+    res.json(certificates)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// GET certificates for a specific offering (teacher views who has certs in their offering)
+router.get('/offering/:offeringId', authenticateToken, async (req, res) => {
+  try {
+    const { offeringId } = req.params
+    const { type } = req.query // 'course' or 'program'
+
+    const where = type === 'program'
+      ? { programOfferingId: offeringId }
+      : { courseOfferingId: offeringId }
+
+    const certificates = await prisma.certificate.findMany({
+      where,
+      include: {
+        student: { include: { user: { include: { profile: true } } } },
+        issuedBy: { include: { profile: true } }
+      },
+      orderBy: { issuedDate: 'desc' }
+    })
+    res.json(certificates)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// GET student's certificates by studentId (admin/teacher)
 router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params
 
-    // Check authorization - students can only view their own certificates
     if (req.user.role === 'STUDENT') {
-      const student = await prisma.student.findUnique({
-        where: { userId: req.user.userId }
-      })
-      if (!student || student.id !== studentId) {
-        return res.status(403).json({ error: 'Unauthorized' })
-      }
+      const student = await prisma.student.findUnique({ where: { userId: req.user.id } })
+      if (!student || student.id !== studentId) return res.status(403).json({ error: 'Unauthorized' })
     }
 
     const certificates = await prisma.certificate.findMany({
-      where: {
-        studentId,
-        status: 'ACTIVE'
-      },
+      where: { studentId, status: 'ACTIVE' },
       include: {
-        course: true,
-        program: true,
-        issuedBy: {
-          include: {
-            profile: true
-          }
-        }
+        courseOffering: { include: { masterCourse: true, semester: true } },
+        programOffering: { include: { masterProgram: true, semester: true } },
+        issuedBy: { include: { profile: true } }
       },
-      orderBy: {
-        issuedDate: 'desc'
-      }
+      orderBy: { issuedDate: 'desc' }
     })
-
     res.json(certificates)
-
   } catch (error) {
-    console.error('Error fetching certificates:', error)
-    res.status(500).json({ error: 'Failed to fetch certificates' })
+    res.status(500).json({ error: error.message })
   }
 })
 
-// Get specific certificate
+// GET specific certificate
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params
-
     const certificate = await prisma.certificate.findUnique({
-      where: { id },
+      where: { id: req.params.id },
       include: {
-        student: {
-          include: {
-            user: {
-              include: {
-                profile: true
-              }
-            }
-          }
-        },
-        course: true,
-        program: true,
-        issuedBy: {
-          include: {
-            profile: true
-          }
-        }
+        student: { include: { user: { include: { profile: true } } } },
+        courseOffering: { include: { masterCourse: true, semester: true } },
+        programOffering: { include: { masterProgram: true, semester: true } },
+        issuedBy: { include: { profile: true } }
       }
     })
+    if (!certificate) return res.status(404).json({ error: 'Certificate not found' })
 
-    if (!certificate) {
-      return res.status(404).json({ error: 'Certificate not found' })
-    }
-
-    // Check authorization
     if (req.user.role === 'STUDENT') {
-      const student = await prisma.student.findUnique({
-        where: { userId: req.user.userId }
-      })
-      if (!student || certificate.studentId !== student.id) {
-        return res.status(403).json({ error: 'Unauthorized' })
-      }
+      const student = await prisma.student.findUnique({ where: { userId: req.user.id } })
+      if (!student || certificate.studentId !== student.id) return res.status(403).json({ error: 'Unauthorized' })
     }
 
     res.json(certificate)
-
   } catch (error) {
-    console.error('Error fetching certificate:', error)
-    res.status(500).json({ error: 'Failed to fetch certificate' })
+    res.status(500).json({ error: error.message })
   }
 })
 
-// Verify certificate by certificate number (public endpoint)
-router.get('/verify/:certificateNumber', async (req, res) => {
+// DELETE / revoke certificate (admin or issuing teacher)
+router.delete('/:id', authenticateToken, authorizeRoles(['TEACHER', 'SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
   try {
-    const { certificateNumber } = req.params
+    const certificate = await prisma.certificate.findUnique({ where: { id: req.params.id } })
+    if (!certificate) return res.status(404).json({ error: 'Certificate not found' })
 
-    const certificate = await prisma.certificate.findUnique({
-      where: { certificateNumber },
-      include: {
-        student: {
-          include: {
-            user: {
-              include: {
-                profile: true
-              }
-            }
-          }
-        },
-        course: true,
-        program: true,
-        issuedBy: {
-          include: {
-            profile: true
-          }
-        }
-      }
+    await prisma.certificate.update({
+      where: { id: req.params.id },
+      data: { status: 'REVOKED', revokedAt: new Date(), revokedReason: req.body.reason || 'Revoked by issuer' }
     })
-
-    if (!certificate) {
-      return res.status(404).json({ 
-        valid: false,
-        error: 'Certificate not found' 
-      })
-    }
-
-    if (certificate.status !== 'ACTIVE') {
-      return res.status(200).json({
-        valid: false,
-        status: certificate.status,
-        revokedAt: certificate.revokedAt,
-        revokedReason: certificate.revokedReason
-      })
-    }
-
-    const studentName = certificate.student.user.profile
-      ? `${certificate.student.user.profile.firstName} ${certificate.student.user.profile.lastName}`
-      : certificate.student.user.email
-
-    const issuerName = certificate.issuedBy.profile
-      ? `${certificate.issuedBy.profile.firstName} ${certificate.issuedBy.profile.lastName}`
-      : certificate.issuedBy.email
-
-    res.json({
-      valid: true,
-      certificateNumber: certificate.certificateNumber,
-      studentName,
-      courseName: certificate.course?.name,
-      programName: certificate.program?.name,
-      completionDate: certificate.completionDate,
-      issuedDate: certificate.issuedDate,
-      grade: certificate.grade,
-      gpa: certificate.gpa,
-      issuedBy: issuerName
-    })
-
+    res.json({ message: 'Certificate revoked' })
   } catch (error) {
-    console.error('Error verifying certificate:', error)
-    res.status(500).json({ error: 'Failed to verify certificate' })
-  }
-})
-
-// Revoke certificate (Admin only)
-router.put('/:id/revoke', authenticateToken, authorizeRoles(['SUPER_ADMIN', 'REGISTRAR']), async (req, res) => {
-  try {
-    const { id } = req.params
-    const { reason } = req.body
-
-    const certificate = await prisma.certificate.update({
-      where: { id },
-      data: {
-        status: 'REVOKED',
-        revokedAt: new Date(),
-        revokedReason: reason || 'No reason provided'
-      },
-      include: {
-        student: {
-          include: {
-            user: {
-              include: {
-                profile: true
-              }
-            }
-          }
-        },
-        course: true,
-        program: true
-      }
-    })
-
-    res.json({
-      message: 'Certificate revoked successfully',
-      certificate
-    })
-
-  } catch (error) {
-    console.error('Error revoking certificate:', error)
-    res.status(500).json({ error: 'Failed to revoke certificate' })
+    res.status(500).json({ error: error.message })
   }
 })
 
