@@ -1,4 +1,4 @@
-import { API_URL } from './config'
+import API_URL from './config'
 
 const getHeaders = () => ({
   'Content-Type': 'application/json',
@@ -6,19 +6,19 @@ const getHeaders = () => ({
 })
 
 export const getSemesters = async () => {
-  const res = await fetch(`${API_URL}/api/semesters`, { headers: getHeaders() })
+  const res = await fetch(`${API_URL}/semesters`, { headers: getHeaders() })
   if (!res.ok) throw new Error((await res.json()).error)
   return res.json()
 }
 
 export const getSemester = async (id) => {
-  const res = await fetch(`${API_URL}/api/semesters/${id}`, { headers: getHeaders() })
+  const res = await fetch(`${API_URL}/semesters/${id}`, { headers: getHeaders() })
   if (!res.ok) throw new Error((await res.json()).error)
   return res.json()
 }
 
 export const createSemester = async (data) => {
-  const res = await fetch(`${API_URL}/api/semesters`, {
+  const res = await fetch(`${API_URL}/semesters`, {
     method: 'POST', headers: getHeaders(), body: JSON.stringify(data)
   })
   if (!res.ok) throw new Error((await res.json()).error)
@@ -26,7 +26,7 @@ export const createSemester = async (data) => {
 }
 
 export const updateSemester = async (id, data) => {
-  const res = await fetch(`${API_URL}/api/semesters/${id}`, {
+  const res = await fetch(`${API_URL}/semesters/${id}`, {
     method: 'PUT', headers: getHeaders(), body: JSON.stringify(data)
   })
   if (!res.ok) throw new Error((await res.json()).error)
@@ -34,7 +34,7 @@ export const updateSemester = async (id, data) => {
 }
 
 export const deleteSemester = async (id) => {
-  const res = await fetch(`${API_URL}/api/semesters/${id}`, {
+  const res = await fetch(`${API_URL}/semesters/${id}`, {
     method: 'DELETE', headers: getHeaders()
   })
   if (!res.ok) throw new Error((await res.json()).error)
