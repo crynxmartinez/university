@@ -9,6 +9,8 @@ import { getCourseStudentGrades } from '../../api/grades'
 import { issueCertificate } from '../../api/certificates'
 import { useToast } from '../../components/Toast'
 import SessionCalendar from '../../components/SessionCalendar'
+import CreateCourseOffering from './CreateCourseOffering'
+import CreateProgramOffering from './CreateProgramOffering'
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -16,6 +18,7 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [offeringsView, setOfferingsView] = useState('list')
   const navigate = useNavigate()
 
   // Analytics state
@@ -306,7 +309,7 @@ export default function TeacherDashboard() {
             {menuItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => { setActiveTab(item.id); setOfferingsView('list') }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                     activeTab === item.id 
                       ? 'bg-[#f7941d] text-white' 
@@ -520,41 +523,55 @@ export default function TeacherDashboard() {
 
           {activeTab === 'offerings' && (
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">My Offerings</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Create course or program offerings from master templates. Admin will activate them.</p>
-                </div>
-                <div className="flex gap-3">
-                  <Link
-                    to="/teacher/course-offerings/create"
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    New Course Offering
-                  </Link>
-                  <Link
-                    to="/teacher/program-offerings/create"
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    New Program Offering
-                  </Link>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <BookOpen size={48} className="text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg font-medium">Your offerings will appear here</p>
-                <p className="text-gray-400 text-sm mt-1">Create a course or program offering to get started. Admin will review and activate it.</p>
-                <div className="flex gap-3 justify-center mt-6">
-                  <Link to="/teacher/course-offerings/create" className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition text-sm">
-                    <Plus size={16} /> New Course Offering
-                  </Link>
-                  <Link to="/teacher/program-offerings/create" className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm">
-                    <Plus size={16} /> New Program Offering
-                  </Link>
-                </div>
-              </div>
+              {offeringsView === 'list' && (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">My Offerings</h2>
+                      <p className="text-sm text-gray-500 mt-0.5">Create course or program offerings from master templates. Admin will activate them.</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setOfferingsView('create-course')}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm"
+                      >
+                        <Plus className="w-4 h-4" /> New Course Offering
+                      </button>
+                      <button
+                        onClick={() => setOfferingsView('create-program')}
+                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition text-sm"
+                      >
+                        <Plus className="w-4 h-4" /> New Program Offering
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                    <BookOpen size={48} className="text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg font-medium">Your offerings will appear here</p>
+                    <p className="text-gray-400 text-sm mt-1">Create a course or program offering to get started. Admin will review and activate it.</p>
+                    <div className="flex gap-3 justify-center mt-6">
+                      <button onClick={() => setOfferingsView('create-course')} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition text-sm">
+                        <Plus size={16} /> New Course Offering
+                      </button>
+                      <button onClick={() => setOfferingsView('create-program')} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm">
+                        <Plus size={16} /> New Program Offering
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+              {offeringsView === 'create-course' && (
+                <CreateCourseOffering
+                  onBack={() => setOfferingsView('list')}
+                  onSuccess={() => setOfferingsView('list')}
+                />
+              )}
+              {offeringsView === 'create-program' && (
+                <CreateProgramOffering
+                  onBack={() => setOfferingsView('list')}
+                  onSuccess={() => setOfferingsView('list')}
+                />
+              )}
             </div>
           )}
 

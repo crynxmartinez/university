@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Calendar, Users, Info } from 'lucide-react'
 import { getMasterCourses } from '../../api/masterCourses'
 import { createCourseOffering } from '../../api/courseOfferings'
 
-export default function CreateCourseOffering() {
-  const navigate = useNavigate()
+export default function CreateCourseOffering({ onBack, onSuccess }) {
   const [masterCourses, setMasterCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -48,7 +46,7 @@ export default function CreateCourseOffering() {
         meetingLink: form.meetingLink || null,
         location: form.location || null
       })
-      navigate('/teacher')
+      onSuccess && onSuccess()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -59,17 +57,16 @@ export default function CreateCourseOffering() {
   const selectedCourse = masterCourses.find(c => c.id === form.masterCourseId)
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center py-20">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
-        <Link to="/teacher" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
-          <ArrowLeft size={16} /> Back to Dashboard
-        </Link>
+    <div>
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
+          <ArrowLeft size={16} /> Back to My Offerings
+        </button>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-8">
           <div className="mb-6">
@@ -108,7 +105,6 @@ export default function CreateCourseOffering() {
               {selectedCourse && (
                 <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
                   <strong>{selectedCourse.code}:</strong> {selectedCourse.description || selectedCourse.title}
-                  {selectedCourse.credits > 0 && <span className="ml-2 text-emerald-500">· {selectedCourse.credits} credits</span>}
                 </div>
               )}
             </div>
@@ -220,9 +216,9 @@ export default function CreateCourseOffering() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Link to="/teacher" className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm text-center">
+              <button type="button" onClick={onBack} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm">
                 Cancel
-              </Link>
+              </button>
               <button
                 type="submit"
                 disabled={saving}
@@ -234,7 +230,6 @@ export default function CreateCourseOffering() {
             </div>
           </form>
         </div>
-      </div>
     </div>
   )
 }
