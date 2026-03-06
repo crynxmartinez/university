@@ -1,12 +1,14 @@
 import API_URL from './config'
 
 /**
- * Shared API client with consistent error handling, auth, and retry logic
- * Use this instead of raw fetch/axios in all API files
+ * Shared API client with consistent error handling, auth, retry logic, and refresh tokens
+ * Phase 5.2: Added automatic token refresh on 401
  */
 
 const MAX_RETRIES = 1
 const RETRY_DELAY = 1500 // 1.5 seconds
+let isRefreshing = false
+let refreshPromise = null
 
 /**
  * Get auth headers with token from localStorage
@@ -16,6 +18,39 @@ function getAuthHeaders() {
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
+  }
+}
+
+/**
+ * Phase 5.2: Refresh the access token using refresh token
+ */
+async function refreshAccessToken() {
+  const refreshToken = localStorage.getItem('refreshToken')
+  if (!refreshToken) {
+    return false
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    })
+
+    if (!response.ok) {
+      // Refresh token invalid or expired
+      return false
+    }
+
+    const data = await response.json()
+    localStorage.setItem('token', data.token)
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user))
+    }
+    return true
+  } catch (error) {
+    console.error('Token refresh failed:', error)
+    return false
   }
 }
 
@@ -42,10 +77,12 @@ function isRetryableError(error, response) {
 }
 
 /**
- * Handle 401 Unauthorized - redirect to login
+ * Handle 401 Unauthorized - try refresh first, then redirect to login
+ * Phase 5.2: Added token refresh attempt before logout
  */
 function handleUnauthorized() {
   localStorage.removeItem('token')
+  localStorage.removeItem('refreshToken')
   localStorage.removeItem('user')
   // Only redirect if not already on login page
   if (!window.location.pathname.includes('/login')) {
@@ -107,8 +144,23 @@ async function apiRequest(endpoint, options = {}, retryCount = 0) {
     return apiRequest(endpoint, options, retryCount + 1)
   }
 
-  // Handle 401 Unauthorized
+  // Handle 401 Unauthorized - Phase 5.2: Try refresh token first
   if (response.status === 401) {
+    // Avoid multiple simultaneous refresh attempts
+    if (!isRefreshing) {
+      isRefreshing = true
+      refreshPromise = refreshAccessToken()
+    }
+    
+    const refreshed = await refreshPromise
+    isRefreshing = false
+    
+    if (refreshed) {
+      // Retry the original request with new token
+      return apiRequest(endpoint, options, retryCount)
+    }
+    
+    // Refresh failed, logout
     handleUnauthorized()
     throw new ApiError('Session expired. Please log in again.', 401, 'UNAUTHORIZED')
   }

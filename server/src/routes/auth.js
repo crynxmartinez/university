@@ -2,6 +2,9 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../lib/prisma.js'
+import { authLimiter, signupLimiter, passwordLimiter } from '../middleware/rateLimiter.js'
+import { isAccountLocked, recordFailedAttempt, clearFailedAttempts } from '../utils/loginAttempts.js'
+import { generateRefreshToken, validateRefreshToken, revokeRefreshToken, revokeAllUserTokens } from '../utils/refreshTokens.js'
 
 const router = express.Router()
 
@@ -30,7 +33,8 @@ async function generateStudentId() {
 }
 
 // POST /api/auth/signup - Student self-registration
-router.post('/signup', async (req, res) => {
+// Phase 5.1: Rate limited to 3 signups per hour per IP
+router.post('/signup', signupLimiter, async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body
 
@@ -94,12 +98,24 @@ router.post('/signup', async (req, res) => {
 })
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+// Phase 5.1: Rate limited to 5 attempts per minute per IP
+// Phase 5.4: Account lockout after 5 failed attempts
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { userId, password } = req.body
 
     if (!userId || !password) {
       return res.status(400).json({ error: 'User ID and password are required' })
+    }
+
+    // Phase 5.4: Check if account is locked
+    const lockStatus = isAccountLocked(userId)
+    if (lockStatus.locked) {
+      return res.status(423).json({ 
+        error: `Account temporarily locked. Try again in ${lockStatus.remainingMinutes} minute(s).`,
+        code: 'ACCOUNT_LOCKED',
+        remainingMinutes: lockStatus.remainingMinutes
+      })
     }
 
     // Find user by userId
@@ -111,24 +127,48 @@ router.post('/login', async (req, res) => {
     })
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' })
+      // Record failed attempt even for non-existent users (prevents enumeration)
+      const attemptResult = recordFailedAttempt(userId)
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        attemptsRemaining: attemptResult.attemptsRemaining
+      })
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' })
+      // Phase 5.4: Record failed attempt
+      const attemptResult = recordFailedAttempt(userId)
+      if (attemptResult.isLocked) {
+        return res.status(423).json({ 
+          error: 'Account locked due to too many failed attempts. Try again in 15 minutes.',
+          code: 'ACCOUNT_LOCKED'
+        })
+      }
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        attemptsRemaining: attemptResult.attemptsRemaining
+      })
     }
 
-    // Generate JWT token
+    // Phase 5.4: Clear failed attempts on successful login
+    clearFailedAttempts(userId)
+
+    // Generate JWT access token (short-lived: 15 minutes)
     const token = jwt.sign(
       { id: user.id, userId: user.userId, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '15m' }
     )
+
+    // Phase 5.2: Generate refresh token (long-lived: 7 days)
+    const refreshTokenData = generateRefreshToken(user.id)
 
     res.json({
       token,
+      refreshToken: refreshTokenData.token,
+      expiresIn: 15 * 60, // 15 minutes in seconds
       user: {
         id: user.id,
         userId: user.userId,
@@ -183,7 +223,8 @@ router.get('/me', async (req, res) => {
 })
 
 // POST /api/auth/change-password - Change password (for first login)
-router.post('/change-password', async (req, res) => {
+// Phase 5.1: Rate limited to 3 attempts per minute per IP
+router.post('/change-password', passwordLimiter, async (req, res) => {
   try {
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -274,6 +315,94 @@ router.post('/seed', async (req, res) => {
   } catch (error) {
     console.error('Seed error:', error)
     res.status(500).json({ error: 'Failed to seed database', details: error.message })
+  }
+})
+
+// Phase 5.2: POST /api/auth/refresh - Exchange refresh token for new access token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' })
+    }
+
+    // Validate refresh token
+    const validation = validateRefreshToken(refreshToken)
+    if (!validation.valid) {
+      return res.status(401).json({ error: validation.error, code: 'INVALID_REFRESH_TOKEN' })
+    }
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: validation.userId },
+      include: { profile: true }
+    })
+
+    if (!user) {
+      revokeRefreshToken(refreshToken)
+      return res.status(401).json({ error: 'User not found', code: 'USER_NOT_FOUND' })
+    }
+
+    // Generate new access token
+    const token = jwt.sign(
+      { id: user.id, userId: user.userId, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    )
+
+    res.json({
+      token,
+      expiresIn: 15 * 60,
+      user: {
+        id: user.id,
+        userId: user.userId,
+        email: user.email,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword,
+        profileComplete: user.profileComplete,
+        profile: user.profile
+      }
+    })
+  } catch (error) {
+    console.error('Refresh token error:', error)
+    res.status(500).json({ error: 'Failed to refresh token' })
+  }
+})
+
+// Phase 5.2: POST /api/auth/logout - Revoke refresh token
+router.post('/logout', async (req, res) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (refreshToken) {
+      revokeRefreshToken(refreshToken)
+    }
+
+    res.json({ message: 'Logged out successfully' })
+  } catch (error) {
+    console.error('Logout error:', error)
+    res.status(500).json({ error: 'Logout failed' })
+  }
+})
+
+// Phase 5.2: POST /api/auth/logout-all - Revoke all refresh tokens for user
+router.post('/logout-all', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    const count = revokeAllUserTokens(decoded.id)
+
+    res.json({ message: `Logged out from all devices. ${count} session(s) revoked.` })
+  } catch (error) {
+    console.error('Logout all error:', error)
+    res.status(500).json({ error: 'Logout failed' })
   }
 })
 

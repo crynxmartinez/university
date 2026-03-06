@@ -29,6 +29,7 @@ import semestersRoutes from './routes/semesters.js'
 import oneOnOneRoutes from './routes/oneOnOne.js'
 import { globalErrorHandler } from './utils/errorHandler.js'
 import { runStartupValidations } from './utils/startupValidator.js'
+import { generalLimiter } from './middleware/rateLimiter.js'
 
 dotenv.config()
 
@@ -70,7 +71,12 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use(express.json())
+// Phase 5.3: Request body size limits to prevent large payload attacks
+app.use(express.json({ limit: '1mb' }))
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
+
+// Phase 5.1: General rate limiting - 100 requests per minute per IP
+app.use('/api', generalLimiter)
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -103,9 +109,30 @@ app.use('/api/one-on-one', oneOnOneRoutes)
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Assalaam University API' })
+// Phase 5.5: Health check with database connectivity verification
+app.get('/api/health', async (req, res) => {
+  const startTime = Date.now()
+  try {
+    // Verify database connectivity
+    await prisma.$queryRaw`SELECT 1`
+    const responseTime = Date.now() - startTime
+    res.json({ 
+      status: 'ok', 
+      message: 'Assalaam University API',
+      database: 'connected',
+      responseTimeMs: responseTime,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    const responseTime = Date.now() - startTime
+    res.status(503).json({ 
+      status: 'error', 
+      message: 'Database connection failed',
+      database: 'disconnected',
+      responseTimeMs: responseTime,
+      timestamp: new Date().toISOString()
+    })
+  }
 })
 
 // 404 handler for unknown routes
