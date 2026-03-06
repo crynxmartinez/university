@@ -46,28 +46,32 @@ async function main() {
         }
       },
       registrar: {
-        create: {}
+        create: {
+          registrarId: 'REG-20250001'
+        }
       }
     }
   })
 
   // Initialize ID sequences
+  const currentYear = new Date().getFullYear()
+
   await prisma.idSequence.upsert({
-    where: { role: 'TEACHER' },
+    where: { type_year: { type: 'TEACHER', year: currentYear } },
     update: {},
-    create: { role: 'TEACHER', lastNumber: 0 }
+    create: { type: 'TEACHER', year: currentYear, lastNumber: 0 }
   })
 
   await prisma.idSequence.upsert({
-    where: { role: 'STUDENT' },
+    where: { type_year: { type: 'STUDENT', year: currentYear } },
     update: {},
-    create: { role: 'STUDENT', lastNumber: 0 }
+    create: { type: 'STUDENT', year: currentYear, lastNumber: 0 }
   })
 
   await prisma.idSequence.upsert({
-    where: { role: 'REGISTRAR' },
+    where: { type_year: { type: 'REGISTRAR', year: currentYear } },
     update: {},
-    create: { role: 'REGISTRAR', lastNumber: 1 }
+    create: { type: 'REGISTRAR', year: currentYear, lastNumber: 1 }
   })
 
   console.log('Super Admin created:', superAdmin.userId)
