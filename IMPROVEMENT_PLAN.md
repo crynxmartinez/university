@@ -165,6 +165,38 @@ This is not a code change — it's a process rule. But it's the most important r
 
 ---
 
+### 1.13 Clean Unused and Dead Code
+
+**Problem:** There are files in the codebase that were created but never connected to the rest of the application. They sit there adding confusion, inflating the project size, and making it harder to understand what's actually in use. Dead code is dangerous because future developers (or even you, months later) will assume it works and try to build on top of it, only to find it was never wired up.
+
+**Unused Frontend API Files (not imported by any page or component):**
+
+- `client/src/api/analytics.js` — has functions for tracking events, but no page ever calls them. The backend route exists, but the frontend never sends analytics. Either connect it to the app or remove it.
+- `client/src/api/messaging.js` — has functions for conversations and messages, but no page imports it. The messaging UI in the dashboards likely uses inline fetch calls or a different pattern instead of this file.
+
+**Unused Frontend Components:**
+
+- `client/src/components/RequestOneOnOneModal.jsx` — this modal was built for students to request 1-on-1 sessions, but no page ever imports it. The student dashboard likely has its own inline implementation instead. Either the dashboard should import this component, or this file should be removed to avoid having two versions of the same thing.
+
+**Unused Utility Files:**
+
+- `client/src/utils/dateUtils.js` — contains date formatting helper functions, but zero files in the entire project import it. Every page that formats dates is doing it inline with its own logic, which means date formatting is inconsistent across the app. Either adopt this utility everywhere or remove it and standardize date formatting another way.
+
+**Backend Routes With No Frontend Consumer:**
+
+- `server/src/routes/announcements.js` — this route is registered in the server and handles creating/reading announcements, but no frontend page or API file ever calls it. The announcements feature was built on the backend but never connected to the UI.
+
+**What to do:**
+
+For each unused file, decide one of two things:
+
+1. **Connect it** — if the feature is wanted, wire the file into the app properly (import the component, call the API, use the utility)
+2. **Remove it** — if the feature isn't needed yet, delete the file entirely. It's in git history if you ever need it back. Dead code in the repo is worse than no code.
+
+Do not leave files that nothing imports. Every file should be reachable from `App.jsx` (frontend) or `index.js` (backend) through a chain of imports. If it's not reachable, it's dead weight.
+
+---
+
 ## Phase 2: Code Quality and Consistency
 
 These don't cause immediate failures but make the codebase harder to maintain, debug, and extend.
