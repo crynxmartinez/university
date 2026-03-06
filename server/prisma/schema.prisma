@@ -120,6 +120,8 @@ model User {
   masterCoursesCreated MasterCourse[] @relation("MasterCoursesCreated")
   masterProgramsCreated MasterProgram[] @relation("MasterProgramsCreated")
   semestersCreated     Semester[]     @relation("SemestersCreated")
+  paymentsUploaded     PaymentProof[] @relation("PaymentsUploaded")
+  paymentsReviewed     PaymentProof[] @relation("PaymentsReviewed")
 }
 
 // Profile - personal information
@@ -1386,4 +1388,29 @@ model OneOnOneRequest {
   @@index([scheduledAt])
   @@index([courseOfferingId])
   @@index([programOfferingId])
+}
+
+// Phase 6.2: Payment proof for GCash screenshots
+model PaymentProof {
+  id               String   @id @default(cuid())
+  enrollmentType   String   // 'course' or 'program'
+  enrollmentId     String   // ID of CourseEnrollment or ProgramOfferingEnrollment
+  imageUrl         String   // Vercel Blob URL
+  blobPath         String   // Path in Vercel Blob storage
+  originalFilename String?
+  fileSize         Int?     // Size in bytes
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewNotes      String?
+  uploadedById     String
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  uploadedBy User  @relation("PaymentsUploaded", fields: [uploadedById], references: [id])
+  reviewedBy User? @relation("PaymentsReviewed", fields: [reviewedById], references: [id])
+
+  @@index([uploadedById])
+  @@index([status])
+  @@index([enrollmentType, enrollmentId])
 }

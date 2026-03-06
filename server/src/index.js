@@ -27,6 +27,7 @@ import courseOfferingsRoutes from './routes/courseOfferings.js'
 import programOfferingsRoutes from './routes/programOfferings.js'
 import semestersRoutes from './routes/semesters.js'
 import oneOnOneRoutes from './routes/oneOnOne.js'
+import paymentsRoutes from './routes/payments.js'
 import { globalErrorHandler } from './utils/errorHandler.js'
 import { runStartupValidations } from './utils/startupValidator.js'
 import { generalLimiter } from './middleware/rateLimiter.js'
@@ -105,6 +106,7 @@ app.use('/api/course-offerings', courseOfferingsRoutes)
 app.use('/api/program-offerings', programOfferingsRoutes)
 app.use('/api/semesters', semestersRoutes)
 app.use('/api/one-on-one', oneOnOneRoutes)
+app.use('/api/payments', paymentsRoutes)
 
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))
