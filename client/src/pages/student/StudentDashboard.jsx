@@ -356,8 +356,19 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-[#1e3a5f] text-white flex flex-col transition-all duration-300 fixed h-full z-40`}>
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Hidden on mobile by default, shown when sidebarOpen is true */}
+      <aside className={`
+        bg-[#1e3a5f] text-white flex flex-col transition-all duration-300 fixed h-full z-50
+        ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0 lg:w-20'}
+      `}>
         <div className="p-4 border-b border-[#2d5a87]">
           <div className="flex items-center gap-3">
             <img 
@@ -446,8 +457,8 @@ export default function StudentDashboard() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+      {/* Main Content - Responsive margin */}
+      <div className="flex-1 lg:ml-20 transition-all duration-300">
         <header className="bg-white shadow-sm sticky top-0 z-30">
           <div className="flex justify-between items-center px-6 py-4">
             <div className="flex items-center gap-4">
@@ -464,7 +475,7 @@ export default function StudentDashboard() {
           </div>
         </header>
 
-        <main className="p-6">
+        <main className="p-4 md:p-6">
           <Suspense fallback={<TabLoader />}>
             {renderActiveTab()}
           </Suspense>
