@@ -23,14 +23,15 @@ import AdminMasterPrograms from './pages/admin/AdminMasterPrograms'
 import AdminMasterProgramDetail from './pages/admin/AdminMasterProgramDetail'
 import RegistrarDashboard from './pages/RegistrarDashboard'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
-import CreateCourse from './pages/teacher/CreateCourse'
+// Legacy teacher imports removed in Phase 4 cleanup:
+// import CreateCourse from './pages/teacher/CreateCourse'
+// import CreateModule from './pages/teacher/CreateModule'
+// import CreateLesson from './pages/teacher/CreateLesson'
+// import EnrollStudents from './pages/teacher/EnrollStudents'
+// import CourseDashboard from './pages/teacher/CourseDashboard'
+// import ExamBuilder from './pages/teacher/ExamBuilder'
 import CreateCourseOffering from './pages/teacher/CreateCourseOffering'
 import CreateProgramOffering from './pages/teacher/CreateProgramOffering'
-import CreateModule from './pages/teacher/CreateModule'
-import CreateLesson from './pages/teacher/CreateLesson'
-import EnrollStudents from './pages/teacher/EnrollStudents'
-import CourseDashboard from './pages/teacher/CourseDashboard'
-import ExamBuilder from './pages/teacher/ExamBuilder'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentCourseView from './pages/student/StudentCourseView'
 import StudentExam from './pages/student/StudentExam'
@@ -74,15 +75,9 @@ function App() {
         <Route path="/admin/master-programs/:id" element={<AdminMasterProgramDetail />} />
         <Route path="/registrar" element={<RegistrarDashboard />} />
         <Route path="/teacher" element={<TeacherDashboard />} />
-        <Route path="/teacher/courses/create" element={<CreateCourse />} />
+        {/* Legacy teacher routes removed in Phase 4 cleanup */}
         <Route path="/teacher/course-offerings/create" element={<CreateCourseOffering />} />
         <Route path="/teacher/program-offerings/create" element={<CreateProgramOffering />} />
-        <Route path="/teacher/courses/:id/dashboard" element={<CourseDashboard />} />
-        <Route path="/teacher/courses/:id" element={<CourseDashboard />} />
-        <Route path="/teacher/courses/:id/modules/create" element={<CreateModule />} />
-        <Route path="/teacher/courses/:id/modules/:moduleId/lessons/create" element={<CreateLesson />} />
-        <Route path="/teacher/courses/:id/students" element={<EnrollStudents />} />
-        <Route path="/teacher/courses/:id/exam/:examId" element={<ExamBuilder />} />
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/student/courses/:id" element={<StudentCourseView />} />
         <Route path="/student/courses/:id/exam/:examId" element={<StudentExam />} />

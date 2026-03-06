@@ -1,7 +1,8 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogOut, BookOpen, Users, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, MessageSquare, TrendingUp, X, Clock, Video, Radio, ExternalLink, AlertTriangle } from 'lucide-react'
-import { getCourses } from '../../api/courses'
+// Legacy import removed in Phase 4 cleanup:
+// import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
 import { getCourseStudentGrades } from '../../api/grades'
@@ -10,7 +11,8 @@ import { getProgramOfferings } from '../../api/programOfferings'
 
 // Lazy load tab components for better performance
 const DashboardTab = lazy(() => import('./tabs/DashboardTab'))
-const CoursesTab = lazy(() => import('./tabs/CoursesTab'))
+// Legacy tab removed in Phase 4 cleanup:
+// const CoursesTab = lazy(() => import('./tabs/CoursesTab'))
 const StudentsTab = lazy(() => import('./tabs/StudentsTab'))
 const OfferingsTab = lazy(() => import('./tabs/OfferingsTab'))
 const OneOnOneTab = lazy(() => import('./tabs/OneOnOneTab'))
@@ -28,7 +30,8 @@ const TabLoader = () => (
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
-  const [courses, setCourses] = useState([])
+  // Legacy state removed in Phase 4 cleanup:
+  // const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -79,20 +82,10 @@ export default function TeacherDashboard() {
     }
     
     setUser(userData)
-    fetchCourses()
+    // Legacy fetchCourses removed in Phase 4 cleanup
     fetchSchedule()
+    setLoading(false)
   }, [navigate])
-
-  const fetchCourses = async () => {
-    try {
-      const data = await getCourses()
-      setCourses(data)
-    } catch (error) {
-      console.error('Failed to fetch courses:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Fetch offerings when offerings tab is active
   useEffect(() => {
@@ -207,7 +200,6 @@ export default function TeacherDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'offerings', label: 'My Offerings', icon: BookOpen },
     { id: 'one-on-one', label: '1-on-1 Requests', icon: Users, badge: pendingCount },
-    { id: 'courses', label: 'Courses (Legacy)', icon: BookOpen },
     { id: 'students', label: 'Students', icon: GraduationCap },
     { id: 'schedule', label: 'Schedule', icon: Calendar, badge: todayCount },
     { id: 'grades', label: 'Grades', icon: TrendingUp },
@@ -226,7 +218,7 @@ export default function TeacherDashboard() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardTab courses={courses} setActiveTab={setActiveTab} />
+        return <DashboardTab setActiveTab={setActiveTab} />
       case 'offerings':
         return (
           <OfferingsTab
@@ -247,8 +239,7 @@ export default function TeacherDashboard() {
             fetchOneOnOneRequests={fetchOneOnOneRequests}
           />
         )
-      case 'courses':
-        return <CoursesTab courses={courses} loading={loading} />
+      // Legacy courses tab removed in Phase 4 cleanup
       case 'students':
         return (
           <StudentsTab
@@ -289,7 +280,7 @@ export default function TeacherDashboard() {
       case 'settings':
         return <SettingsTab />
       default:
-        return <DashboardTab courses={courses} setActiveTab={setActiveTab} />
+        return <DashboardTab setActiveTab={setActiveTab} />
     }
   }
 

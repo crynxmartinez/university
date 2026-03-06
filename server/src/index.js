@@ -5,9 +5,10 @@ import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import programRoutes from './routes/programs.js'
 import programEnrollmentRoutes from './routes/programEnrollments.js'
-import courseRoutes from './routes/courses.js'
-import moduleRoutes from './routes/modules.js'
-import lessonRoutes from './routes/lessons.js'
+// Legacy routes removed in Phase 4 cleanup:
+// import courseRoutes from './routes/courses.js'
+// import moduleRoutes from './routes/modules.js'
+// import lessonRoutes from './routes/lessons.js'
 import enrollmentRoutes from './routes/enrollments.js'
 import sessionRoutes from './routes/sessions.js'
 import noteRoutes from './routes/notes.js'
@@ -76,9 +77,10 @@ app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/programs', programRoutes)
 app.use('/api/program-enrollments', programEnrollmentRoutes)
-app.use('/api/courses', courseRoutes)
-app.use('/api/modules', moduleRoutes)
-app.use('/api/lessons', lessonRoutes)
+// Legacy routes removed in Phase 4 cleanup:
+// app.use('/api/courses', courseRoutes)
+// app.use('/api/modules', moduleRoutes)
+// app.use('/api/lessons', lessonRoutes)
 app.use('/api/enrollments', enrollmentRoutes)
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/notes', noteRoutes)
