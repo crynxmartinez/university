@@ -32,8 +32,32 @@ async function generateStudentId() {
   return `STU-${year}${String(updated.lastNumber).padStart(4, '0')}`
 }
 
-// POST /api/auth/signup - Student self-registration
-// Phase 5.1: Rate limited to 3 signups per hour per IP
+/**
+ * @swagger
+ * /auth/signup:
+ *   post:
+ *     summary: Student self-registration
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [firstName, lastName, email, password]
+ *             properties:
+ *               firstName: { type: string }
+ *               lastName: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string, minLength: 6 }
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email already exists
+ */
 router.post('/signup', signupLimiter, async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body
@@ -97,9 +121,30 @@ router.post('/signup', signupLimiter, async (req, res) => {
   }
 })
 
-// POST /api/auth/login
-// Phase 5.1: Rate limited to 5 attempts per minute per IP
-// Phase 5.4: Account lockout after 5 failed attempts
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: User login
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: Invalid credentials
+ *       423:
+ *         description: Account locked
+ */
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const { userId, password } = req.body
