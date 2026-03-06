@@ -228,8 +228,14 @@ router.post('/change-password', async (req, res) => {
 })
 
 // POST /api/auth/seed - Initialize admin accounts (one-time use)
+// SECURITY: This endpoint is disabled in production unless ALLOW_SEED=true
 router.post('/seed', async (req, res) => {
   try {
+    // Block seed endpoint in production unless explicitly allowed
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
+      return res.status(403).json({ error: 'Seed endpoint is disabled in production' })
+    }
+
     // Check if admin already exists
     const existingAdmin = await prisma.user.findUnique({
       where: { userId: 'ADMIN-001' }

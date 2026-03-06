@@ -6,10 +6,12 @@ import {
   getStudentGrades 
 } from '../utils/gradeCalculator.js'
 import prisma from '../lib/prisma.js'
+import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.get('/student/:studentId', async (req, res) => {
+// All grade routes require authentication
+router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params
     const grades = await getStudentGrades(studentId)
@@ -20,7 +22,7 @@ router.get('/student/:studentId', async (req, res) => {
   }
 })
 
-router.post('/calculate/course/:courseId', async (req, res) => {
+router.post('/calculate/course/:courseId', authenticateToken, async (req, res) => {
   try {
     const { courseId } = req.params
     const { studentId } = req.body
@@ -37,7 +39,7 @@ router.post('/calculate/course/:courseId', async (req, res) => {
   }
 })
 
-router.post('/calculate/program/:programId', async (req, res) => {
+router.post('/calculate/program/:programId', authenticateToken, async (req, res) => {
   try {
     const { programId } = req.params
     const { studentId } = req.body
@@ -54,7 +56,7 @@ router.post('/calculate/program/:programId', async (req, res) => {
   }
 })
 
-router.post('/calculate/all/:studentId', async (req, res) => {
+router.post('/calculate/all/:studentId', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params
     const result = await calculateAllStudentGrades(studentId)
@@ -65,7 +67,7 @@ router.post('/calculate/all/:studentId', async (req, res) => {
   }
 })
 
-router.get('/course/:courseId/students', async (req, res) => {
+router.get('/course/:courseId/students', authenticateToken, async (req, res) => {
   try {
     const { courseId } = req.params
     
@@ -107,7 +109,7 @@ router.get('/course/:courseId/students', async (req, res) => {
   }
 })
 
-router.get('/program/:programId/students', async (req, res) => {
+router.get('/program/:programId/students', authenticateToken, async (req, res) => {
   try {
     const { programId } = req.params
     

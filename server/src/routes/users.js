@@ -1,11 +1,15 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import prisma from '../lib/prisma.js'
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js'
 
 const router = express.Router()
 
+// All user management routes require authentication and admin/registrar role
+const adminAuth = [authenticateToken, authorizeRoles(['SUPER_ADMIN', 'REGISTRAR'])]
+
 // GET /api/users - Get all users with optional role filter
-router.get('/', async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
     const { role, search, page = 1, limit = 20 } = req.query
     
@@ -89,7 +93,7 @@ router.get('/', async (req, res) => {
 })
 
 // GET /api/users/:id - Get single user details
-router.get('/:id', async (req, res) => {
+router.get('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     
@@ -131,7 +135,7 @@ router.get('/:id', async (req, res) => {
 })
 
 // POST /api/users/create - Create a new account (Registrar, Teacher, or Student)
-router.post('/create', async (req, res) => {
+router.post('/create', adminAuth, async (req, res) => {
   try {
     const { firstName, lastName, role } = req.body
 
@@ -254,7 +258,7 @@ router.post('/create', async (req, res) => {
 })
 
 // PUT /api/users/:id - Update user
-router.put('/:id', async (req, res) => {
+router.put('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { firstName, lastName, email, status } = req.body
@@ -322,7 +326,7 @@ router.put('/:id', async (req, res) => {
 })
 
 // POST /api/users/:id/reset-password - Reset user password to default
-router.post('/:id/reset-password', async (req, res) => {
+router.post('/:id/reset-password', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const defaultPassword = 'passwordtest123'
@@ -354,7 +358,7 @@ router.post('/:id/reset-password', async (req, res) => {
 })
 
 // DELETE /api/users/:id - Delete user
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     

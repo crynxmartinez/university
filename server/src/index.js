@@ -26,6 +26,8 @@ import courseOfferingsRoutes from './routes/courseOfferings.js'
 import programOfferingsRoutes from './routes/programOfferings.js'
 import semestersRoutes from './routes/semesters.js'
 import oneOnOneRoutes from './routes/oneOnOne.js'
+import { globalErrorHandler } from './utils/errorHandler.js'
+import { runStartupValidations } from './utils/startupValidator.js'
 
 dotenv.config()
 
@@ -33,11 +35,30 @@ const app = express()
 const PORT = process.env.PORT || 5000
 
 // CORS middleware - must be first, before any other middleware
+// Allowed origins for CORS (add your frontend domains here)
+const allowedOrigins = [
+  'https://university-client.vercel.app',
+  'https://university-client-git-main-crynxmartinez.vercel.app',
+  process.env.FRONTEND_URL, // Allow custom frontend URL from env
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : null,
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : null,
+].filter(Boolean)
+
 app.use((req, res, next) => {
-  // Set CORS headers for all requests
-  res.header('Access-Control-Allow-Origin', '*')
+  const origin = req.headers.origin
+  
+  // Check if origin is allowed
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin)
+  } else if (process.env.NODE_ENV !== 'production') {
+    // In development, allow all origins for easier testing
+    res.header('Access-Control-Allow-Origin', origin || '*')
+  }
+  // In production with unknown origin, don't set the header (browser will block)
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept')
+  res.header('Access-Control-Allow-Credentials', 'true')
   
   // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
@@ -85,11 +106,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Assalaam University API' })
 })
 
+// 404 handler for unknown routes
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Endpoint not found', code: 'NOT_FOUND' })
+})
+
+// Global error handler - MUST be last middleware
+app.use(globalErrorHandler)
+
 // Start server (only in development)
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Run startup validations before starting
+  runStartupValidations().then(valid => {
+    if (!valid) {
+      console.error('Server startup aborted due to validation failures')
+      process.exit(1)
+    }
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  })
 }
 
 export default app;

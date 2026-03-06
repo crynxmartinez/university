@@ -1,9 +1,8 @@
 import express from 'express'
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js'
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // GET all master courses (all roles can view)
 router.get('/', authenticateToken, async (req, res) => {

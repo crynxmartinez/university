@@ -1,10 +1,9 @@
 import express from 'express'
-import { PrismaClient } from '@prisma/client'
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js'
 import { generateCertificateNumber } from '../utils/certificateGenerator.js'
+import prisma from '../lib/prisma.js'
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Issue a certificate (Teacher/Admin only)
 // Body: { studentId, courseOfferingId?, programOfferingId?, certificateUrl, completionDate? }

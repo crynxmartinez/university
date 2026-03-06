@@ -1,9 +1,8 @@
 import express from 'express'
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js'
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Student creates a 1-on-1 request
 router.post('/request', authenticateToken, authorizeRoles(['STUDENT']), async (req, res) => {

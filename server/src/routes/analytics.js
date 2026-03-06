@@ -7,6 +7,7 @@ import {
   getStudentAnalytics,
   getTeacherAnalytics 
 } from '../utils/analyticsEngine.js'
+import prisma from '../lib/prisma.js'
 
 const router = express.Router()
 
@@ -42,8 +43,6 @@ router.get('/course/:courseId', authenticateToken, async (req, res) => {
 
     // Check authorization - teachers can only view their own courses
     if (req.user.role === 'TEACHER') {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
       const teacher = await prisma.teacher.findUnique({
         where: { userId: req.user.userId },
         include: { courses: true }
@@ -71,8 +70,6 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
 
     // Check authorization - students can only view their own analytics
     if (req.user.role === 'STUDENT') {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
       const student = await prisma.student.findUnique({
         where: { userId: req.user.userId }
       })
