@@ -25,6 +25,7 @@ import masterProgramsRoutes from './routes/masterPrograms.js'
 import courseOfferingsRoutes from './routes/courseOfferings.js'
 import programOfferingsRoutes from './routes/programOfferings.js'
 import semestersRoutes from './routes/semesters.js'
+import oneOnOneRoutes from './routes/oneOnOne.js'
 
 dotenv.config()
 
@@ -74,6 +75,7 @@ app.use('/api/master-programs', masterProgramsRoutes)
 app.use('/api/course-offerings', courseOfferingsRoutes)
 app.use('/api/program-offerings', programOfferingsRoutes)
 app.use('/api/semesters', semestersRoutes)
+app.use('/api/one-on-one', oneOnOneRoutes)
 
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))

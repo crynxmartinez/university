@@ -81,6 +81,17 @@ enum NotificationType {
   MATERIAL_ADDED
 }
 
+enum OneOnOneStatus {
+  PENDING
+  PROPOSAL_SENT
+  ACCEPTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  DECLINED
+  AUTO_DECLINED
+}
+
 // ============ MODELS ============
 
 // User - for authentication
@@ -161,6 +172,7 @@ model Student {
   programOfferingExamAttempts ProgramOfferingExamAttempt[]
   courseGradeCalculations    CourseGradeCalculation[]
   programGradeCalculations   ProgramGradeCalculation[]
+  oneOnOneRequests           OneOnOneRequest[]
 }
 
 // Teacher record
@@ -176,6 +188,7 @@ model Teacher {
   programs Program[]
   courseOfferings  CourseOffering[]
   programOfferings ProgramOffering[]
+  oneOnOneRequests OneOnOneRequest[]
 }
 
 // Registrar record
@@ -641,6 +654,7 @@ model CourseOffering {
   gradeCalculations CourseGradeCalculation[]
   certificates      Certificate[]      @relation("CourseOfferingCertificates")
   announcements     Announcement[]     @relation("CourseOfferingAnnouncements")
+  oneOnOneRequests  OneOnOneRequest[]
 }
 
 // ProgramOffering - Teacher creates this, links to MasterProgram + Semester
@@ -667,6 +681,7 @@ model ProgramOffering {
   exams             ProgramOfferingExam[]
   gradeCalculations ProgramGradeCalculation[]
   certificates      Certificate[]      @relation("ProgramOfferingCertificates")
+  oneOnOneRequests  OneOnOneRequest[]
   announcements     Announcement[]     @relation("ProgramOfferingAnnouncements")
 }
 
@@ -1309,4 +1324,66 @@ enum Priority {
   INFO
   IMPORTANT
   URGENT
+}
+
+// One-on-One Session Requests
+model OneOnOneRequest {
+  id                String   @id @default(cuid())
+  
+  // Relationships
+  studentId         String
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  teacherId         String
+  teacher           Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  
+  courseOfferingId  String?
+  courseOffering    CourseOffering? @relation(fields: [courseOfferingId], references: [id], onDelete: SetNull)
+  
+  programOfferingId String?
+  programOffering   ProgramOffering? @relation(fields: [programOfferingId], references: [id], onDelete: SetNull)
+  
+  // Request details
+  topic             String
+  studentNote       String?
+  requestedDate     DateTime?
+  requestedTime     String?
+  duration          Int      // 30 or 60 minutes
+  
+  // Response details
+  finalDate         DateTime?
+  finalTime         String?
+  meetingLink       String?
+  teacherNote       String?
+  
+  // Status
+  status            OneOnOneStatus @default(PENDING)
+  
+  // Alternative proposal
+  proposedDate      DateTime?
+  proposedTime      String?
+  proposalReason    String?
+  
+  // Decline reason
+  declineReason     String?
+  
+  // No-show tracking
+  studentNoShow     Boolean  @default(false)
+  teacherNoShow     Boolean  @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  respondedAt       DateTime?
+  scheduledAt       DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancelledBy       String?
+  cancellationReason String?
+  
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([courseOfferingId])
+  @@index([programOfferingId])
 }
