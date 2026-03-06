@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { BookOpen, Video, Radio, Folder, Calendar, CheckCircle } from 'lucide-react'
+import { BookOpen, Video, Radio, Folder, Calendar, CheckCircle, CreditCard, Clock, XCircle } from 'lucide-react'
+import PaymentUploadModal from '../../../components/PaymentUploadModal'
 
 export default function EnrollmentsTab({
   enrollmentsTab,
@@ -14,6 +16,36 @@ export default function EnrollmentsTab({
   setSelectedCourse
 }) {
   const navigate = useNavigate()
+  const [paymentModal, setPaymentModal] = useState({ open: false, type: null, id: null })
+
+  const getPaymentStatusBadge = (status) => {
+    switch (status) {
+      case 'PAID':
+        return (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" /> Paid
+          </span>
+        )
+      case 'PENDING':
+        return (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Payment Pending
+          </span>
+        )
+      case 'REJECTED':
+        return (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1">
+            <XCircle className="w-3 h-3" /> Payment Rejected
+          </span>
+        )
+      default:
+        return (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex items-center gap-1">
+            <CreditCard className="w-3 h-3" /> Unpaid
+          </span>
+        )
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
@@ -73,11 +105,12 @@ export default function EnrollmentsTab({
                       </span>
                     </div>
                     
-                    {/* Enrolled Badge */}
+                    {/* Status Badges */}
                     <div className="flex flex-wrap gap-1 mb-2">
                       <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" /> Enrolled
                       </span>
+                      {getPaymentStatusBadge(enrollment.paymentStatus)}
                     </div>
                     
                     <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">
@@ -96,6 +129,14 @@ export default function EnrollmentsTab({
                       >
                         View Program
                       </button>
+                      {enrollment.paymentStatus !== 'PAID' && (
+                        <button
+                          onClick={() => setPaymentModal({ open: true, type: 'program', id: enrollment.id })}
+                          className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center gap-1"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => setSelectedEnrolledProgram(program)}
                         className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
@@ -158,11 +199,12 @@ export default function EnrollmentsTab({
                     </span>
                   </div>
                   
-                  {/* Enrolled Badge */}
+                  {/* Status Badges */}
                   <div className="flex flex-wrap gap-1 mb-2">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" /> Enrolled
                     </span>
+                    {getPaymentStatusBadge(course.paymentStatus)}
                   </div>
                   
                   <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-1">
@@ -181,6 +223,14 @@ export default function EnrollmentsTab({
                     >
                       View Course
                     </Link>
+                    {course.paymentStatus !== 'PAID' && (
+                      <button
+                        onClick={() => setPaymentModal({ open: true, type: 'course', id: course.enrollmentId || course.id })}
+                        className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center gap-1"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setSelectedCourse(course)}
                       className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
@@ -194,6 +244,18 @@ export default function EnrollmentsTab({
           )}
         </>
       )}
+
+      {/* Payment Upload Modal */}
+      <PaymentUploadModal
+        isOpen={paymentModal.open}
+        onClose={() => setPaymentModal({ open: false, type: null, id: null })}
+        enrollmentType={paymentModal.type}
+        enrollmentId={paymentModal.id}
+        onSuccess={() => {
+          setPaymentModal({ open: false, type: null, id: null })
+          // Refresh will happen on next page load
+        }}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, MessageSquare, Shield, Users } from 'lucide-react'
+import { LogOut, BookOpen, Video, Radio, LayoutDashboard, GraduationCap, Calendar, Settings, Menu, Award, Folder, MapPin, ExternalLink, Search, ChevronDown, ChevronRight, CheckCircle, X, Clock, MessageSquare, Shield, Users, TrendingUp } from 'lucide-react'
+import NotificationBell from '../../components/NotificationBell'
 import { getMyCourses, selfEnrollInCourse } from '../../api/enrollments'
 import { getStudentPrograms } from '../../api/programs'
 import { getMyProgramEnrollments, enrollInProgram } from '../../api/programEnrollments'
@@ -23,6 +24,7 @@ const CertificatesTab = lazy(() => import('./tabs/CertificatesTab'))
 const OneOnOneTab = lazy(() => import('./tabs/OneOnOneTab'))
 const MessagesTab = lazy(() => import('./tabs/MessagesTab'))
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'))
+const ProgressTab = lazy(() => import('../../components/ProgressDashboard'))
 
 // Loading spinner component
 const TabLoader = () => (
@@ -249,6 +251,7 @@ export default function StudentDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'browse', label: 'Browse', icon: Search },
     { id: 'enrollments', label: 'My Enrollments', icon: CheckCircle, hasDropdown: true },
+    { id: 'progress', label: 'My Progress', icon: TrendingUp },
     { id: 'one-on-one', label: '1-on-1 Sessions', icon: Users },
     { id: 'notes', label: 'My Notes', icon: MessageSquare },
     { id: 'grades', label: 'Grades', icon: Award },
@@ -345,6 +348,8 @@ export default function StudentDashboard() {
             fetchOneOnOneRequests={fetchOneOnOneRequests}
           />
         )
+      case 'progress':
+        return <ProgressTab />
       case 'messages':
         return <MessagesTab />
       case 'settings':
@@ -470,7 +475,8 @@ export default function StudentDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-600 text-sm">Welcome, {user.profile?.firstName}</span>
+              <NotificationBell />
+              <span className="text-gray-600 text-sm hidden sm:inline">Welcome, {user.profile?.firstName}</span>
             </div>
           </div>
         </header>

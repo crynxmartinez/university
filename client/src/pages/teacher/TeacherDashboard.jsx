@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, MessageSquare, TrendingUp, X, Clock, Video, Radio, ExternalLink, AlertTriangle } from 'lucide-react'
+import { LogOut, BookOpen, Users, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, MessageSquare, TrendingUp, X, Clock, Video, Radio, ExternalLink, AlertTriangle, Bell } from 'lucide-react'
+import NotificationBell from '../../components/NotificationBell'
 // Legacy import removed in Phase 4 cleanup:
 // import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
@@ -385,7 +386,8 @@ export default function TeacherDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-600 text-sm">
+              <NotificationBell />
+              <span className="text-gray-600 text-sm hidden sm:inline">
                 Welcome, {user.profile?.firstName}
               </span>
             </div>
