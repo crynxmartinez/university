@@ -1,7 +1,7 @@
 # ILM University SaaS — Improvement Plan
 
-> Last updated: March 6, 2026
-> Status: Planning phase — no code changes yet
+> Last updated: March 7, 2026
+> Status: Phase 5 Complete — Production Hardening done
 
 ---
 
@@ -427,52 +427,107 @@ This is the industry standard for token-based authentication.
 
 ## Phase 6: Feature Enhancements (Future)
 
-These are not bugs or issues — they're features that would make the SaaS more competitive.
+These are not bugs or issues — they're features that would make the platform more complete and user-friendly.
 
-### 6.1 Email Notifications
-Send emails for: account creation, password reset, enrollment confirmation, session reminders, exam results, certificate issuance. Use a service like Resend, SendGrid, or AWS SES.
+### 6.1 Email Notifications (Resend)
+Send emails for: account creation, password reset, enrollment confirmation, session reminders, exam results, certificate issuance. Use **Resend** as the email provider.
 
-### 6.2 File Upload System
-Allow teachers to upload materials directly instead of pasting Google Drive links. Use Vercel Blob, AWS S3, or Cloudinary.
+**Priority:** High — essential for user communication
 
-### 6.3 Real-Time Features
+---
+
+### 6.2 GCash Payment Screenshot Upload
+Students pay via GCash and upload a screenshot as proof of payment. The system should:
+- Accept image uploads (jpg, png)
+- Convert to WebP format to save storage space
+- Store the image (using Vercel Blob)
+- Show "View Payment Proof" button on admin side
+- Admin can approve/reject payment
+
+**Priority:** High — needed for enrollment flow
+
+---
+
+### 6.3 Real-Time Features (WebSockets)
 Live notifications, real-time messaging, live attendance tracking. Use WebSockets (Socket.io) or server-sent events.
+
+**Priority:** Medium — nice to have for engagement
+
+---
 
 ### 6.4 Mobile Responsiveness Audit
 Ensure all dashboard views work well on tablets and phones. The current sidebar layout likely breaks on small screens.
 
-### 6.5 Dark Mode
-Add a theme toggle for dark mode across all pages.
-
-### 6.6 Multi-Tenant Support
-If this becomes a true SaaS, support multiple universities/schools as separate tenants with their own branding, domains, and data isolation.
-
-### 6.7 Payment Integration
-Integrate Stripe or PayMongo for course/program payments, replacing the current price fields that don't connect to any payment flow.
-
-### 6.8 Automated Grading Reports
-Generate PDF grade reports per student per semester, similar to university transcripts.
-
-### 6.9 Student Progress Dashboard
-Visual progress tracking: completion percentage, streak tracking, learning analytics, performance trends over time.
-
-### 6.10 API Documentation
-Generate OpenAPI/Swagger documentation for all endpoints. This is essential if third parties or mobile apps will consume the API.
+**Priority:** Medium — many users access via mobile
 
 ---
 
-## Execution Order
+### 6.5 Dark Mode
+Add a theme toggle for dark mode across all pages.
 
-| Order | Phase | Effort | Impact |
-|-------|-------|--------|--------|
-| 1 | Phase 1: Security + Resilience | 2-3 days | Prevents crashes, data loss, and breaches |
-| 2 | Phase 2: Code Quality | 3-5 days | Prevents production bugs, faster debugging |
-| 3 | Phase 4: Schema Cleanup | 2-3 days | Reduces complexity and confusion |
-| 4 | Phase 3: Frontend Architecture | 5-7 days | Enables faster development |
-| 5 | Phase 5: Production Hardening | 3-4 days | Production readiness |
-| 6 | Phase 6: Features | Ongoing | Growth and competitiveness |
+**Priority:** Low — cosmetic enhancement
 
-**Total estimated effort for Phase 1-5:** 3-4 weeks of focused work.
+---
+
+### 6.6 File Upload System (Vercel Blob)
+Allow teachers to upload course materials directly instead of pasting Google Drive links. Use Vercel Blob for storage.
+
+**Priority:** Medium — improves teacher experience
+
+---
+
+### 6.7 Automated PDF Reports
+Generate PDF grade reports/transcripts per student per semester, similar to university transcripts.
+
+**Priority:** Medium — useful for official records
+
+---
+
+### 6.8 Student Progress Dashboard
+Visual progress tracking: completion percentage, streak tracking, learning analytics, performance trends over time.
+
+**Priority:** Medium — improves student engagement
+
+---
+
+### 6.9 API Documentation (Swagger/OpenAPI)
+Generate OpenAPI/Swagger documentation for all endpoints. Essential if third parties or mobile apps will consume the API.
+
+**Priority:** Low — needed only for external integrations
+
+---
+
+### ~~6.10 Multi-Tenant Support~~ (REMOVED)
+~~Support multiple universities/schools as separate tenants.~~
+
+**Decision:** This is a single-school website. For other schools, the codebase will be duplicated and customized separately. No multi-tenant architecture needed.
+
+---
+
+## Execution Order & Status
+
+| Order | Phase | Status | Completed |
+|-------|-------|--------|-----------|
+| 1 | Phase 1: Security + Resilience | ✅ DONE | March 6, 2026 |
+| 2 | Phase 2: Code Quality | ✅ DONE | March 6, 2026 |
+| 3 | Phase 3: Frontend Architecture | ✅ DONE | March 6, 2026 |
+| 4 | Phase 4: Schema Cleanup (Partial) | ✅ DONE | March 7, 2026 |
+| 5 | Phase 5: Production Hardening | ✅ DONE | March 7, 2026 |
+| 6 | Phase 6: Features | 🔄 IN PROGRESS | - |
+
+### Phase 6 Priority Order
+
+| Priority | Feature | Effort | Status |
+|----------|---------|--------|--------|
+| 1 | 6.1 Email Notifications (Resend) | 1-2 days | Pending |
+| 2 | 6.2 GCash Payment Screenshot Upload | 1-2 days | Pending |
+| 3 | 6.4 Mobile Responsiveness Audit | 2-3 days | Pending |
+| 4 | 6.3 Real-Time Features (WebSockets) | 3-5 days | Pending |
+| 5 | 6.6 File Upload System (Vercel Blob) | 1-2 days | Pending |
+| 6 | 6.7 Automated PDF Reports | 2-3 days | Pending |
+| 7 | 6.8 Student Progress Dashboard | 3-5 days | Pending |
+| 8 | 6.5 Dark Mode | 1 day | Pending |
+| 9 | 6.9 API Documentation | 1-2 days | Pending |
 
 ---
 
