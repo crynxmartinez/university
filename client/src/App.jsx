@@ -2,6 +2,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { ToastProvider } from './components/Toast'
 import ErrorBoundary from './components/ErrorBoundary'
+import { ThemeProvider } from './contexts/ThemeContext'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import ProgramsPage from './pages/ProgramsPage'
@@ -51,9 +52,10 @@ function ScrollToTop() {
 function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <ScrollToTop />
-        <Routes>
+      <ThemeProvider>
+        <ToastProvider>
+          <ScrollToTop />
+          <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/programs" element={<ProgramsPage />} />
@@ -84,7 +86,8 @@ function App() {
         <Route path="/student/programs/:id" element={<StudentProgramView />} />
         <Route path="/student/programs/:id/exam/:examId" element={<StudentProgramExam />} />
         </Routes>
-      </ToastProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }
