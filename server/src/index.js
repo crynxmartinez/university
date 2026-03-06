@@ -46,6 +46,7 @@ const PORT = process.env.PORT || 5000
 // Allowed origins for CORS (add your frontend domains here)
 const allowedOrigins = [
   'https://university-client.vercel.app',
+  'https://university-client-theta.vercel.app',
   'https://university-client-git-main-crynxmartinez.vercel.app',
   process.env.FRONTEND_URL, // Allow custom frontend URL from env
   process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : null,
