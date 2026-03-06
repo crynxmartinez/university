@@ -1,18 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, BookOpen, Users, Plus, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, Video, Radio, ExternalLink, MessageSquare, TrendingUp, AlertTriangle, Search, ChevronDown, ChevronLeft, ChevronRight, X, Clock, Info, Shield, Award } from 'lucide-react'
+import { LogOut, BookOpen, Users, LayoutDashboard, GraduationCap, Settings, Menu, Calendar, MessageSquare, TrendingUp, X, Clock, Video, Radio, ExternalLink, AlertTriangle } from 'lucide-react'
 import { getCourses } from '../../api/courses'
 import { getTeacherAnalytics } from '../../api/enrollments'
 import { getTeacherSchedule } from '../../api/sessions'
-import { getCourseGrades } from '../../api/exams'
 import { getCourseStudentGrades } from '../../api/grades'
-import { useToast } from '../../components/Toast'
-import SessionCalendar from '../../components/SessionCalendar'
-import CreateCourseOffering from './CreateCourseOffering'
-import CreateProgramOffering from './CreateProgramOffering'
-import TeacherOfferingDetail from './TeacherOfferingDetail'
 import { getCourseOfferings } from '../../api/courseOfferings'
 import { getProgramOfferings } from '../../api/programOfferings'
+
+// Lazy load tab components for better performance
+const DashboardTab = lazy(() => import('./tabs/DashboardTab'))
+const CoursesTab = lazy(() => import('./tabs/CoursesTab'))
+const StudentsTab = lazy(() => import('./tabs/StudentsTab'))
+const OfferingsTab = lazy(() => import('./tabs/OfferingsTab'))
+const OneOnOneTab = lazy(() => import('./tabs/OneOnOneTab'))
+const ScheduleTab = lazy(() => import('./tabs/ScheduleTab'))
+const GradesTab = lazy(() => import('./tabs/GradesTab'))
+const MessagesTab = lazy(() => import('./tabs/MessagesTab'))
+const SettingsTab = lazy(() => import('./tabs/SettingsTab'))
+
+// Loading spinner component
+const TabLoader = () => (
+  <div className="flex items-center justify-center py-20">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1e3a5f]"></div>
+  </div>
+)
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState(null)
@@ -20,22 +32,22 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const navigate = useNavigate()
+
+  // Offerings state
   const [offeringsView, setOfferingsView] = useState('list')
   const [courseOfferings, setCourseOfferings] = useState([])
   const [programOfferings, setProgramOfferings] = useState([])
   const [loadingOfferings, setLoadingOfferings] = useState(false)
-  const [selectedOffering, setSelectedOffering] = useState(null) // { id, type }
+  const [selectedOffering, setSelectedOffering] = useState(null)
+
+  // One-on-one state
   const [oneOnOneRequests, setOneOnOneRequests] = useState([])
   const [loadingOneOnOne, setLoadingOneOnOne] = useState(false)
-  const [oneOnOneTab, setOneOnOneTab] = useState('pending')
-  const navigate = useNavigate()
 
   // Analytics state
   const [analytics, setAnalytics] = useState(null)
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
-  const [studentSearchTerm, setStudentSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [courseFilter, setCourseFilter] = useState('all')
   const [selectedStudent, setSelectedStudent] = useState(null)
 
   // Schedule state
@@ -44,19 +56,14 @@ export default function TeacherDashboard() {
   const [todayCount, setTodayCount] = useState(0)
   const [showTodayPopup, setShowTodayPopup] = useState(false)
   const [todaySessions, setTodaySessions] = useState([])
-  
-  // Calendar state
-  const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedSession, setSelectedSession] = useState(null)
   const [showCalendarModal, setShowCalendarModal] = useState(false)
-  const [calendarView, setCalendarView] = useState('list') // 'list' or 'calendar'
 
   // Grades state
   const [selectedGradeCourse, setSelectedGradeCourse] = useState(null)
   const [gradesData, setGradesData] = useState(null)
   const [loadingGrades, setLoadingGrades] = useState(false)
   const [issuingCertificate, setIssuingCertificate] = useState(null)
-  const toast = useToast()
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -73,6 +80,7 @@ export default function TeacherDashboard() {
     
     setUser(userData)
     fetchCourses()
+    fetchSchedule()
   }, [navigate])
 
   const fetchCourses = async () => {
@@ -111,7 +119,7 @@ export default function TeacherDashboard() {
     if (activeTab === 'one-on-one') {
       fetchOneOnOneRequests()
     }
-  }, [activeTab, oneOnOneTab])
+  }, [activeTab])
 
   const fetchOneOnOneRequests = async () => {
     setLoadingOneOnOne(true)
@@ -145,40 +153,6 @@ export default function TeacherDashboard() {
     }
   }
 
-  // Filter students based on search and filters
-  const filteredStudents = analytics?.students?.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                          student.email.toLowerCase().includes(studentSearchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || student.status === statusFilter
-    const matchesCourse = courseFilter === 'all' || student.courses.some(c => c.id === courseFilter)
-    return matchesSearch && matchesStatus && matchesCourse
-  }) || []
-
-  // Fetch schedule on mount (for badge) and when schedule tab is active
-  useEffect(() => {
-    fetchSchedule()
-  }, [])
-
-  useEffect(() => {
-    if (activeTab === 'schedule' && !schedule) {
-      fetchSchedule()
-    }
-  }, [activeTab])
-
-  // Fetch grades when a course is selected
-  const handleSelectGradeCourse = async (course) => {
-    setSelectedGradeCourse(course)
-    setLoadingGrades(true)
-    try {
-      const students = await getCourseStudentGrades(course.id)
-      setGradesData({ students })
-    } catch (error) {
-      console.error('Error fetching grades:', error)
-    } finally {
-      setLoadingGrades(false)
-    }
-  }
-
   const fetchSchedule = async () => {
     setLoadingSchedule(true)
     try {
@@ -186,7 +160,6 @@ export default function TeacherDashboard() {
       setSchedule(data.sessions)
       setTodayCount(data.todayCount)
       
-      // Show popup if there are classes today (only on first load)
       if (data.todayCount > 0 && !sessionStorage.getItem('teacherTodayPopupShown')) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -209,105 +182,18 @@ export default function TeacherDashboard() {
     }
   }
 
-  // Group sessions by date
-  const groupSessionsByDate = (sessions) => {
-    if (!sessions) return {}
-    
-    const groups = {}
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    
-    sessions.forEach(session => {
-      const sessionDate = new Date(session.date)
-      sessionDate.setHours(0, 0, 0, 0)
-      
-      let label
-      if (sessionDate.getTime() === today.getTime()) {
-        label = 'Today'
-      } else if (sessionDate.getTime() === tomorrow.getTime()) {
-        label = 'Tomorrow'
-      } else {
-        label = sessionDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-      }
-      
-      if (!groups[label]) {
-        groups[label] = []
-      }
-      groups[label].push(session)
-    })
-    
-    return groups
-  }
-
-  const groupedSessions = groupSessionsByDate(schedule)
-
-  // Calendar helper functions
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDay = firstDay.getDay() // 0 = Sunday
-    
-    const days = []
-    
-    // Add empty slots for days before the first day of month
-    for (let i = 0; i < startingDay; i++) {
-      days.push(null)
+  const handleSelectGradeCourse = async (course) => {
+    setSelectedGradeCourse(course)
+    setLoadingGrades(true)
+    try {
+      const students = await getCourseStudentGrades(course.id)
+      setGradesData({ students })
+    } catch (error) {
+      console.error('Error fetching grades:', error)
+    } finally {
+      setLoadingGrades(false)
     }
-    
-    // Add all days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day))
-    }
-    
-    return days
   }
-
-  const formatDateStr = (date) => {
-    // Format as YYYY-MM-DD in local timezone
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  const getSessionsForDay = (date) => {
-    if (!date || !schedule) return []
-    const dateStr = formatDateStr(date)
-    
-    return schedule.filter(s => {
-      // Parse session date and format in local timezone
-      const sessionDate = new Date(s.date)
-      const sessionDateStr = formatDateStr(sessionDate)
-      return sessionDateStr === dateStr
-    })
-  }
-
-  const isToday = (date) => {
-    if (!date) return false
-    const today = new Date()
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear()
-  }
-
-  const goToPrevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
-  }
-
-  const goToNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
-  }
-
-  const goToToday = () => {
-    setCurrentMonth(new Date())
-  }
-
-  const calendarDays = getDaysInMonth(currentMonth)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -335,6 +221,76 @@ export default function TeacherDashboard() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]"></div>
       </div>
     )
+  }
+
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardTab courses={courses} setActiveTab={setActiveTab} />
+      case 'offerings':
+        return (
+          <OfferingsTab
+            offeringsView={offeringsView}
+            setOfferingsView={setOfferingsView}
+            courseOfferings={courseOfferings}
+            programOfferings={programOfferings}
+            loadingOfferings={loadingOfferings}
+            selectedOffering={selectedOffering}
+            setSelectedOffering={setSelectedOffering}
+          />
+        )
+      case 'one-on-one':
+        return (
+          <OneOnOneTab
+            oneOnOneRequests={oneOnOneRequests}
+            loadingOneOnOne={loadingOneOnOne}
+            fetchOneOnOneRequests={fetchOneOnOneRequests}
+          />
+        )
+      case 'courses':
+        return <CoursesTab courses={courses} loading={loading} />
+      case 'students':
+        return (
+          <StudentsTab
+            analytics={analytics}
+            loadingAnalytics={loadingAnalytics}
+            selectedStudent={selectedStudent}
+            setSelectedStudent={setSelectedStudent}
+          />
+        )
+      case 'schedule':
+        return (
+          <ScheduleTab
+            schedule={schedule}
+            loadingSchedule={loadingSchedule}
+            selectedSession={selectedSession}
+            setSelectedSession={setSelectedSession}
+            showCalendarModal={showCalendarModal}
+            setShowCalendarModal={setShowCalendarModal}
+          />
+        )
+      case 'grades':
+        return (
+          <GradesTab
+            courses={courses}
+            loading={loading}
+            selectedGradeCourse={selectedGradeCourse}
+            setSelectedGradeCourse={setSelectedGradeCourse}
+            gradesData={gradesData}
+            setGradesData={setGradesData}
+            loadingGrades={loadingGrades}
+            handleSelectGradeCourse={handleSelectGradeCourse}
+            issuingCertificate={issuingCertificate}
+            setIssuingCertificate={setIssuingCertificate}
+          />
+        )
+      case 'messages':
+        return <MessagesTab />
+      case 'settings':
+        return <SettingsTab />
+      default:
+        return <DashboardTab courses={courses} setActiveTab={setActiveTab} />
+    }
   }
 
   return (
@@ -434,1131 +390,11 @@ export default function TeacherDashboard() {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Page Content with Suspense for lazy loading */}
         <main className="p-6">
-          {activeTab === 'dashboard' && (
-            <>
-              {/* Stats Cards */}
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#1e3a5f]">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-[#1e3a5f]" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
-                      <p className="text-gray-600 text-sm">My Courses</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#f7941d]">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <GraduationCap className="w-6 h-6 text-[#f7941d]" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                      <p className="text-gray-600 text-sm">Total Students</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                      <p className="text-gray-600 text-sm">Upcoming Classes</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Link 
-                    to="/teacher/courses/create"
-                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition"
-                  >
-                    <div className="w-10 h-10 bg-[#f7941d] rounded-lg flex items-center justify-center">
-                      <Plus className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Create Course</p>
-                      <p className="text-sm text-gray-500">Add new course</p>
-                    </div>
-                  </Link>
-                  <button 
-                    onClick={() => setActiveTab('courses')}
-                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition text-left"
-                  >
-                    <div className="w-10 h-10 bg-[#1e3a5f] rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">View Courses</p>
-                      <p className="text-sm text-gray-500">Manage courses</p>
-                    </div>
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('students')}
-                    className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#f7941d] transition text-left"
-                  >
-                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                      <Users className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">View Students</p>
-                      <p className="text-sm text-gray-500">Enrolled students</p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Recent Courses */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Courses</h2>
-                  <button 
-                    onClick={() => setActiveTab('courses')}
-                    className="text-[#f7941d] hover:text-[#e8850f] text-sm font-medium"
-                  >
-                    View All
-                  </button>
-                </div>
-                {courses.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No courses yet</p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {courses.slice(0, 3).map((course) => (
-                      <Link
-                        key={course.id}
-                        to={`/teacher/courses/${course.slug || course.id}/dashboard`}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-[#f7941d] hover:shadow-md transition"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-medium text-gray-900">{course.name}</h3>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              course.type === 'RECORDED' 
-                                ? 'bg-blue-100 text-blue-700' 
-                                : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                            </span>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              course.isActive 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-gray-100 text-gray-500'
-                            }`}>
-                              {course.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-500 line-clamp-2">{course.description || 'No description'}</p>
-                        <div className="mt-3 text-xs text-gray-400">
-                          {course.modules?.length || 0} modules
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'offerings' && (
-            <div>
-              {offeringsView === 'list' && (
-                <>
-                  <div className="flex justify-between items-center mb-6">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">My Offerings</h2>
-                      <p className="text-sm text-gray-500 mt-0.5">Manage your course and program offerings. Click an offering to view enrolled students and issue certificates.</p>
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={() => setOfferingsView('create-course')} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition text-sm">
-                        <Plus className="w-4 h-4" /> New Course Offering
-                      </button>
-                      <button onClick={() => setOfferingsView('create-program')} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition text-sm">
-                        <Plus className="w-4 h-4" /> New Program Offering
-                      </button>
-                    </div>
-                  </div>
-
-                  {loadingOfferings ? (
-                    <div className="flex items-center justify-center py-20">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
-                    </div>
-                  ) : (courseOfferings.length === 0 && programOfferings.length === 0) ? (
-                    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                      <BookOpen size={48} className="text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">No offerings yet</p>
-                      <p className="text-gray-400 text-sm mt-1">Create a course or program offering to get started. Admin will review and activate it.</p>
-                      <div className="flex gap-3 justify-center mt-6">
-                        <button onClick={() => setOfferingsView('create-course')} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition text-sm">
-                          <Plus size={16} /> New Course Offering
-                        </button>
-                        <button onClick={() => setOfferingsView('create-program')} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm">
-                          <Plus size={16} /> New Program Offering
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {courseOfferings.map(o => (
-                        <div key={o.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer" onClick={() => { setSelectedOffering({ id: o.id, type: 'course' }); setOfferingsView('detail') }}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                                <BookOpen size={18} className="text-emerald-600" />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-mono text-gray-400">{o.masterCourse?.code}</span>
-                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${o.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : o.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{o.status}</span>
-                                </div>
-                                <div className="font-semibold text-gray-900 text-sm">{o.masterCourse?.title}</div>
-                                {o.semester && <div className="text-xs text-gray-400">{o.semester.name}</div>}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span className="flex items-center gap-1"><Users size={13} /> {o._count?.enrollments || 0}</span>
-                              <Award size={16} className="text-gray-300" />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {programOfferings.map(o => (
-                        <div key={o.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer" onClick={() => { setSelectedOffering({ id: o.id, type: 'program' }); setOfferingsView('detail') }}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                                <GraduationCap size={18} className="text-purple-600" />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-mono text-gray-400">{o.masterProgram?.code}</span>
-                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${o.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : o.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{o.status}</span>
-                                </div>
-                                <div className="font-semibold text-gray-900 text-sm">{o.masterProgram?.title}</div>
-                                {o.semester && <div className="text-xs text-gray-400">{o.semester.name}</div>}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span className="flex items-center gap-1"><Users size={13} /> {o._count?.enrollments || 0}</span>
-                              <Award size={16} className="text-gray-300" />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-              {offeringsView === 'detail' && selectedOffering && (
-                <TeacherOfferingDetail
-                  offeringId={selectedOffering.id}
-                  offeringType={selectedOffering.type}
-                  onBack={() => { setOfferingsView('list'); setSelectedOffering(null) }}
-                />
-              )}
-              {offeringsView === 'create-course' && (
-                <CreateCourseOffering
-                  onBack={() => setOfferingsView('list')}
-                  onSuccess={() => setOfferingsView('list')}
-                />
-              )}
-              {offeringsView === 'create-program' && (
-                <CreateProgramOffering
-                  onBack={() => setOfferingsView('list')}
-                  onSuccess={() => setOfferingsView('list')}
-                />
-              )}
-            </div>
-          )}
-
-          {activeTab === 'one-on-one' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">1-on-1 Session Requests</h2>
-                  <p className="text-sm text-gray-500">Review and respond to student requests for 1-on-1 sessions</p>
-                </div>
-                <button
-                  onClick={fetchOneOnOneRequests}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition text-sm"
-                >
-                  <Users className="w-4 h-4" />
-                  Refresh
-                </button>
-              </div>
-
-              <div className="flex gap-2 mb-6 border-b">
-                <button
-                  onClick={() => setOneOnOneTab('pending')}
-                  className={`px-4 py-2 font-medium text-sm transition ${
-                    oneOnOneTab === 'pending'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Pending ({oneOnOneRequests.filter(r => r.status === 'PENDING').length})
-                </button>
-                <button
-                  onClick={() => setOneOnOneTab('scheduled')}
-                  className={`px-4 py-2 font-medium text-sm transition ${
-                    oneOnOneTab === 'scheduled'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Scheduled ({oneOnOneRequests.filter(r => r.status === 'SCHEDULED').length})
-                </button>
-                <button
-                  onClick={() => setOneOnOneTab('history')}
-                  className={`px-4 py-2 font-medium text-sm transition ${
-                    oneOnOneTab === 'history'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  History ({oneOnOneRequests.filter(r => ['COMPLETED', 'CANCELLED', 'DECLINED'].includes(r.status)).length})
-                </button>
-              </div>
-
-              {loadingOneOnOne ? (
-                <div className="py-12 text-center">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading requests...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {oneOnOneRequests
-                    .filter(r => {
-                      if (oneOnOneTab === 'pending') return r.status === 'PENDING'
-                      if (oneOnOneTab === 'scheduled') return r.status === 'SCHEDULED'
-                      return ['COMPLETED', 'CANCELLED', 'DECLINED', 'AUTO_DECLINED'].includes(r.status)
-                    })
-                    .map(req => {
-                      const studentProfile = req.student?.user?.profile
-                      const studentName = studentProfile ? `${studentProfile.firstName} ${studentProfile.lastName}` : req.student?.user?.email
-                      const courseName = req.courseOffering?.masterCourse?.title || req.programOffering?.masterProgram?.title
-                      const semesterName = req.courseOffering?.semester?.name || req.programOffering?.semester?.name
-
-                      return (
-                        <div key={req.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-gray-900">{studentName}</h3>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                  req.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                                  req.status === 'SCHEDULED' ? 'bg-green-100 text-green-700' :
-                                  req.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {req.status}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600">{courseName}</p>
-                              {semesterName && <p className="text-xs text-gray-400">{semesterName}</p>}
-                            </div>
-                            <p className="text-xs text-gray-400">
-                              {new Date(req.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </p>
-                          </div>
-
-                          <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                            <p className="text-sm font-medium text-gray-700 mb-1">Topic:</p>
-                            <p className="text-sm text-gray-600">{req.topic}</p>
-                            {req.studentNote && (
-                              <>
-                                <p className="text-sm font-medium text-gray-700 mt-2 mb-1">Student's Note:</p>
-                                <p className="text-sm text-gray-600">{req.studentNote}</p>
-                              </>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-3 text-sm mb-3">
-                            <div>
-                              <p className="text-gray-500">Duration:</p>
-                              <p className="font-medium text-gray-900">{req.duration} min</p>
-                            </div>
-                            {req.requestedDate && (
-                              <div>
-                                <p className="text-gray-500">Requested:</p>
-                                <p className="font-medium text-gray-900">
-                                  {new Date(req.requestedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {req.requestedTime || ''}
-                                </p>
-                              </div>
-                            )}
-                            {req.status === 'SCHEDULED' && req.scheduledAt && (
-                              <div>
-                                <p className="text-gray-500">Scheduled:</p>
-                                <p className="font-medium text-gray-900">
-                                  {new Date(req.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {req.finalTime}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {req.status === 'SCHEDULED' && req.meetingLink && (
-                            <div className="bg-green-50 rounded-lg p-3 mb-3">
-                              <p className="text-sm font-medium text-green-900 mb-1">Meeting Link:</p>
-                              <a href={req.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-green-700 hover:underline break-all">
-                                {req.meetingLink}
-                              </a>
-                            </div>
-                          )}
-
-                          <div className="flex gap-2">
-                            {req.status === 'PENDING' && (
-                              <button
-                                onClick={async () => {
-                                  const { default: RespondToRequestModal } = await import('../../components/RespondToRequestModal')
-                                  const modal = document.createElement('div')
-                                  document.body.appendChild(modal)
-                                  const { createRoot } = await import('react-dom/client')
-                                  const root = createRoot(modal)
-                                  root.render(
-                                    <RespondToRequestModal
-                                      request={req}
-                                      onClose={() => { root.unmount(); modal.remove() }}
-                                      onSuccess={() => { root.unmount(); modal.remove(); fetchOneOnOneRequests() }}
-                                    />
-                                  )
-                                }}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm"
-                              >
-                                Respond
-                              </button>
-                            )}
-                            {req.status === 'SCHEDULED' && (
-                              <>
-                                <a
-                                  href={req.meetingLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm"
-                                >
-                                  <Video size={16} />
-                                  Join Meeting
-                                </a>
-                                <button
-                                  onClick={async () => {
-                                    if (confirm('Cancel this session?')) {
-                                      try {
-                                        const { cancelOneOnOneSession } = await import('../../api/oneOnOne')
-                                        const reason = prompt('Reason for cancellation:')
-                                        if (reason) {
-                                          await cancelOneOnOneSession(req.id, reason)
-                                          toast.success('Session cancelled')
-                                          fetchOneOnOneRequests()
-                                        }
-                                      } catch (err) {
-                                        toast.error(err.message)
-                                      }
-                                    }
-                                  }}
-                                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition text-sm"
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                  {oneOnOneRequests.filter(r => {
-                    if (oneOnOneTab === 'pending') return r.status === 'PENDING'
-                    if (oneOnOneTab === 'scheduled') return r.status === 'SCHEDULED'
-                    return ['COMPLETED', 'CANCELLED', 'DECLINED', 'AUTO_DECLINED'].includes(r.status)
-                  }).length === 0 && (
-                    <div className="py-12 text-center">
-                      <Users size={48} className="text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">
-                        {oneOnOneTab === 'pending' && 'No pending requests'}
-                        {oneOnOneTab === 'scheduled' && 'No scheduled sessions'}
-                        {oneOnOneTab === 'history' && 'No session history'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'courses' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">My Courses (Legacy)</h2>
-                <Link
-                  to="/teacher/courses/create"
-                  className="flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-4 py-2 rounded-lg transition"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Course
-                </Link>
-              </div>
-
-              {loading ? (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                  <div className="w-12 h-12 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading courses...</p>
-                </div>
-              ) : courses.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                  <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No courses yet</h3>
-                  <p className="text-gray-500 mb-4">Create your first course to get started</p>
-                  <Link
-                    to="/teacher/courses/create"
-                    className="inline-flex items-center gap-2 bg-[#f7941d] hover:bg-[#e8850f] text-white px-6 py-3 rounded-lg transition"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create Course
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {courses.map((course) => (
-                    <div
-                      key={course.id}
-                      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition flex flex-col"
-                    >
-                      {/* Course Header */}
-                      <div className={`h-2 ${course.type === 'LIVE' ? 'bg-purple-500' : 'bg-[#1e3a5f]'}`}></div>
-                      
-                      <div className="p-5 flex flex-col flex-1">
-                        {/* Type & Status Badges */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
-                            course.type === 'RECORDED' 
-                              ? 'bg-blue-100 text-blue-700' 
-                              : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {course.type === 'RECORDED' ? <Video className="w-3 h-3" /> : <Radio className="w-3 h-3" />}
-                            {course.type === 'RECORDED' ? 'Recorded' : 'Live'}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            course.isActive 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {course.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-
-                        {/* Course Name */}
-                        <h3 className="font-semibold text-gray-900 text-lg mb-2">{course.name}</h3>
-                        
-                        {/* Description */}
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
-                          {course.description || 'No description'}
-                        </p>
-                        
-                        {/* Stats */}
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                          <span>{course.modules?.length || 0} modules</span>
-                          {course.type === 'LIVE' && (
-                            <span>{course.sessions?.length || 0} sessions</span>
-                          )}
-                        </div>
-
-                        {/* Action Button */}
-                        <div className="pt-4 border-t mt-auto">
-                          <Link
-                            to={`/teacher/courses/${course.slug || course.id}/dashboard`}
-                            className="w-full flex items-center justify-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a87] text-white py-2 px-3 rounded-lg text-sm font-medium transition"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            Dashboard
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'students' && (
-            <div>
-              {loadingAnalytics ? (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading analytics...</p>
-                </div>
-              ) : analytics ? (
-                <>
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Total Students</p>
-                          <p className="text-3xl font-bold text-gray-900">{analytics.summary.totalStudents}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                          <Users className="w-6 h-6 text-blue-600" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Total Enrollments</p>
-                          <p className="text-3xl font-bold text-gray-900">{analytics.summary.totalEnrollments}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                          <BookOpen className="w-6 h-6 text-green-600" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Avg Attendance</p>
-                          <p className="text-3xl font-bold text-gray-900">{analytics.summary.avgAttendance}%</p>
-                        </div>
-                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                          <TrendingUp className="w-6 h-6 text-purple-600" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">At-Risk Students</p>
-                          <p className="text-3xl font-bold text-red-600">{analytics.summary.atRiskCount}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                          <AlertTriangle className="w-6 h-6 text-red-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Filters */}
-                  <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-                    <div className="flex flex-wrap items-center gap-4">
-                      <div className="flex-1 min-w-[200px]">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search students..."
-                            value={studentSearchTerm}
-                            onChange={(e) => setStudentSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                          />
-                        </div>
-                      </div>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                      >
-                        <option value="all">All Status</option>
-                        <option value="good">Good (≥80%)</option>
-                        <option value="warning">Warning (50-79%)</option>
-                        <option value="at_risk">At Risk (&lt;50%)</option>
-                      </select>
-                      <select
-                        value={courseFilter}
-                        onChange={(e) => setCourseFilter(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] outline-none"
-                      >
-                        <option value="all">All Courses</option>
-                        {analytics.courses.map(course => (
-                          <option key={course.id} value={course.id}>{course.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Students Table */}
-                  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    {filteredStudents.length === 0 ? (
-                      <div className="p-12 text-center">
-                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500">No students found</p>
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-gray-50 border-b">
-                            <tr>
-                              <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                              <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Courses</th>
-                              <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance</th>
-                              <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                              <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {filteredStudents.map((student) => (
-                              <tr key={student.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white font-bold">
-                                      {student.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-gray-900">{student.name}</p>
-                                      <p className="text-sm text-gray-500">{student.email}</p>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="text-sm text-gray-900">{student.totalEnrollments} course{student.totalEnrollments !== 1 ? 's' : ''}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                                      <div 
-                                        className={`h-2 rounded-full ${
-                                          student.overallAttendance >= 80 ? 'bg-green-500' : 
-                                          student.overallAttendance >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                        }`}
-                                        style={{ width: `${student.overallAttendance}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900">{student.overallAttendance}%</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    student.status === 'good' ? 'bg-green-100 text-green-700' :
-                                    student.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-red-100 text-red-700'
-                                  }`}>
-                                    {student.status === 'good' ? 'Good' : student.status === 'warning' ? 'Warning' : 'At Risk'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <button
-                                    onClick={() => setSelectedStudent(student)}
-                                    className="text-[#1e3a5f] hover:text-[#2d5a87] font-medium text-sm"
-                                  >
-                                    View Details
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No data available</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'schedule' && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {loadingSchedule ? (
-                <div className="p-12 text-center">
-                  <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading schedule...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Header with View Toggle */}
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-6 h-6 text-[#1e3a5f]" />
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Teaching Schedule</h2>
-                        <p className="text-sm text-gray-500">{schedule?.length || 0} upcoming sessions</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex bg-gray-100 rounded-lg p-0.5">
-                        <button
-                          onClick={() => setCalendarView('list')}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                            calendarView === 'list' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
-                          }`}
-                        >
-                          List View
-                        </button>
-                        <button
-                          onClick={() => setShowCalendarModal(true)}
-                          className="px-3 py-1.5 text-sm font-medium rounded-md transition text-gray-500 hover:text-gray-900"
-                        >
-                          Calendar View
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* List View */}
-                  <div className="p-4 border-b flex items-center justify-between" style={{display: 'none'}}>
-                    <div className="flex items-center gap-2">
-                      <button onClick={goToPrevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
-                        <ChevronLeft className="w-5 h-5 text-gray-600" />
-                      </button>
-                      <h2 className="text-lg font-semibold text-gray-900 min-w-[180px] text-center">
-                        {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </h2>
-                      <button onClick={goToNextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
-                        <ChevronRight className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
-                    <button onClick={goToToday} className="px-4 py-2 text-sm font-medium text-[#1e3a5f] hover:bg-[#1e3a5f]/10 rounded-lg transition">
-                      Today
-                    </button>
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="p-4">
-                    {/* Day Headers */}
-                    <div className="grid grid-cols-7 mb-2">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">{day}</div>
-                      ))}
-                    </div>
-
-                    {/* Calendar Days */}
-                    <div className="grid grid-cols-7 gap-1">
-                      {calendarDays.map((date, index) => {
-                        const daySessions = date ? getSessionsForDay(date) : []
-                        const hasNoLinkSession = daySessions.some(s => !s.meetingLink)
-                        
-                        return (
-                          <div
-                            key={index}
-                            className={`min-h-[100px] p-2 border rounded-lg ${
-                              !date ? 'bg-gray-50 border-transparent' :
-                              isToday(date) ? 'bg-blue-50 border-blue-300' : 'border-gray-200 hover:bg-gray-50'
-                            }`}
-                          >
-                            {date && (
-                              <>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className={`text-sm font-medium ${isToday(date) ? 'text-blue-600' : 'text-gray-700'}`}>
-                                    {date.getDate()}
-                                  </span>
-                                  {hasNoLinkSession && (
-                                    <div className="group relative">
-                                      <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                      <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block z-10">
-                                        <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                                          No meeting link
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="space-y-1">
-                                  {daySessions.slice(0, 3).map(session => {
-                                    // Format startTime (e.g., "19:00") to 12-hour format
-                                    const formatTime = (time) => {
-                                      if (!time) return 'No time'
-                                      const [h, m] = time.split(':')
-                                      const hour = parseInt(h)
-                                      const ampm = hour >= 12 ? 'PM' : 'AM'
-                                      const hour12 = hour % 12 || 12
-                                      return `${hour12}:${m} ${ampm}`
-                                    }
-                                    return (
-                                      <button
-                                        key={session.id}
-                                        onClick={() => setSelectedSession(session)}
-                                        className={`w-full text-left text-xs p-1 rounded truncate transition ${
-                                          !session.meetingLink 
-                                            ? 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200' 
-                                            : session.course?.type === 'LIVE'
-                                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                              : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                        }`}
-                                      >
-                                        {formatTime(session.startTime)}
-                                      </button>
-                                    )
-                                  })}
-                                  {daySessions.length > 3 && (
-                                    <p className="text-xs text-gray-500 text-center">+{daySessions.length - 3} more</p>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'messages' && (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-              <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Messages</h2>
-              <p className="text-gray-500 mb-4">Coming Soon</p>
-              <p className="text-sm text-gray-400 max-w-md mx-auto">
-                You'll be able to send and receive messages from your students here.
-              </p>
-            </div>
-          )}
-
-          {/* Grades Tab */}
-          {activeTab === 'grades' && (
-            <div>
-              {!selectedGradeCourse ? (
-                // Course Selection View
-                <div>
-                  <p className="text-gray-600 mb-6">Select a course to view student grades</p>
-                  
-                  {loading ? (
-                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                      <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-gray-500">Loading courses...</p>
-                    </div>
-                  ) : courses.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                      <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Courses Yet</h3>
-                      <p className="text-gray-500">Create a course first to manage grades</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {courses.map(course => (
-                        <button
-                          key={course.id}
-                          onClick={() => handleSelectGradeCourse(course)}
-                          className="bg-white rounded-xl shadow-sm p-6 text-left hover:shadow-md transition group"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                              course.type === 'LIVE' ? 'bg-purple-100' : 'bg-blue-100'
-                            }`}>
-                              {course.type === 'LIVE' ? (
-                                <Radio className="w-6 h-6 text-purple-600" />
-                              ) : (
-                                <Video className="w-6 h-6 text-blue-600" />
-                              )}
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#1e3a5f] transition" />
-                          </div>
-                          <h3 className="font-semibold text-gray-900 mb-1">{course.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {course.enrollments?.length || 0} students enrolled
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Gradebook View
-                <div>
-                  <div className="flex items-center gap-4 mb-6">
-                    <button
-                      onClick={() => {
-                        setSelectedGradeCourse(null)
-                        setGradesData(null)
-                      }}
-                      className="flex items-center gap-2 text-gray-600 hover:text-[#1e3a5f] transition"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                      Back to Courses
-                    </button>
-                    <div className="flex-1">
-                      <h2 className="text-lg font-semibold text-gray-900">{selectedGradeCourse.name}</h2>
-                      <p className="text-sm text-gray-500">Gradebook</p>
-                    </div>
-                  </div>
-
-                  {loadingGrades ? (
-                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                      <div className="w-8 h-8 border-4 border-[#1e3a5f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-gray-500">Loading grades...</p>
-                    </div>
-                  ) : !gradesData || gradesData.students?.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                      <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Enrolled</h3>
-                      <p className="text-gray-500">Students need to enroll in this course first</p>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-gray-50 border-b">
-                            <tr>
-                              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-900">Student</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Exam Score</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Attendance</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Final Grade</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Letter</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">GPA</th>
-                              <th className="text-center px-6 py-4 text-sm font-semibold text-gray-900">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y">
-                            {gradesData.students.map(student => (
-                              <tr key={student.studentId} className="hover:bg-gray-50">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-[#1e3a5f] rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                      {student.name?.charAt(0).toUpperCase() || 'S'}
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-gray-900">{student.name || 'Unknown'}</p>
-                                      <p className="text-xs text-gray-500">{student.email || 'N/A'}</p>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  {student.grade ? (
-                                    <span className="font-medium text-gray-900">{student.grade.examScore.toFixed(1)}%</span>
-                                  ) : (
-                                    <span className="text-gray-400">Not calculated</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  {student.grade ? (
-                                    <span className="font-medium text-gray-900">{student.grade.attendanceScore.toFixed(1)}%</span>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  {student.grade ? (
-                                    <span className={`text-lg font-bold ${
-                                      student.grade.finalGrade >= 90 ? 'text-green-600' :
-                                      student.grade.finalGrade >= 80 ? 'text-blue-600' :
-                                      student.grade.finalGrade >= 70 ? 'text-yellow-600' :
-                                      'text-red-600'
-                                    }`}>
-                                      {student.grade.finalGrade.toFixed(1)}%
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  {student.grade ? (
-                                    <span className={`text-xl font-bold ${
-                                      student.grade.letterGrade === 'A' || student.grade.letterGrade === 'A-' ? 'text-green-600' :
-                                      student.grade.letterGrade.startsWith('B') ? 'text-blue-600' :
-                                      student.grade.letterGrade.startsWith('C') ? 'text-yellow-600' :
-                                      'text-red-600'
-                                    }`}>
-                                      {student.grade.letterGrade}
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  {student.grade ? (
-                                    <span className="font-semibold text-[#1e3a5f]">{student.grade.gpa.toFixed(2)}</span>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  {student.grade && student.grade.finalGrade >= 70 ? (
-                                    <button
-                                      onClick={async () => {
-                                        const certificateUrl = prompt('Enter the certificate download URL (e.g., Google Drive link, Dropbox link, etc.):')
-                                        if (!certificateUrl) {
-                                          toast.error('Certificate URL is required')
-                                          return
-                                        }
-                                        
-                                        setIssuingCertificate(student.studentId)
-                                        try {
-                                          await issueCertificate({
-                                            studentId: student.studentId,
-                                            courseId: selectedGradeCourse.id,
-                                            completionDate: new Date().toISOString(),
-                                            grade: student.grade.letterGrade,
-                                            gpa: student.grade.gpa,
-                                            certificateUrl
-                                          })
-                                          toast.success('Certificate issued successfully!')
-                                        } catch (error) {
-                                          console.error('Error issuing certificate:', error)
-                                          if (error.response?.data?.error?.includes('already issued')) {
-                                            toast.error('Certificate already issued')
-                                          } else {
-                                            toast.error('Failed to issue certificate')
-                                          }
-                                        } finally {
-                                          setIssuingCertificate(null)
-                                        }
-                                      }}
-                                      disabled={issuingCertificate === student.studentId}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#f7941d] hover:bg-[#e88a1a] text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
-                                    >
-                                      {issuingCertificate === student.studentId ? (
-                                        <>
-                                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                          Issuing...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Shield className="w-4 h-4" />
-                                          Issue Certificate
-                                        </>
-                                      )}
-                                    </button>
-                                  ) : (
-                                    <span className="text-xs text-gray-400">
-                                      {student.grade ? 'Below passing grade' : 'No grade'}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      
-                      {/* Summary */}
-                      <div className="p-4 bg-gray-50 border-t flex items-center justify-between text-sm">
-                        <span className="text-gray-600">
-                          Total Students: <span className="font-semibold">{gradesData.students.length}</span>
-                        </span>
-                        <span className="text-gray-600">
-                          Graded: <span className="font-semibold">{gradesData.students.filter(s => s.grade).length}</span>
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Settings</h2>
-              <p className="text-gray-500">Settings coming soon...</p>
-            </div>
-          )}
+          <Suspense fallback={<TabLoader />}>
+            {renderActiveTab()}
+          </Suspense>
         </main>
       </div>
 
@@ -1582,7 +418,6 @@ export default function TeacherDashboard() {
             </div>
             
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Overall Stats */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
                   <p className="text-2xl font-bold text-gray-900">{selectedStudent.totalEnrollments}</p>
@@ -1597,7 +432,6 @@ export default function TeacherDashboard() {
                 </div>
               </div>
 
-              {/* Courses Breakdown */}
               <h4 className="font-medium text-gray-900 mb-3">Course Breakdown</h4>
               <div className="space-y-3">
                 {selectedStudent.courses.map((course) => (
@@ -1817,22 +651,6 @@ export default function TeacherDashboard() {
           </div>
         </div>
       )}
-
-      {/* SessionCalendar Modal */}
-      <SessionCalendar
-        sessions={schedule || []}
-        isOpen={showCalendarModal}
-        onClose={() => setShowCalendarModal(false)}
-        title="Teaching Schedule"
-        subtitle="Your upcoming sessions"
-        accentColor="purple"
-        type="course"
-        onJoinSession={(session) => {
-          if (session.meetingLink) {
-            window.open(session.meetingLink, '_blank')
-          }
-        }}
-      />
     </div>
   )
 }
