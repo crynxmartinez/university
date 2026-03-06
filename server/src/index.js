@@ -30,6 +30,7 @@ import oneOnOneRoutes from './routes/oneOnOne.js'
 import paymentsRoutes from './routes/payments.js'
 import notificationsRoutes from './routes/notifications.js'
 import reportsRoutes from './routes/reports.js'
+import progressRoutes from './routes/progress.js'
 import { globalErrorHandler } from './utils/errorHandler.js'
 import { runStartupValidations } from './utils/startupValidator.js'
 import { generalLimiter } from './middleware/rateLimiter.js'
@@ -111,6 +112,7 @@ app.use('/api/one-on-one', oneOnOneRoutes)
 app.use('/api/payments', paymentsRoutes)
 app.use('/api/notifications', notificationsRoutes)
 app.use('/api/reports', reportsRoutes)
+app.use('/api/progress', progressRoutes)
 
 // Serve certificate PDFs
 app.use('/certificates', express.static('certificates'))
